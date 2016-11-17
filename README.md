@@ -32,7 +32,7 @@ repositories to be built to be fully functional. If you are testing the Mender s
 is therefore easier to follow the getting started section above as it integrates these
 services.
 
-If you would like to build the Device Inventory service independently, you can follow
+If you would like to build the User Administration service independently, you can follow
 these steps:
 
 ```
@@ -40,15 +40,6 @@ git clone https://github.com/mendersoftware/useradm.git
 cd useradm
 go build
 ```
-
-## Configuration
-
-The service can be configured by:
-* providing configuration file (supports JSON, TOML, YAML and HCL formatting).
-The default configuration file is provided to be downloaded from [config.yaml](https://github.com/mendersoftware/inventory/blob/master/config.yaml).
-* setting environment variables. The service will check for a environment variable
-with a name matching the key uppercased and prefixed with "USERADM_".
-Eg. for "listen" the variable name is "USERADM_LISTEN".
 
 ## Contributing
 
