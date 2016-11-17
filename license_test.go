@@ -14,5 +14,9 @@
 
 package main
 
-// TODO: Make me useful
-func main() {}
+import "testing"
+import mt "github.com/mendersoftware/mendertesting"
+
+func TestLicenses(t *testing.T) {
+	mt.CheckLicenses(t)
+}
