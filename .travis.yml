@@ -77,7 +77,7 @@ before_script:
     - if test "$(ls -A docs)"; then swagger validate docs/*.yml; fi
 
     # Verify that the Swagger docs follow the autodeployment requirements
-    - python2.7 verify_docs.py `find docs -name "*.yml"`
+    - if test "$(ls -A docs)"; then python2.7 verify_docs.py `find docs -name "*.yml"`; fi
 
 script:
     # go list supply import paths for all sub directories.
