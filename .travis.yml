@@ -121,11 +121,11 @@ deploy:
         secret_access_key: $AWS_SECRET_ACCESS_KEY
         bucket: $AWS_BUCKET_DOCS
         region: $AWS_REGION
-        upload-dir: $DEPLOY_REPO/latest/$TRAVIS_BRANCH
+        upload-dir: $TRAVIS_REPO_SLUG/latest/$TRAVIS_BRANCH
         local_dir: docs
         skip_cleanup: true
         acl: public_read
         on:
-            repo: $DEPLOY_REPO
+            repo: $TRAVIS_REPO_SLUG
             all_branches: true
             condition: $API_DOCS_CHANGED = true
