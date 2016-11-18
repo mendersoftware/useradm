@@ -1,0 +1,52 @@
+swagger: '2.0'
+info:
+  version: '0.1'
+  title: User administration and authentication
+  description: |
+    An API for user administration and user authentication handling. Not exposed via the API Gateway - intended for internal use only.
+
+basePath: '/api/0.1.0/'
+host: 'mender-device-auth:8080'
+schemes:
+  - http
+
+paths:
+  /auth/verify:
+    post:
+     summary: Check the validity of a token
+     description: |
+        Besides the basic validity check, checks the token expiration time and user-initiated token revocation.
+
+        Services which intend to use it should be correctly set up in the gateway's configuration.
+     parameters:
+       - name: Authorization
+         in: header
+         description: The token in base64-encoded form.
+         required: true
+         type: string
+         format: Bearer [token]
+     responses:
+        200:
+            description: The token is valid.
+        400:
+            description: Missing or malformed request parameters.
+        401:
+            description: Verification failed, authentication should not be granted.
+        403:
+            description: Token has expired - apply for a new one.
+        500:
+            description: Unexpected error.
+            schema:
+              $ref: '#/definitions/Error'
+
+definitions:
+  Error:
+    description: Error descriptor.
+    type: object
+    properties:
+      error:
+        description: Description of the error.
+        type: string
+    example:
+      application/json:
+        error: "missing Authorization header"
