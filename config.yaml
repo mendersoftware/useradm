@@ -1,0 +1,13 @@
+    # API server listen address
+    # Defauls to: ":8080" which will listen on all avalable interfaces.
+listen: :8080
+
+    # HTTP Server middleware environment
+    # Available values:
+    #   dev
+    #       development environment
+    #   prod
+    #       production environment
+    #
+    # Defaults to: prod
+middleware: dev

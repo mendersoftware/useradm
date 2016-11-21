@@ -11,8 +11,52 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-
 package main
 
-// TODO: Make me useful
-func main() {}
+import (
+	"flag"
+	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/log"
+)
+
+func main() {
+	var configPath string
+	var printVersion bool
+	var devSetup bool
+	var debug bool
+
+	flag.StringVar(&configPath, "config",
+		"",
+		"Configuration file path. Supports JSON, TOML, YAML and HCL formatted configs.")
+	flag.BoolVar(&printVersion, "version",
+		false, "Show version")
+	flag.BoolVar(&devSetup, "dev",
+		false, "Use development setup")
+	flag.BoolVar(&debug, "debug",
+		false, "Enable debug logging")
+
+	flag.Parse()
+
+	log.Setup(debug)
+
+	l := log.New(log.Ctx{})
+
+	err := config.FromConfigFile(configPath, configDefaults)
+	if err != nil {
+		l.Fatalf("error loading configuration: %s", err)
+	}
+
+	if devSetup == true {
+		l.Infof("setting up development configuration")
+		config.Config.Set(SettingMiddleware, EnvDev)
+	}
+
+	// Enable setting conig values by environment variables
+	config.Config.SetEnvPrefix("INVENTORY")
+	config.Config.AutomaticEnv()
+
+	/*l.Printf("Inventory Service, version %s starting up",
+	CreateVersionString())*/
+
+	l.Fatal(RunServer(config.Config))
+}

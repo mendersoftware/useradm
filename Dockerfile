@@ -2,4 +2,7 @@ FROM iron/base
 
 COPY ./useradm /usr/bin/
 
-ENTRYPOINT ["/usr/bin/useradm"]
+RUN mkdir /etc/useradm
+COPY ./config.yaml /etc/useradm/
+
+ENTRYPOINT ["/usr/bin/useradm", "-config", "/etc/useradm/config.yaml"]
