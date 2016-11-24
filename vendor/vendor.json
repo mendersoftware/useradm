@@ -4,8 +4,14 @@
 	"package": [
 		{
 			"path": "git",
-			"revision": "",
+			"revision": "github.com:mendersoftware/go-lib-micro.git",
 			"version": "github.com:mendersoftware/go-lib-micro.git"
+		},
+		{
+			"checksumSHA1": "jRtYpPa7CRuA+LP4ELF9c9CjJao=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "a437dfd2463eaedbec3dfe443e477d3b0a810b3f",
+			"revisionTime": "2016-11-18T19:45:39Z"
 		},
 		{
 			"checksumSHA1": "LNT0T3eBPSaJ3aKhWNh8iWlBvjo=",
@@ -20,10 +26,244 @@
 			"revisionTime": "2016-11-06T00:05:15Z"
 		},
 		{
-			"checksumSHA1": "i38FeB/pqmU7xcluq/0LHjIwDY8=",
+			"checksumSHA1": "hveFTNQ9YEyYRs6SWuXM+XU9qRI=",
+			"path": "github.com/fsnotify/fsnotify",
+			"revision": "fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197",
+			"revisionTime": "2016-10-26T20:31:22Z"
+		},
+		{
+			"checksumSHA1": "8OPDk+bKyRGJoKcS4QNw9F7dpE8=",
+			"path": "github.com/hashicorp/hcl",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "XQmjDva9JCGGkIecOgwtBEMCJhU=",
+			"path": "github.com/hashicorp/hcl/hcl/ast",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "croNloscHsjX87X+4/cKOURf1EY=",
+			"path": "github.com/hashicorp/hcl/hcl/parser",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "Zz4271B4Kc+rwwK7cbaRv7STfO8=",
+			"path": "github.com/hashicorp/hcl/hcl/scanner",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "/e0ULfQnGeUKiM1+iMnQhImo62k=",
+			"path": "github.com/hashicorp/hcl/hcl/strconv",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "c6yprzj06ASwCo18TtbbNNBHljA=",
+			"path": "github.com/hashicorp/hcl/hcl/token",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "138aCV5n8n7tkGYMsMVQQnnLq+0=",
+			"path": "github.com/hashicorp/hcl/json/parser",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "YdvFsNOMSWMLnY6fcliWQa0O5Fw=",
+			"path": "github.com/hashicorp/hcl/json/scanner",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "fNlXQCQEnb+B3k5UDL/r15xtSJY=",
+			"path": "github.com/hashicorp/hcl/json/token",
+			"revision": "7cb7455c285ca3bf3362aa4ba6a06a6d6f5c3ba0",
+			"revisionTime": "2016-11-22T02:11:24Z"
+		},
+		{
+			"checksumSHA1": "S6PDDQMYaKwLDIP/NsRYb4FRAqQ=",
+			"path": "github.com/magiconair/properties",
+			"revision": "0723e352fa358f9322c938cc2dadda874e9151a9",
+			"revisionTime": "2016-09-08T09:36:58Z"
+		},
+		{
+			"checksumSHA1": "TBy4BC8vdb8QenUOK253xKqZ4r8=",
+			"path": "github.com/mendersoftware/go-lib-micro/accesslog",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "QmyI+9PdA6JncH24k1luvXmsjcc=",
+			"path": "github.com/mendersoftware/go-lib-micro/config",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "jDowIsScTGT3iVNFl33Mawor+Sc=",
+			"path": "github.com/mendersoftware/go-lib-micro/log",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "sfykRSgWfCdMe6IVMuKkUeeO96c=",
+			"path": "github.com/mendersoftware/go-lib-micro/requestid",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "O+xXlg78j4kn5aSNQQ98gfLhreI=",
+			"path": "github.com/mendersoftware/go-lib-micro/requestlog",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "64/faU2UQiBk7RNPf8Q6HM0ybsw=",
+			"path": "github.com/mendersoftware/go-lib-micro/rest_utils",
+			"revision": "6adf38ac9953df030ef93400921ffcf4d67ceeaf",
+			"revisionTime": "2016-11-24T09:44:53Z"
+		},
+		{
+			"checksumSHA1": "C7r5yLBTpOOVXFJ2g44BjCiQXJM=",
+			"path": "github.com/mendersoftware/go-lib-micro/routing",
+			"revision": "6adf38ac9953df030ef93400921ffcf4d67ceeaf",
+			"revisionTime": "2016-11-24T09:44:53Z"
+		},
+		{
+			"checksumSHA1": "orp+H68OgE0c3mL+R22NEaf8+Qs=",
+			"path": "github.com/mendersoftware/go-lib-micro/strings",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "HUl6/8GJBuYZENsD/EPAJPKHZOM=",
+			"path": "github.com/mendersoftware/go-lib-micro/testing",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
+			"checksumSHA1": "2t8qpPhOmNL6G5pCqQLEEwPkI3I=",
 			"path": "github.com/mendersoftware/mendertesting",
-			"revision": "8f7685eaafcdf5702c7484892858237090f1240a",
-			"revisionTime": "2016-09-27T12:54:33Z"
+			"revision": "ac32f1a1746eef3a54dc432d2c89c4e80bd2198e",
+			"revisionTime": "2016-11-24T14:34:15Z"
+		},
+		{
+			"checksumSHA1": "UuXgD2dDojfS8AViUEe15gLIWZE=",
+			"path": "github.com/mitchellh/mapstructure",
+			"revision": "f3009df150dadf309fdee4a54ed65c124afad715",
+			"revisionTime": "2016-10-20T16:18:36Z"
+		},
+		{
+			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
+			"path": "github.com/pelletier/go-buffruneio",
+			"revision": "df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d",
+			"revisionTime": "2016-01-24T19:35:03Z"
+		},
+		{
+			"checksumSHA1": "CtI2rBQw2rxHNIU+a0rcAf29Sco=",
+			"path": "github.com/pelletier/go-toml",
+			"revision": "45932ad32dfdd20826f5671da37a5f3ce9f26a8d",
+			"revisionTime": "2016-09-20T07:07:15Z"
+		},
+		{
+			"checksumSHA1": "ynJSWoF6v+3zMnh9R0QmmG6iGV8=",
+			"path": "github.com/pkg/errors",
+			"revision": "248dadf4e9068a0b3e79f02ed0a610d935de5302",
+			"revisionTime": "2016-10-29T09:36:37Z"
+		},
+		{
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
+			"revisionTime": "2016-09-27T10:08:44Z"
+		},
+		{
+			"checksumSHA1": "f2mjcLDkc28ImTfmedA5kfcOzUw=",
+			"path": "github.com/spf13/afero",
+			"revision": "06b7e5f50606ecd49148a01a6008942d9b669217",
+			"revisionTime": "2016-11-09T00:09:53Z"
+		},
+		{
+			"checksumSHA1": "u6B0SEgZ/TUEfIvF6w/HnFVQbII=",
+			"path": "github.com/spf13/afero/mem",
+			"revision": "06b7e5f50606ecd49148a01a6008942d9b669217",
+			"revisionTime": "2016-11-09T00:09:53Z"
+		},
+		{
+			"checksumSHA1": "+mfjYfgvbP8vg0ubsMOw/iTloo8=",
+			"path": "github.com/spf13/cast",
+			"revision": "24b6558033ffe202bf42f0f3b870dcc798dd2ba8",
+			"revisionTime": "2016-11-16T01:33:54Z"
+		},
+		{
+			"checksumSHA1": "dkruahfhuLXXuyeCuRpsWlcRK+8=",
+			"path": "github.com/spf13/jwalterweatherman",
+			"revision": "33c24e77fb80341fe7130ee7c594256ff08ccc46",
+			"revisionTime": "2016-03-01T12:00:06Z"
+		},
+		{
+			"checksumSHA1": "GxPD7A0NjMDom1xte0mghkpzr0E=",
+			"path": "github.com/spf13/pflag",
+			"revision": "5ccb023bc27df288a957c5e994cd44fd19619465",
+			"revisionTime": "2016-10-24T13:13:51Z"
+		},
+		{
+			"checksumSHA1": "802GjFNHMmnFXEIkQ137ucUUacI=",
+			"path": "github.com/spf13/viper",
+			"revision": "651d9d916abc3c3d6a91a12549495caba5edffd2",
+			"revisionTime": "2016-10-29T21:33:52Z"
+		},
+		{
+			"checksumSHA1": "KqecwXo3OO+p4N+E9RhlHvl9I+w=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "b699b7032584f0953262cb2788a0ca19bb494703",
+			"revisionTime": "2016-11-10T11:58:56Z"
+		},
+		{
+			"checksumSHA1": "B3d1je1cb+pDWpniE8CCuC6xJQI=",
+			"path": "golang.org/x/text/internal/gen",
+			"revision": "a263ba8db058568bb9beba166777d9c9dbe75d68",
+			"revisionTime": "2016-10-26T11:09:11Z"
+		},
+		{
+			"checksumSHA1": "47nwiUyVBY2RKoEGXmCSvusY4Js=",
+			"path": "golang.org/x/text/internal/triegen",
+			"revision": "a263ba8db058568bb9beba166777d9c9dbe75d68",
+			"revisionTime": "2016-10-26T11:09:11Z"
+		},
+		{
+			"checksumSHA1": "Yd5wMObzagIfCiKLpZbtBIrOUA4=",
+			"path": "golang.org/x/text/internal/ucd",
+			"revision": "a263ba8db058568bb9beba166777d9c9dbe75d68",
+			"revisionTime": "2016-10-26T11:09:11Z"
+		},
+		{
+			"checksumSHA1": "ziMb9+ANGRJSSIuxYdRbA+cDRBQ=",
+			"path": "golang.org/x/text/transform",
+			"revision": "a263ba8db058568bb9beba166777d9c9dbe75d68",
+			"revisionTime": "2016-10-26T11:09:11Z"
+		},
+		{
+			"checksumSHA1": "i14IZXKECObKRUNvTr7xivSL1IU=",
+			"path": "golang.org/x/text/unicode/cldr",
+			"revision": "a263ba8db058568bb9beba166777d9c9dbe75d68",
+			"revisionTime": "2016-10-26T11:09:11Z"
+		},
+		{
+			"checksumSHA1": "Vircurgvsnt4k26havmxPM67PUA=",
+			"path": "golang.org/x/text/unicode/norm",
+			"revision": "a263ba8db058568bb9beba166777d9c9dbe75d68",
+			"revisionTime": "2016-10-26T11:09:11Z"
+		},
+		{
+			"checksumSHA1": "12GqsW8PiRPnezDDy0v4brZrndM=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "a5b47d31c556af34a302ce5d659e6fea44d90de0",
+			"revisionTime": "2016-09-28T15:37:09Z"
 		}
 	],
 	"rootPath": "github.com/mendersoftware/useradm"
