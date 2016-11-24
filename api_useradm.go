@@ -15,8 +15,13 @@ package main
 
 import (
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/go-lib-micro/requestlog"
+	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 const (
@@ -25,15 +30,24 @@ const (
 	uriUsersInitial = "/api/0.1.0/users/initial"
 )
 
-type UserAdmHandlers struct {
+var (
+	ErrAuthHeader = errors.New("invalid or missing auth header")
+)
+
+type UserAdmFactory func(c config.Reader, l *log.Logger) (UserAdmApp, error)
+
+type UserAdmApiHandlers struct {
+	createUserAdm UserAdmFactory
 }
 
 // return an ApiHandler for user administration and authentiacation app
-func NewUserAdmApiHandlers() ApiHandler {
-	return &UserAdmHandlers{}
+func NewUserAdmApiHandlers(userAdmFactory UserAdmFactory) ApiHandler {
+	return &UserAdmApiHandlers{
+		createUserAdm: userAdmFactory,
+	}
 }
 
-func (i *UserAdmHandlers) GetApp() (rest.App, error) {
+func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
 		rest.Post(uriAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriAuthVerify, i.AuthVerifyHandler),
@@ -53,14 +67,39 @@ func (i *UserAdmHandlers) GetApp() (rest.App, error) {
 	return app, nil
 }
 
-func (i *UserAdmHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Request) {
+func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Request) {
+	l := requestlog.GetRequestLogger(r.Env)
+
+	//parse auth header
+	//TODO: we'll allow no auth in the 'first login' case, for now - just return 401
+	email, pass, ok := r.BasicAuth()
+	if !ok {
+		rest_utils.RestErrWithLog(w, r, l, ErrAuthHeader, http.StatusUnauthorized)
+		return
+	}
+
+	useradm, err := u.createUserAdm(config.Config, l)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	//TODO: at some point useradm will return a well-known error
+	// e.g. "useradm: unauthorized"; for now, every error is an internal one
+	token, err := useradm.Login(email, pass)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.(http.ResponseWriter).Write([]byte(token.Raw))
+	w.Header().Set("Content-Type", "application/jwt")
+}
+
+func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {
 	rest.NotFound(w, r)
 }
 
-func (i *UserAdmHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {
-	rest.NotFound(w, r)
-}
-
-func (i *UserAdmHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
+func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
 	rest.NotFound(w, r)
 }

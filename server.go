@@ -14,10 +14,14 @@
 package main
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -40,7 +44,22 @@ func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
-	useradmapi := NewUserAdmApiHandlers(GetUserAdm)
+	privKey, err := getRSAPrivKey(c.GetString(SettingPrivKeyPath))
+	if err != nil {
+		return errors.Wrap(err, "failed to read rsa private key")
+	}
+
+	useradmapi := NewUserAdmApiHandlers(
+		func(l *log.Logger) UserAdmApp {
+			jwtHandler := NewJWTHandlerRS256(
+				privKey,
+				c.GetString(SettingJWTIssuer),
+				int64(c.GetInt(SettingJWTExpirationTimeout)),
+				l)
+
+			ua := NewUserAdm(jwtHandler)
+			return ua
+		})
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware))
 	if err != nil {
@@ -57,4 +76,31 @@ func RunServer(c config.Reader) error {
 	l.Printf("listening on %s", addr)
 
 	return http.ListenAndServe(addr, api.MakeHandler())
+}
+
+func getRSAPrivKey(privKeyPath string) (*rsa.PrivateKey, error) {
+	// read key from file
+	pemData, err := ioutil.ReadFile(privKeyPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "jwt: can't open key")
+	}
+
+	// decode pem key
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		return nil, errors.Wrap(err, "jwt: can't decode key")
+	}
+
+	// check if it is an RSA PRIVATE KEY
+	if got, want := block.Type, "RSA PRIVATE KEY"; got != want {
+		return nil, errors.New("jwt: can't open key - not an rsa private key")
+	}
+
+	// return parsed key
+	privkey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "jwt: can't parse key")
+	}
+
+	return privkey, nil
 }
