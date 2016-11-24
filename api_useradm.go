@@ -15,7 +15,6 @@ package main
 
 import (
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
@@ -34,7 +33,7 @@ var (
 	ErrAuthHeader = errors.New("invalid or missing auth header")
 )
 
-type UserAdmFactory func(c config.Reader, l *log.Logger) (UserAdmApp, error)
+type UserAdmFactory func(l *log.Logger) UserAdmApp
 
 type UserAdmApiHandlers struct {
 	createUserAdm UserAdmFactory
@@ -78,11 +77,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	useradm, err := u.createUserAdm(config.Config, l)
-	if err != nil {
-		rest_utils.RestErrWithLogInternal(w, r, l, err)
-		return
-	}
+	useradm := u.createUserAdm(l)
 
 	//TODO: at some point useradm will return a well-known error
 	// e.g. "useradm: unauthorized"; for now, every error is an internal one
