@@ -15,8 +15,8 @@ package main
 
 import (
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/mendersoftware/inventory/config"
-	"github.com/mendersoftware/inventory/log"
+	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 	"net/http"
 )
@@ -40,14 +40,14 @@ func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
-	invapi := NewUserAdmApiHandlers()
+	useradmapi := NewUserAdmApiHandlers(GetUserAdm)
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware))
 	if err != nil {
 		return errors.Wrap(err, "API setup failed")
 	}
 
-	apph, err := invapi.GetApp()
+	apph, err := useradmapi.GetApp()
 	if err != nil {
 		return errors.Wrap(err, "inventory API handlers setup failed")
 	}
