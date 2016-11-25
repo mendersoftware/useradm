@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Enable setting conig values by environment variables
-	config.Config.SetEnvPrefix("INVENTORY")
+	config.Config.SetEnvPrefix("USERADM")
 	config.Config.AutomaticEnv()
 
 	/*l.Printf("Inventory Service, version %s starting up",

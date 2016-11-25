@@ -23,6 +23,15 @@ const (
 
 	SettingMiddleware        = "middleware"
 	SettingMiddlewareDefault = EnvProd
+
+	SettingPrivKeyPath        = "server_priv_key_path"
+	SettingPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
+
+	SettingJWTIssuer        = "jwt_issuer"
+	SettingJWTIssuerDefault = "mender.useradm"
+
+	SettingJWTExpirationTimeout        = "jwt_exp_timeout"
+	SettingJWTExpirationTimeoutDefault = "604800" //one week
 )
 
 var (
@@ -30,5 +39,8 @@ var (
 	configDefaults   = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
+		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
+		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
+		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
 	}
 )
