@@ -19,6 +19,8 @@ a94710b55e03b5285f77d048c5ba61bb9d6ee04a06c0eb90e68821e11b0c707a  vendor/gopkg.i
 f56f51f3aac08674202e9c399e4f32e733c12953c09e15464b0cc3227ac442c0  vendor/github.com/satori/go.uuid/LICENSE
 402f39eed8a1851385d0703999aa9f23d067c2ea3e15c63c074e389cbf8f8f8f  vendor/github.com/stretchr/testify/LICENSE
 8a8dfa5f0d44be786425f14eb7ed30738399f2c827808928f22d9c03410b0625  vendor/github.com/pelletier/go-buffruneio/README.md
+fde7d610b9b95fc5a6304055c4dae951025b630aaa42a24e95ebf76675ae832c  vendor/github.com/stretchr/objx/LICENSE.md
+f71d43124a8b70fbaef7c835d1639e89a7acdb252b05dda35652247902880724  vendor/github.com/dgrijalva/jwt-go/LICENSE
 
 # Mozilla Public 2.0
 bef1747eda88b9ed46e94830b0d978c3499dad5dfe38d364971760881901dadd  vendor/github.com/hashicorp/hcl/LICENSE
@@ -37,3 +39,5 @@ c8001d18c3dda64c7e72146f1b23d73619fcf426aed6778f447599f5ac8e600a  vendor/github.
 
 # ISC
 6a6ae99c69879233ddb1095938f7f3ea651fd91d82d46988fb0be6489c7a1bb6  vendor/github.com/davecgh/go-spew/LICENSE
+
+

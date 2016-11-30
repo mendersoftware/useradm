@@ -14,13 +14,14 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 const (
@@ -92,7 +93,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 }
 
 func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {
-	rest.NotFound(w, r)
+	w.(http.ResponseWriter).WriteHeader(http.StatusOK)
 }
 
 func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
