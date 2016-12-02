@@ -34,7 +34,7 @@ var (
 	ErrAuthHeader = errors.New("invalid or missing auth header")
 )
 
-type UserAdmFactory func(l *log.Logger) UserAdmApp
+type UserAdmFactory func(l *log.Logger) (UserAdmApp, error)
 
 type UserAdmApiHandlers struct {
 	createUserAdm UserAdmFactory
@@ -71,24 +71,38 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 	l := requestlog.GetRequestLogger(r.Env)
 
 	//parse auth header
-	//TODO: we'll allow no auth in the 'first login' case, for now - just return 401
 	email, pass, ok := r.BasicAuth()
-	if !ok {
-		rest_utils.RestErrWithLog(w, r, l, ErrAuthHeader, http.StatusUnauthorized)
+	if !ok && r.Header.Get("Authorization") != "" {
+		rest_utils.RestErrWithLog(w, r, l,
+			ErrAuthHeader, http.StatusUnauthorized)
 		return
 	}
 
-	useradm := u.createUserAdm(l)
-
-	//TODO: at some point useradm will return a well-known error
-	// e.g. "useradm: unauthorized"; for now, every error is an internal one
-	token, err := useradm.Login(email, pass)
+	useradm, err := u.createUserAdm(l)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
 
-	w.(http.ResponseWriter).Write([]byte(token.Raw))
+	// e.g. "useradm: unauthorized"; for now, every error is an internal one
+	token, err := useradm.Login(email, pass)
+	if err != nil {
+		switch {
+		case err == ErrUnauthorized:
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnauthorized)
+		default:
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+		}
+		return
+	}
+
+	raw, err := token.MarshalJWT(useradm.SignToken())
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.(http.ResponseWriter).Write(raw)
 	w.Header().Set("Content-Type", "application/jwt")
 }
 
