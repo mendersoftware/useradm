@@ -26,37 +26,38 @@ import (
 
 func TestNewJWTHandlerRS256(t *testing.T) {
 	privKey := loadPrivKey("crypto/private.pem", t)
-	jwtHandler := NewJWTHandlerRS256(privKey, "Mender", 3600, nil)
+	jwtHandler := NewJWTHandlerRS256(privKey, nil)
 
 	assert.NotNil(t, jwtHandler)
-	assert.Equal(t, "Mender", jwtHandler.issuer)
-	assert.Equal(t, int64(3600), jwtHandler.expiresInSec)
 	assert.NotNil(t, jwtHandler.log)
 }
 
 func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 	testCases := map[string]struct {
 		privKey      *rsa.PrivateKey
-		subject      string
-		issuer       string
+		claims       Claims
 		expiresInSec int64
 	}{
 		"ok": {
-			privKey:      loadPrivKey("crypto/private.pem", t),
-			subject:      "foo",
-			issuer:       "Mender",
+			privKey: loadPrivKey("crypto/private.pem", t),
+			claims: Claims{
+				Issuer:  "Mender",
+				Subject: "foo",
+			},
 			expiresInSec: 3600,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerRS256(tc.privKey, tc.issuer, tc.expiresInSec, nil)
+		jwtHandler := NewJWTHandlerRS256(tc.privKey, nil)
 
-		token, err := jwtHandler.GenerateToken(tc.subject)
+		raw, err := jwtHandler.ToJWT(&Token{
+			Claims: tc.claims,
+		})
 		assert.NoError(t, err)
 
-		_ = parseGeneratedTokenRS256(t, token.Raw, tc.privKey)
+		_ = parseGeneratedTokenRS256(t, string(raw), tc.privKey)
 	}
 }
 

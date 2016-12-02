@@ -14,7 +14,6 @@
 package main
 
 import (
-	"github.com/dgrijalva/jwt-go"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,26 +24,10 @@ type MockJWTHandler struct {
 }
 
 // GenerateToken provides a mock function with given fields: subject
-func (_m *MockJWTHandler) GenerateToken(subject string) (*jwt.Token, error) {
-	ret := _m.Called(subject)
+func (_m *MockJWTHandler) ToJWT(token *Token) (string, error) {
+	ret := _m.Called(token)
 
-	var r0 *jwt.Token
-	if rf, ok := ret.Get(0).(func(string) *jwt.Token); ok {
-		r0 = rf(subject)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*jwt.Token)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(subject)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return ret.String(0), ret.Error(1)
 }
 
 // UseLog provides a mock function with given fields: l
