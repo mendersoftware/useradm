@@ -28,6 +28,8 @@ bef1747eda88b9ed46e94830b0d978c3499dad5dfe38d364971760881901dadd  vendor/github.
 # BSD-2-Clause
 1e0222fa00c5a5356489185f78758e8ce8352c44e992486136b605f8ef7ee657  vendor/github.com/magiconair/properties/LICENSE
 8d427fd87bc9579ea368fde3d49f9ca22eac857f91a9dec7e3004bdfab7dee86  vendor/github.com/pkg/errors/LICENSE
+fe60e0cc90e88f12c814adb7dc88df6791c6ec6798d8c856b7d5ad1b805b4f10  vendor/gopkg.in/mgo.v2/LICENSE
+86258a47c5340187ef120b9c20e5427a84d3040ecab3243315692862e07dedae  vendor/gopkg.in/mgo.v2/bson/LICENSE
 
 # BSD-3-Clause
 b8514c577c1c4b46cee454d5a882b15fa411e72c5bd7f801f241591789fce61a  vendor/github.com/spf13/pflag/LICENSE
@@ -36,7 +38,8 @@ b8514c577c1c4b46cee454d5a882b15fa411e72c5bd7f801f241591789fce61a  vendor/github.
 c8001d18c3dda64c7e72146f1b23d73619fcf426aed6778f447599f5ac8e600a  vendor/github.com/fsnotify/fsnotify/LICENSE
 2d36597f7117c38b006835ae7f537487207d8ec407aa9d9980794b2030cbc067  vendor/golang.org/x/sys/LICENSE
 2d36597f7117c38b006835ae7f537487207d8ec407aa9d9980794b2030cbc067  vendor/golang.org/x/text/LICENSE
-
+dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d  vendor/gopkg.in/mgo.v2/internal/json/LICENSE
+8407b13e462f755c06db3db3a034dc1fdc9157af19c6ea8986e7d5aecf4126b3  vendor/gopkg.in/tomb.v2/LICENSE
 # ISC
 6a6ae99c69879233ddb1095938f7f3ea651fd91d82d46988fb0be6489c7a1bb6  vendor/github.com/davecgh/go-spew/LICENSE
 
