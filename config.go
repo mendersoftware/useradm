@@ -32,6 +32,9 @@ const (
 
 	SettingJWTExpirationTimeout        = "jwt_exp_timeout"
 	SettingJWTExpirationTimeoutDefault = "604800" //one week
+
+	SettingDb        = "mongo"
+	SettingDbDefault = "mongo-useradm"
 )
 
 var (
@@ -42,5 +45,6 @@ var (
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
+		{Key: SettingDb, Value: SettingDbDefault},
 	}
 )
