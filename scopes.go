@@ -15,5 +15,7 @@ package main
 
 var (
 	// inital user creation
-	ScopeInitialUserCreate = "mender.users.intial.create"
+	ScopeInitialUserCreate = "mender.users.initial.create"
+	// full permissions for the tenant admin
+	ScopeAll = "mender.*"
 )
