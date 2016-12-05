@@ -38,8 +38,7 @@ const (
 )
 
 var (
-	configValidators = []config.Validator{}
-	configDefaults   = []config.Default{
+	configDefaults = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
