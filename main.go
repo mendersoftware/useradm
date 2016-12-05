@@ -46,7 +46,7 @@ func main() {
 		l.Fatalf("error loading configuration: %s", err)
 	}
 
-	if devSetup == true {
+	if devSetup {
 		l.Infof("setting up development configuration")
 		config.Config.Set(SettingMiddleware, EnvDev)
 	}
