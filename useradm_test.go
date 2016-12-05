@@ -132,3 +132,132 @@ func TestUserAdmLoginInitial(t *testing.T) {
 	}
 
 }
+
+func TestUserAdmCreateUser(t *testing.T) {
+	testCases := map[string]struct {
+		inUser UserModel
+
+		dbErr error
+
+		outErr error
+	}{
+		"ok": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"db error: duplicate email": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbErr:  ErrDuplicateEmail,
+			outErr: ErrDuplicateEmail,
+		},
+		"db error: general": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbErr: errors.New("no reachable servers"),
+
+			outErr: errors.New("useradm: failed to create user in the db: no reachable servers"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db := &mockDataStore{}
+		db.On("CreateUser",
+			mock.AnythingOfType("*main.UserModel")).
+			Return(tc.dbErr)
+
+		useradm := NewUserAdm(nil, db, UserAdmConfig{})
+
+		err := useradm.CreateUser(&tc.inUser)
+
+		if tc.outErr != nil {
+			assert.EqualError(t, err, tc.outErr.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+
+}
+
+func TestUserAdmCreateUserInitial(t *testing.T) {
+	testCases := map[string]struct {
+		inUser UserModel
+
+		dbEmpty     bool
+		dbEmptyErr  error
+		dbCreateErr error
+
+		outErr error
+	}{
+		"ok": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbEmpty:     true,
+			dbEmptyErr:  nil,
+			dbCreateErr: nil,
+			outErr:      nil,
+		},
+		"error: not an initial user": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbEmpty:     false,
+			dbEmptyErr:  nil,
+			dbCreateErr: ErrUserNotInitial,
+			outErr:      ErrUserNotInitial,
+		},
+		"db error: IsEmpty()": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbEmpty:     false,
+			dbEmptyErr:  errors.New("no reachable servers"),
+			dbCreateErr: nil,
+			outErr:      errors.New("useradm: failed to check if db is empty: no reachable servers"),
+		},
+		"db error: CreateUser()": {
+			inUser: UserModel{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbEmpty:     true,
+			dbEmptyErr:  nil,
+			dbCreateErr: errors.New("no reachable servers"),
+			outErr:      errors.New("useradm: failed to create user in the db: no reachable servers"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db := &mockDataStore{}
+		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
+		db.On("CreateUser",
+			mock.AnythingOfType("*main.UserModel")).
+			Return(tc.dbCreateErr)
+
+		useradm := NewUserAdm(nil, db, UserAdmConfig{})
+
+		err := useradm.CreateUserInitial(&tc.inUser)
+
+		if tc.outErr != nil {
+			assert.EqualError(t, err, tc.outErr.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+}
