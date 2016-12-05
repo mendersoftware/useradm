@@ -32,15 +32,18 @@ const (
 
 	SettingJWTExpirationTimeout        = "jwt_exp_timeout"
 	SettingJWTExpirationTimeoutDefault = "604800" //one week
+
+	SettingDb        = "mongo"
+	SettingDbDefault = "mongo-useradm"
 )
 
 var (
-	configValidators = []config.Validator{}
-	configDefaults   = []config.Default{
+	configDefaults = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
+		{Key: SettingDb, Value: SettingDbDefault},
 	}
 )

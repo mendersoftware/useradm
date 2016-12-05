@@ -14,32 +14,81 @@
 package main
 
 import (
-	jwt "github.com/dgrijalva/jwt-go"
+	"time"
+
 	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
+)
+
+var (
+	ErrUnauthorized = errors.New("unauthorized")
 )
 
 type UserAdmApp interface {
 	// Login accepts email/password, returns JWT
-	Login(email, pass string) (*jwt.Token, error)
+	Login(email, pass string) (*Token, error)
+
+	// SignToken returns a function that can be used for generating a signed
+	// token using configuration & method set up in UserAdmApp
+	SignToken() SignFunc
+}
+
+type UserAdmConfig struct {
+	// token issuer
+	Issuer string
+	// token expiration time
+	ExpirationTime int64
 }
 
 type UserAdm struct {
+	// JWT serialized/deserializer
 	jwtHandler JWTHandler
+	db         DataStore
+	config     UserAdmConfig
 }
 
-func NewUserAdm(jwtHandler JWTHandler) *UserAdm {
-	return &UserAdm{jwtHandler: jwtHandler}
+func NewUserAdm(jwtHandler JWTHandler, db DataStore, config UserAdmConfig) *UserAdm {
+	return &UserAdm{
+		jwtHandler: jwtHandler,
+		db:         db,
+		config:     config,
+	}
 }
 
 // this is a dummy method for now - always returns a valid JWT; no db interaction
-func (u *UserAdm) Login(email, pass string) (*jwt.Token, error) {
-	//TODO: pull this from the db after verification
-	userId := "dummy_user_id"
+func (u *UserAdm) Login(email, pass string) (*Token, error) {
 
-	token, err := u.jwtHandler.GenerateToken(userId)
-	if err != nil {
-		return nil, errors.Wrap(err, "useradm: failed to generate token")
+	if email == "" && pass == "" {
+		empty, err := u.db.IsEmpty()
+		if err != nil {
+			return nil, errors.Wrap(err, "useradm: failed to query database")
+		}
+		if !empty {
+			return nil, ErrUnauthorized
+		}
+		// initial login
+		t := u.generateInitialToken()
+
+		return t, nil
 	}
 
-	return token, nil
+	return nil, nil
+}
+
+func (u *UserAdm) generateInitialToken() *Token {
+	return &Token{
+		Claims: Claims{
+			ID:        uuid.NewV4().String(),
+			Issuer:    u.config.Issuer,
+			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
+			Subject:   "initial",
+			Scope:     ScopeInitialUserCreate,
+		},
+	}
+}
+
+func (u *UserAdm) SignToken() SignFunc {
+	return func(t *Token) (string, error) {
+		return u.jwtHandler.ToJWT(t)
+	}
 }

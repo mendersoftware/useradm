@@ -87,7 +87,7 @@ func SetupMiddleware(api *rest.Api, mwtype string) error {
 	l.Infof("setting up %s middleware", mwtype)
 
 	mwstack, ok := middlewareMap[mwtype]
-	if ok != true {
+	if !ok {
 		return fmt.Errorf("incorrect middleware type: %s", mwtype)
 	}
 

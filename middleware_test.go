@@ -33,9 +33,9 @@ func TestSetupMiddleware(t *testing.T) {
 		api := rest.NewApi()
 
 		err := SetupMiddleware(api, td.mwtype)
-		if err != nil && td.experr == false {
+		if err != nil && !td.experr {
 			t.Errorf("dod not expect error: %s", err)
-		} else if err == nil && td.experr == true {
+		} else if err == nil && td.experr {
 			t.Errorf("expected error, got none")
 		}
 	}

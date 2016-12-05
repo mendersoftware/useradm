@@ -17,68 +17,39 @@ import (
 	"crypto/rsa"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/satori/go.uuid"
-	"time"
-)
-
-// token claim names
-const (
-	jwtClaimIssuer     = "iss"
-	jwtClaimSubject    = "sub"
-	jwtClaimExpiration = "exp"
-	jwtClaimTokenId    = "jti"
 )
 
 // JWTHandler jwt generator/verifier
 type JWTHandler interface {
-	GenerateToken(subject string) (*jwt.Token, error)
+	ToJWT(t *Token) (string, error)
 }
 
 // JWTHandlerRS256 is an RS256-specific JWTHandler
 type JWTHandlerRS256 struct {
-	issuer       string
-	expiresInSec int64
-	privKey      *rsa.PrivateKey
-	log          *log.Logger
+	privKey *rsa.PrivateKey
+	log     *log.Logger
 }
 
-func NewJWTHandlerRS256(privKey *rsa.PrivateKey, issuer string, expiresInSec int64, l *log.Logger) *JWTHandlerRS256 {
+func NewJWTHandlerRS256(privKey *rsa.PrivateKey, l *log.Logger) *JWTHandlerRS256 {
 	if l == nil {
 		l = log.New(log.Ctx{})
 	}
 
 	return &JWTHandlerRS256{
-		issuer:       issuer,
-		expiresInSec: expiresInSec,
-		privKey:      privKey,
-		log:          l,
+		privKey: privKey,
+		log:     l,
 	}
 }
 
-func (j *JWTHandlerRS256) GenerateToken(subject string) (*jwt.Token, error) {
-	//set claims
-	claims := jwt.StandardClaims{
-		Issuer:    j.issuer,
-		ExpiresAt: time.Now().Unix() + j.expiresInSec,
-		Subject:   subject,
-		Id:        uuid.NewV4().String(),
-	}
-
+func (j *JWTHandlerRS256) ToJWT(token *Token) (string, error) {
 	//generate
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	jt := jwt.NewWithClaims(jwt.SigningMethodRS256, &token.Claims)
 
 	//sign
-	tokenString, err := token.SignedString(j.privKey)
-	if err != nil {
-		return nil, err
-	}
-
-	//note: abusing the jwt.Token slightly here, by reusing the 'Raw' field
-	//jwt does this only on Parse()
-	token.Raw = tokenString
-
-	return token, nil
+	data, err := jt.SignedString(j.privKey)
+	return data, err
 }
+
 func (j *JWTHandlerRS256) UseLog(l *log.Logger) {
 	j.log = l.F(log.Ctx{})
 }

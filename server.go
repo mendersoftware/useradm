@@ -50,15 +50,19 @@ func RunServer(c config.Reader) error {
 	}
 
 	useradmapi := NewUserAdmApiHandlers(
-		func(l *log.Logger) UserAdmApp {
-			jwtHandler := NewJWTHandlerRS256(
-				privKey,
-				c.GetString(SettingJWTIssuer),
-				int64(c.GetInt(SettingJWTExpirationTimeout)),
-				l)
+		func(l *log.Logger) (UserAdmApp, error) {
+			db, err := GetDataStoreMongo(c.GetString(SettingDb), l)
+			if err != nil {
+				return nil, errors.Wrap(err, "database connection failed")
+			}
 
-			ua := NewUserAdm(jwtHandler)
-			return ua
+			jwtHandler := NewJWTHandlerRS256(privKey, l)
+
+			ua := NewUserAdm(jwtHandler, db, UserAdmConfig{
+				Issuer:         c.GetString(SettingJWTIssuer),
+				ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+			})
+			return ua, nil
 		})
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware))

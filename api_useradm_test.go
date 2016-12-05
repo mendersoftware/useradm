@@ -17,7 +17,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
@@ -48,16 +47,21 @@ func TestUserAdmApiLogin(t *testing.T) {
 	testCases := map[string]struct {
 		inAuthHeader string
 
-		uaToken *jwt.Token
+		uaToken *Token
 		uaError error
+
+		signed  string
+		signErr error
 
 		checker mt.ResponseChecker
 	}{
 		"ok": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &jwt.Token{Raw: "dummytoken"},
-			uaError:      nil,
+			uaToken:      &Token{},
+
+			signed: "dummytoken",
+
 			checker: &mt.BaseResponse{
 				Status:      http.StatusOK,
 				ContentType: "application/jwt",
@@ -65,19 +69,18 @@ func TestUserAdmApiLogin(t *testing.T) {
 			},
 		},
 		//NOTE: we will allow it in the full impl
-		"missing auth header": {
+		"initial user": {
 			inAuthHeader: "",
-			uaToken:      &jwt.Token{Raw: "dummytoken"},
-			uaError:      nil,
-			checker: mt.NewJSONResponse(
-				http.StatusUnauthorized,
-				nil,
-				restError("invalid or missing auth header")),
+			signed:       "initial",
+
+			checker: &mt.BaseResponse{
+				Status:      http.StatusOK,
+				ContentType: "application/jwt",
+				Body:        "initial",
+			},
 		},
 		"corrupt auth header": {
 			inAuthHeader: "ZW1haWw6cGFzcw==",
-			uaToken:      &jwt.Token{Raw: "dummytoken"},
-			uaError:      nil,
 			checker: mt.NewJSONResponse(
 				http.StatusUnauthorized,
 				nil,
@@ -85,7 +88,6 @@ func TestUserAdmApiLogin(t *testing.T) {
 		},
 		"useradm create error": {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &jwt.Token{Raw: "dummytoken"},
 			uaError:      errors.New("useradm creation internal error"),
 			checker: mt.NewJSONResponse(
 				http.StatusInternalServerError,
@@ -102,24 +104,39 @@ func TestUserAdmApiLogin(t *testing.T) {
 				restError("internal error"),
 			),
 		},
+		"sign error": {
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			uaToken:      &Token{},
+			signErr:      errors.New("sign error"),
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		useradm := &MockUserAdmApp{}
+		useradm := &mockUserAdmApp{
+			sign: func(_ *Token) (string, error) {
+				return tc.signed, tc.signErr
+			},
+		}
 		useradm.On("Login",
 			mock.AnythingOfType("string"),
 			mock.AnythingOfType("string")).
 			Return(tc.uaToken, tc.uaError)
+		useradm.On("SignToken").Return()
 
 		//make mock request
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
 
 		//make handler
-		factory := func(l *log.Logger) UserAdmApp {
-			return useradm
+		factory := func(l *log.Logger) (UserAdmApp, error) {
+			return useradm, nil
 		}
 
 		api := makeMockApiHandler(t, factory)

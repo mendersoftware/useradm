@@ -14,33 +14,29 @@
 package main
 
 import (
-	jwt "github.com/dgrijalva/jwt-go"
+	"testing"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
-func TestUserAdmLogin(t *testing.T) {
+func TestUserAdmSignToken(t *testing.T) {
 	//cases: handler err, no handler err
 	testCases := map[string]struct {
-		jwtToken      *jwt.Token
-		jwtHandlerErr error
+		signed  string
+		signErr error
 
-		outErr   error
-		outToken *jwt.Token
+		config UserAdmConfig
 	}{
 		"ok": {
-			jwtToken:      &jwt.Token{Raw: "dummytoken"},
-			jwtHandlerErr: nil,
-
-			outErr: nil,
+			signed:  "foo",
+			signErr: nil,
 		},
-		"token generation error": {
-			jwtToken:      nil,
-			jwtHandlerErr: errors.New("token generation error"),
-
-			outErr: errors.New("useradm: failed to generate token: token generation error"),
+		"token sign error": {
+			signed:  "",
+			signErr: errors.New("token generation error"),
 		},
 	}
 
@@ -48,19 +44,91 @@ func TestUserAdmLogin(t *testing.T) {
 		t.Logf("test case: %s", name)
 
 		mockJWTHandler := MockJWTHandler{}
-		mockJWTHandler.On("GenerateToken",
-			mock.AnythingOfType("string"),
-		).Return(tc.jwtToken, tc.jwtHandlerErr)
+		mockJWTHandler.On("ToJWT",
+			mock.AnythingOfType("*main.Token"),
+		).Return(tc.signed, tc.signErr)
 
-		useradm := NewUserAdm(&mockJWTHandler)
+		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
 
-		token, err := useradm.Login("dontcare", "dontcare")
+		sf := useradm.SignToken()
+
+		assert.NotNil(t, sf)
+
+		signed, err := sf(&Token{})
+
+		if tc.signErr != nil {
+			assert.EqualError(t, err, tc.signErr.Error())
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, tc.signed, signed)
+		}
+	}
+
+}
+
+func TestUserAdmLoginInitial(t *testing.T) {
+	testCases := map[string]struct {
+		dbEmpty bool
+		dbErr   error
+
+		outErr   error
+		outToken *Token
+
+		config UserAdmConfig
+	}{
+		"initial token": {
+			dbEmpty: true,
+			dbErr:   nil,
+
+			outErr: nil,
+			outToken: &Token{
+				Claims: Claims{
+					Subject: "initial",
+					Scope:   ScopeInitialUserCreate,
+				},
+			},
+
+			config: UserAdmConfig{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"db error": {
+			dbErr: errors.New("db failed"),
+
+			outErr: errors.New("useradm: failed to query database: db failed"),
+		},
+		"db not empty - no token": {
+			outToken: nil,
+			outErr:   ErrUnauthorized,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db := &mockDataStore{}
+		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbErr)
+
+		useradm := NewUserAdm(nil, db, tc.config)
+
+		token, err := useradm.Login("", "")
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
 		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tc.jwtToken.Raw, token.Raw)
+			if tc.outToken != nil && assert.NotNil(t, token) {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, token.Claims.ID)
+				assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
+				assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)
+				assert.WithinDuration(t,
+					time.Now().Add(time.Duration(tc.config.ExpirationTime)*time.Second),
+					time.Unix(token.Claims.ExpiresAt, 0),
+					time.Second)
+
+			}
 		}
 	}
+
 }
