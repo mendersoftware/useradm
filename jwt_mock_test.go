@@ -23,14 +23,67 @@ type MockJWTHandler struct {
 	mock.Mock
 }
 
-// GenerateToken provides a mock function with given fields: subject
-func (_m *MockJWTHandler) ToJWT(token *Token) (string, error) {
-	ret := _m.Called(token)
+// ToJWT provides a mock function with given fields: t
+func (_m *MockJWTHandler) ToJWT(t *Token) (string, error) {
+	ret := _m.Called(t)
 
-	return ret.String(0), ret.Error(1)
+	var r0 string
+	if rf, ok := ret.Get(0).(func(*Token) string); ok {
+		r0 = rf(t)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*Token) error); ok {
+		r1 = rf(t)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FromJWT provides a mock function with given fields: _a0
+func (_m *MockJWTHandler) FromJWT(_a0 string) (*Token, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *Token
+	if rf, ok := ret.Get(0).(func(string) *Token); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*Token)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // UseLog provides a mock function with given fields: l
 func (_m *MockJWTHandler) UseLog(l *log.Logger) {
 	_m.Called(l)
+}
+
+// WithLog provides a mock function with given fields: l
+func (_m *MockJWTHandler) WithLog(l *log.Logger) JWTHandler {
+	ret := _m.Called(l)
+
+	var r0 JWTHandler
+	if rf, ok := ret.Get(0).(func(*log.Logger) JWTHandler); ok {
+		r0 = rf(l)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(JWTHandler)
+		}
+	}
+
+	return r0
 }
