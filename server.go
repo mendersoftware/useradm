@@ -17,17 +17,19 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/useradm/authz"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"net/http"
 )
 
-func SetupAPI(stacktype string) (*rest.Api, error) {
+func SetupAPI(stacktype string, authz authz.Authorizer) (*rest.Api, error) {
 	api := rest.NewApi()
-	if err := SetupMiddleware(api, stacktype); err != nil {
+	if err := SetupMiddleware(api, stacktype, authz); err != nil {
 		return nil, errors.Wrap(err, "failed to setup middleware")
 	}
 
@@ -49,6 +51,10 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
 
+	jwth := NewJWTHandlerRS256(privKey, l)
+
+	authz := NewSimpleAuthz(jwth, l)
+
 	useradmapi := NewUserAdmApiHandlers(
 		func(l *log.Logger) (UserAdmApp, error) {
 			db, err := GetDataStoreMongo(c.GetString(SettingDb), l)
@@ -65,7 +71,7 @@ func RunServer(c config.Reader) error {
 			return ua, nil
 		})
 
-	api, err := SetupAPI(c.GetString(SettingMiddleware))
+	api, err := SetupAPI(c.GetString(SettingMiddleware), authz)
 	if err != nil {
 		return errors.Wrap(err, "API setup failed")
 	}

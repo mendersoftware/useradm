@@ -32,7 +32,7 @@ func TestSetupMiddleware(t *testing.T) {
 	for _, td := range tdata {
 		api := rest.NewApi()
 
-		err := SetupMiddleware(api, td.mwtype)
+		err := SetupMiddleware(api, td.mwtype, nil)
 		if err != nil && !td.experr {
 			t.Errorf("dod not expect error: %s", err)
 		} else if err == nil && td.experr {
