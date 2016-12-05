@@ -24,12 +24,15 @@ var (
 	// device not found
 	ErrDevNotFound = errors.New("device not found")
 	// device not found
-	ErrTokenNotFound = errors.New("token not found")
+	ErrTokenNotFound  = errors.New("token not found")
+	ErrDuplicateEmail = errors.New("user with a given email already exists")
 )
 
 type DataStore interface {
 	// IsEmpty returns true if database is empty (i.e. clean state of the
 	// system)
 	IsEmpty() (bool, error)
+	// CreateUser persists the user
+	CreateUser(u *UserModel) error
 	log.ContextLogger
 }

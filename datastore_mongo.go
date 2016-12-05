@@ -19,6 +19,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -26,6 +27,8 @@ import (
 const (
 	DbName      = "useradm"
 	DbUsersColl = "users"
+
+	DbUserEmail = "email"
 )
 
 var (
@@ -52,11 +55,19 @@ func GetDataStoreMongo(db string, l *log.Logger) (*DataStoreMongo, error) {
 	return d, nil
 }
 
-func NewDataStoreMongoWithSession(session *mgo.Session) *DataStoreMongo {
-	return &DataStoreMongo{
+func NewDataStoreMongoWithSession(session *mgo.Session) (*DataStoreMongo, error) {
+
+	db := &DataStoreMongo{
 		session: session,
 		log:     log.New(log.Ctx{}),
 	}
+
+	err := db.Index()
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 func NewDataStoreMongo(host string) (*DataStoreMongo, error) {
@@ -69,7 +80,10 @@ func NewDataStoreMongo(host string) (*DataStoreMongo, error) {
 		return nil, errors.New("failed to open mgo session")
 	}
 
-	db := NewDataStoreMongoWithSession(masterSession)
+	db, err := NewDataStoreMongoWithSession(masterSession)
+	if err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }
@@ -83,6 +97,43 @@ func (db *DataStoreMongo) IsEmpty() (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+func (db *DataStoreMongo) CreateUser(u *UserModel) error {
+	s := db.session.Copy()
+	defer s.Close()
+
+	//compute/set password hash
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate password hash")
+	}
+	u.Password = string(hash)
+
+	err = s.DB(DbName).C(DbUsersColl).Insert(u)
+	if err != nil {
+		if mgo.IsDup(err) {
+			return ErrDuplicateEmail
+		}
+
+		return errors.Wrap(err, "failed to insert user")
+	}
+
+	return nil
+}
+
+func (db *DataStoreMongo) Index() error {
+	session := db.session.Copy()
+	defer session.Close()
+
+	uniqueEmailIndex := mgo.Index{
+		Key:        []string{"email"},
+		Unique:     true,
+		Name:       "uniqueEmail",
+		Background: false,
+	}
+
+	return session.DB(DbName).C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
 }
 
 func (db *DataStoreMongo) UseLog(l *log.Logger) {

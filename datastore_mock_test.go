@@ -27,6 +27,20 @@ func (m *mockDataStore) IsEmpty() (bool, error) {
 	return ret.Get(0).(bool), ret.Error(1)
 }
 
+// CreateUser provides a mock function with given fields: u
+func (_m *mockDataStore) CreateUser(u *UserModel) error {
+	ret := _m.Called(u)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*UserModel) error); ok {
+		r0 = rf(u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // UseLog provides a mock function with given fields: l
 func (m *mockDataStore) UseLog(l *log.Logger) {
 	m.Called(l)
