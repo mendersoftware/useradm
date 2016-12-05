@@ -14,7 +14,11 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -25,9 +29,11 @@ import (
 )
 
 const (
-	uriAuthLogin    = "/api/0.1.0/auth/login"
-	uriAuthVerify   = "/api/0.1.0/auth/verify"
-	uriUsersInitial = "/api/0.1.0/users/initial"
+	uriBase         = "/api/0.1.0/"
+	uriAuthLogin    = uriBase + "auth/login"
+	uriAuthVerify   = uriBase + "auth/verify"
+	uriUsersInitial = uriBase + "users/initial"
+	uriUser         = uriBase + "users/:id"
 )
 
 var (
@@ -111,5 +117,67 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 }
 
 func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
-	rest.NotFound(w, r)
+	l := requestlog.GetRequestLogger(r.Env)
+
+	// get and validate user from body
+	var user UserModel
+	body, err := readBodyRaw(r)
+	if err != nil {
+		err = errors.Wrap(err, "failed to decode user info")
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	err = json.Unmarshal(body, &user)
+	if err != nil {
+		err = errors.Wrap(err, "failed to decode user info")
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	if err := user.ValidateNew(); err != nil {
+		err = errors.Wrap(err, "invalid user info")
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	useradm, err := u.createUserAdm(l)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	err = useradm.CreateUserInitial(&user)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	userurl := buildURL(r, uriUser, map[string]string{
+		":id": user.ID,
+	})
+	w.Header().Set("Location", userurl.String())
+	w.WriteHeader(http.StatusCreated)
+}
+
+func readBodyRaw(r *rest.Request) ([]byte, error) {
+	content, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return content, nil
+}
+
+func buildURL(r *rest.Request, template string, params map[string]string) *url.URL {
+	url := r.BaseUrl()
+
+	path := template
+	for k, v := range params {
+		path = strings.Replace(path, k, v, -1)
+	}
+	url.Path = path
+
+	return url
 }
