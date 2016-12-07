@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestMongoIsEmpty(t *testing.T) {
@@ -42,7 +43,8 @@ func TestMongoIsEmpty(t *testing.T) {
 		db.Wipe()
 
 		session := db.Session()
-		store := NewDataStoreMongoWithSession(session)
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
 
 		if !tc.empty {
 			// insert anything
@@ -56,6 +58,78 @@ func TestMongoIsEmpty(t *testing.T) {
 
 		// Need to close all sessions to be able to call wipe at next
 		// test case
+		session.Close()
+	}
+}
+
+func TestMongoCreateUser(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	exisitingUsers := []interface{}{
+		UserModel{
+			ID:       "1",
+			Email:    "foo@bar.com",
+			Password: "pretenditsahash",
+		},
+		UserModel{
+			ID:       "2",
+			Email:    "bar@bar.com",
+			Password: "pretenditsahash",
+		},
+	}
+
+	testCases := map[string]struct {
+		inUser UserModel
+		outErr string
+	}{
+		"ok": {
+			inUser: UserModel{
+				ID:       "1234",
+				Email:    "baz@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			outErr: "",
+		},
+		"duplicate email error": {
+			inUser: UserModel{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			outErr: "user with a given email already exists",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		err = session.DB(DbName).C(DbUsersColl).Insert(exisitingUsers...)
+		assert.NoError(t, err)
+
+		pass := tc.inUser.Password
+		err = store.CreateUser(&tc.inUser)
+
+		if tc.outErr == "" {
+			//fetch user by id, verify password checks out
+			var user UserModel
+			err := session.DB(DbName).C(DbUsersColl).FindId("1234").One(&user)
+			assert.NoError(t, err)
+			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
+
+			assert.NoError(t, err)
+
+		} else {
+			assert.EqualError(t, err, tc.outErr)
+		}
+
 		session.Close()
 	}
 }

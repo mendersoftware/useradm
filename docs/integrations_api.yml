@@ -105,6 +105,10 @@ paths:
           description: Unauthorized.
           schema:
             $ref: '#/definitions/Error'
+        403:
+          description: Forbidden.
+          schema:
+            $ref: '#/definitions/Error'
         500:
           description: Internal server error.
           schema:

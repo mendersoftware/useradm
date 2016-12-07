@@ -11,37 +11,26 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package authz
 
 import (
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/stretchr/testify/mock"
+	"github.com/pkg/errors"
 )
 
-type mockDataStore struct {
-	mock.Mock
-}
+var (
+	ErrAuthzUnauthorized = errors.New("unauthorized")
+	ErrAuthzNoAuthHeader = errors.New("missing or invalid auth header")
+	ErrAuthzTokenInvalid = errors.New("invalid jwt")
+)
 
-func (m *mockDataStore) IsEmpty() (bool, error) {
-	ret := m.Called()
-	return ret.Get(0).(bool), ret.Error(1)
-}
-
-// CreateUser provides a mock function with given fields: u
-func (_m *mockDataStore) CreateUser(u *UserModel) error {
-	ret := _m.Called(u)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*UserModel) error); ok {
-		r0 = rf(u)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UseLog provides a mock function with given fields: l
-func (m *mockDataStore) UseLog(l *log.Logger) {
-	m.Called(l)
+// Authorizer defines the interface for checking the permissions of a given user(token) vs an action on a resource.
+type Authorizer interface {
+	// Authorize checks if the given user (identified by token) has permissions to an action on a resource.
+	// returns:
+	// nil if authorization is granted
+	// ErrAuthzUnauthorized otherwise
+	// ErrAuthzTokenInvalid if can't parse token
+	Authorize(token, resource, action string) error
+	WithLog(l *log.Logger) Authorizer
 }

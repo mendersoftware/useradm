@@ -42,3 +42,31 @@ func (_m *mockUserAdmApp) SignToken() SignFunc {
 
 	return _m.sign
 }
+
+// CreateUser provides a mock function with given fields: u
+func (_m *mockUserAdmApp) CreateUser(u *UserModel) error {
+	ret := _m.Called(u)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*UserModel) error); ok {
+		r0 = rf(u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CreateUserInitial provides a mock function with given fields: u
+func (_m *mockUserAdmApp) CreateUserInitial(u *UserModel) error {
+	ret := _m.Called(u)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*UserModel) error); ok {
+		r0 = rf(u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

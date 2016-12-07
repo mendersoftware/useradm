@@ -16,12 +16,14 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/accesslog"
 	dlog "github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
+	"github.com/mendersoftware/useradm/authz"
 )
 
 const (
@@ -80,7 +82,7 @@ var (
 	}
 )
 
-func SetupMiddleware(api *rest.Api, mwtype string) error {
+func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer) error {
 
 	l := dlog.New(dlog.Ctx{})
 
@@ -136,5 +138,35 @@ func SetupMiddleware(api *rest.Api, mwtype string) error {
 		},
 	})
 
+	authzmw := &authz.AuthzMiddleware{
+		Authz:   authorizer,
+		ResFunc: extractResourceId,
+	}
+
+	//allow access without authz on /login
+	//all other enpoinds protected
+	ifmw := &rest.IfMiddleware{
+		Condition: func(r *rest.Request) bool {
+			if r.URL.Path == uriAuthLogin && r.Method == http.MethodPost {
+				return true
+			} else {
+				return false
+			}
+		},
+		IfFalse: authzmw,
+	}
+
+	api.Use(ifmw)
+
 	return nil
+}
+
+// extracts resource ID from the request url
+func extractResourceId(r *rest.Request) (string, error) {
+	//tokenize everything past the api version
+	path := r.URL.Path
+
+	path = strings.Replace(path, uriBase, "", 1)
+
+	return strings.Replace(path, "/", ":", 1), nil
 }
