@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	EnvProd = "prod"
-	EnvDev  = "dev"
+	EnvProd   = "prod"
+	EnvDev    = "dev"
+	EnvNoAuth = "noauth"
 )
 
 var (
@@ -79,6 +80,9 @@ var (
 	middlewareMap = map[string][]rest.Middleware{
 		EnvProd: DefaultProdStack,
 		EnvDev:  DefaultDevStack,
+		// this is a temporary solution until work on user authentication is
+		// done and UI part is implemented
+		EnvNoAuth: DefaultDevStack,
 	}
 )
 
@@ -137,6 +141,13 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer) 
 			"Link",
 		},
 	})
+
+	// TODO: remove below once user authentication is fully implemented
+	if mwtype == EnvNoAuth {
+		// do not use `AuthzMiddleware` and return immediately instead
+		l.Warn("running without authorization API and should not be used in production")
+		return nil
+	}
 
 	authzmw := &authz.AuthzMiddleware{
 		Authz:   authorizer,
