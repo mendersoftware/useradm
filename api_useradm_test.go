@@ -57,7 +57,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 
 		checker mt.ResponseChecker
 	}{
-		"ok": {
+		"ok: regular flow": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			uaToken:      &Token{},
@@ -70,8 +70,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 				Body:        "dummytoken",
 			},
 		},
-		//NOTE: we will allow it in the full impl
-		"initial user": {
+		"ok: initial flow": {
 			inAuthHeader: "",
 			signed:       "initial",
 
@@ -81,14 +80,25 @@ func TestUserAdmApiLogin(t *testing.T) {
 				Body:        "initial",
 			},
 		},
-		"corrupt auth header": {
+		"error: unauthorized": {
+			//"email:pass"
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			signed:       "initial",
+			uaError:      ErrUnauthorized,
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnauthorized,
+				nil,
+				restError("unauthorized")),
+		},
+		"error: corrupt auth header": {
 			inAuthHeader: "ZW1haWw6cGFzcw==",
 			checker: mt.NewJSONResponse(
 				http.StatusUnauthorized,
 				nil,
 				restError("invalid or missing auth header")),
 		},
-		"useradm create error": {
+		"error: useradm create error": {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			uaError:      errors.New("useradm creation internal error"),
 			checker: mt.NewJSONResponse(
@@ -96,7 +106,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 				nil,
 				restError("internal error")),
 		},
-		"useradm error": {
+		"error: useradm error": {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			uaToken:      nil,
 			uaError:      errors.New("useradm internal error"),
@@ -106,7 +116,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 				restError("internal error"),
 			),
 		},
-		"sign error": {
+		"error: sign error": {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			uaToken:      &Token{},
 			signErr:      errors.New("sign error"),
