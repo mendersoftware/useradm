@@ -34,5 +34,7 @@ type DataStore interface {
 	IsEmpty() (bool, error)
 	// CreateUser persists the user
 	CreateUser(u *UserModel) error
+	//GetUserByEmail returns nil,nil if not found
+	GetUserByEmail(email string) (*UserModel, error)
 	log.ContextLogger
 }

@@ -66,19 +66,31 @@ func TestUserAdmSignToken(t *testing.T) {
 
 }
 
-func TestUserAdmLoginInitial(t *testing.T) {
+func TestUserAdmLogin(t *testing.T) {
 	testCases := map[string]struct {
-		dbEmpty bool
-		dbErr   error
+		inEmail    string
+		inPassword string
+
+		dbEmpty    bool
+		dbEmptyErr error
+
+		dbUser    *UserModel
+		dbUserErr error
 
 		outErr   error
 		outToken *Token
 
 		config UserAdmConfig
 	}{
-		"initial token": {
-			dbEmpty: true,
-			dbErr:   nil,
+		"ok: initial login": {
+			inEmail:    "",
+			inPassword: "",
+
+			dbEmpty:    true,
+			dbEmptyErr: nil,
+
+			dbUser:    nil,
+			dbUserErr: nil,
 
 			outErr: nil,
 			outToken: &Token{
@@ -93,14 +105,118 @@ func TestUserAdmLoginInitial(t *testing.T) {
 				ExpirationTime: 10,
 			},
 		},
-		"db error": {
-			dbErr: errors.New("db failed"),
+
+		"ok: regular login": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbEmpty:    false,
+			dbEmptyErr: nil,
+
+			dbUser: &UserModel{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			outErr: nil,
+			outToken: &Token{
+				Claims: Claims{
+					Subject: "1234",
+					Scope:   ScopeAll,
+				},
+			},
+
+			config: UserAdmConfig{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"error: initial login, db IsEmpty() error": {
+			dbEmptyErr: errors.New("db failed"),
 
 			outErr: errors.New("useradm: failed to query database: db failed"),
 		},
-		"db not empty - no token": {
+		"error: initial login, db not empty": {
 			outToken: nil,
 			outErr:   ErrUnauthorized,
+		},
+		"error: trying initial login, db not empty": {
+			inEmail:    "",
+			inPassword: "",
+
+			dbEmpty:    false,
+			dbEmptyErr: nil,
+
+			dbUser:    nil,
+			dbUserErr: nil,
+
+			outErr:   ErrUnauthorized,
+			outToken: nil,
+
+			config: UserAdmConfig{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"error: regular login, no user": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbEmpty:    false,
+			dbEmptyErr: nil,
+
+			dbUser:    nil,
+			dbUserErr: nil,
+
+			outErr:   ErrUnauthorized,
+			outToken: nil,
+
+			config: UserAdmConfig{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"error: regular login, wrong password": {
+			inEmail:    "foo@bar.com",
+			inPassword: "notcorrecthorsebatterystaple",
+
+			dbEmpty:    false,
+			dbEmptyErr: nil,
+
+			dbUser: &UserModel{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			outErr:   ErrUnauthorized,
+			outToken: nil,
+
+			config: UserAdmConfig{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"error: regular login, db.GetUserByEmail() error": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbEmpty:    false,
+			dbEmptyErr: nil,
+
+			dbUser:    nil,
+			dbUserErr: errors.New("db: internal error"),
+
+			outErr:   errors.New("useradm: failed to get user: db: internal error"),
+			outToken: nil,
+
+			config: UserAdmConfig{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
 		},
 	}
 
@@ -108,14 +224,16 @@ func TestUserAdmLoginInitial(t *testing.T) {
 		t.Logf("test case: %s", name)
 
 		db := &mockDataStore{}
-		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbErr)
+		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
+		db.On("GetUserByEmail", tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
 		useradm := NewUserAdm(nil, db, tc.config)
 
-		token, err := useradm.Login("", "")
+		token, err := useradm.Login(tc.inEmail, tc.inPassword)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
+			assert.Nil(t, token)
 		} else {
 			if tc.outToken != nil && assert.NotNil(t, token) {
 				assert.NoError(t, err)

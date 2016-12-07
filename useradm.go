@@ -18,6 +18,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -58,34 +59,63 @@ func NewUserAdm(jwtHandler JWTHandler, db DataStore, config UserAdmConfig) *User
 	}
 }
 
-// this is a dummy method for now - always returns a valid JWT; no db interaction
 func (u *UserAdm) Login(email, pass string) (*Token, error) {
-
 	if email == "" && pass == "" {
-		empty, err := u.db.IsEmpty()
-		if err != nil {
-			return nil, errors.Wrap(err, "useradm: failed to query database")
-		}
-		if !empty {
-			return nil, ErrUnauthorized
-		}
-		// initial login
-		t := u.generateInitialToken()
-
-		return t, nil
+		return u.doInitialLogin()
 	}
 
-	return nil, nil
+	return u.doRegularLogin(email, pass)
 }
 
-func (u *UserAdm) generateInitialToken() *Token {
+// implements the initial/first-time login flow
+// issues a token for user creation if no users defined yet
+func (u *UserAdm) doInitialLogin() (*Token, error) {
+	empty, err := u.db.IsEmpty()
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to query database")
+	}
+	if !empty {
+		return nil, ErrUnauthorized
+	}
+
+	t := u.generateToken("initial", ScopeInitialUserCreate)
+
+	return t, nil
+}
+
+// implements the regular login flow
+// needs real creds, issues a general-purpose token
+func (u *UserAdm) doRegularLogin(email, password string) (*Token, error) {
+	//get user
+	user, err := u.db.GetUserByEmail(email)
+	if user == nil && err == nil {
+		return nil, ErrUnauthorized
+	}
+
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to get user")
+	}
+
+	//verify password
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return nil, ErrUnauthorized
+	}
+
+	//generate token
+	t := u.generateToken(user.ID, ScopeAll)
+
+	return t, nil
+}
+
+func (u *UserAdm) generateToken(subject, scope string) *Token {
 	return &Token{
 		Claims: Claims{
 			ID:        uuid.NewV4().String(),
 			Issuer:    u.config.Issuer,
 			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
-			Subject:   "initial",
-			Scope:     ScopeInitialUserCreate,
+			Subject:   subject,
+			Scope:     scope,
 		},
 	}
 }

@@ -90,7 +90,6 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	// e.g. "useradm: unauthorized"; for now, every error is an internal one
 	token, err := useradm.Login(email, pass)
 	if err != nil {
 		switch {

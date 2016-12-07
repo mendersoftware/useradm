@@ -122,6 +122,25 @@ func (db *DataStoreMongo) CreateUser(u *UserModel) error {
 	return nil
 }
 
+func (db *DataStoreMongo) GetUserByEmail(email string) (*UserModel, error) {
+	s := db.session.Copy()
+	defer s.Close()
+
+	var user UserModel
+
+	err := s.DB(DbName).C(DbUsersColl).Find(bson.M{DbUserEmail: email}).One(&user)
+
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, nil
+		} else {
+			return nil, errors.Wrap(err, "failed to fetch user")
+		}
+	}
+
+	return &user, nil
+}
+
 func (db *DataStoreMongo) Index() error {
 	session := db.session.Copy()
 	defer session.Close()
