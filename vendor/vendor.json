@@ -26,6 +26,12 @@
 			"revisionTime": "2016-11-06T00:05:15Z"
 		},
 		{
+			"checksumSHA1": "CDOphCxF7dup+hBBVRpFeQhM9Jw=",
+			"path": "github.com/asaskevich/govalidator",
+			"revision": "593d64559f7600f29581a3ee42177f5dbded27a9",
+			"revisionTime": "2016-07-15T17:06:12Z"
+		},
+		{
 			"checksumSHA1": "2Fy1Y6Z3lRRX1891WF/+HT4XS2I=",
 			"path": "github.com/dgrijalva/jwt-go",
 			"revision": "9ed569b5d1ac936e6494082958d63a6aa4fff99a",
@@ -98,6 +104,12 @@
 			"revisionTime": "2016-09-08T09:36:58Z"
 		},
 		{
+			"checksumSHA1": "etVGhlz8BDhM/Z2Vy8oxRKzoerk=",
+			"path": "github.com/mendersoftware/go-lib-micro",
+			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
+			"revisionTime": "2016-11-24T10:14:05Z"
+		},
+		{
 			"checksumSHA1": "TBy4BC8vdb8QenUOK253xKqZ4r8=",
 			"path": "github.com/mendersoftware/go-lib-micro/accesslog",
 			"revision": "9f71306f755154587081d23bd0e622cf280ae6e3",
@@ -162,6 +174,60 @@
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "f3009df150dadf309fdee4a54ed65c124afad715",
 			"revisionTime": "2016-10-20T16:18:36Z"
+		},
+		{
+			"checksumSHA1": "DP8R0Q7TDlHbhz9Livyj8RkRKvU=",
+			"path": "github.com/nbutton23/zxcvbn-go",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "HEqKoRuKJ86gic8DPZqtDKZNo7E=",
+			"path": "github.com/nbutton23/zxcvbn-go/adjacency",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "etc47rBuvFfzUZ7n8EDLQiDQeXU=",
+			"path": "github.com/nbutton23/zxcvbn-go/data",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "/NSHii4ih+43IBnoXrjAtIzTtPI=",
+			"path": "github.com/nbutton23/zxcvbn-go/entropy",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "VyH3r1FJcSB13wj0T812EMASq1Q=",
+			"path": "github.com/nbutton23/zxcvbn-go/frequency",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "U6O/H84jE24jhCSOgi+IsjSPomM=",
+			"path": "github.com/nbutton23/zxcvbn-go/match",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "BHO5wnIg2NQTYSILHmpezEJFv4E=",
+			"path": "github.com/nbutton23/zxcvbn-go/matching",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "vRXGbBJSonwD03A/WAkhNkYNY38=",
+			"path": "github.com/nbutton23/zxcvbn-go/scoring",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
+		},
+		{
+			"checksumSHA1": "cEdCjSL9cNJm5o+nGwPM3WgloyM=",
+			"path": "github.com/nbutton23/zxcvbn-go/utils/math",
+			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
+			"revisionTime": "2016-06-27T00:44:24Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
@@ -234,6 +300,24 @@
 			"path": "github.com/stretchr/testify/mock",
 			"revision": "d77da356e56a7428ad25149ca77381849a6a5232",
 			"revisionTime": "2016-06-15T09:26:46Z"
+		},
+		{
+			"checksumSHA1": "vE43s37+4CJ2CDU6TlOUOYE0K9c=",
+			"path": "golang.org/x/crypto/bcrypt",
+			"revision": "b2fa06b6af4b7c9bfeb8569ab7b17f04550717bf",
+			"revisionTime": "2016-10-28T17:07:08Z"
+		},
+		{
+			"checksumSHA1": "JsJdKXhz87gWenMwBeejTOeNE7k=",
+			"path": "golang.org/x/crypto/blowfish",
+			"revision": "b2fa06b6af4b7c9bfeb8569ab7b17f04550717bf",
+			"revisionTime": "2016-10-28T17:07:08Z"
+		},
+		{
+			"checksumSHA1": "4hQNaJUg67lF/QcO0NKzUeqlaew=",
+			"path": "golang.org/x/net/context",
+			"revision": "4cfeeeb61ae8daa2a4b06572024786e56f23504c",
+			"revisionTime": "2016-10-30T07:22:20Z"
 		},
 		{
 			"checksumSHA1": "KqecwXo3OO+p4N+E9RhlHvl9I+w=",
