@@ -48,7 +48,7 @@ func TestUserAdmSignToken(t *testing.T) {
 			mock.AnythingOfType("*main.Token"),
 		).Return(tc.signed, tc.signErr)
 
-		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
+		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config, nil)
 
 		sf := useradm.SignToken()
 
@@ -227,7 +227,7 @@ func TestUserAdmLogin(t *testing.T) {
 		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
 		db.On("GetUserByEmail", tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
-		useradm := NewUserAdm(nil, db, tc.config)
+		useradm := NewUserAdm(nil, db, tc.config, nil)
 
 		token, err := useradm.Login(tc.inEmail, tc.inPassword)
 
@@ -294,7 +294,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 			mock.AnythingOfType("*main.UserModel")).
 			Return(tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, UserAdmConfig{})
+		useradm := NewUserAdm(nil, db, UserAdmConfig{}, nil)
 
 		err := useradm.CreateUser(&tc.inUser)
 
@@ -368,7 +368,7 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			mock.AnythingOfType("*main.UserModel")).
 			Return(tc.dbCreateErr)
 
-		useradm := NewUserAdm(nil, db, UserAdmConfig{})
+		useradm := NewUserAdm(nil, db, UserAdmConfig{}, nil)
 
 		err := useradm.CreateUserInitial(&tc.inUser)
 
@@ -378,4 +378,8 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
+}
+
+func TestUserAdmVerify(t *testing.T) {
+	//in: token
 }

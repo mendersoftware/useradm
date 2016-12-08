@@ -67,7 +67,7 @@ func RunServer(c config.Reader) error {
 			ua := NewUserAdm(jwtHandler, db, UserAdmConfig{
 				Issuer:         c.GetString(SettingJWTIssuer),
 				ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
-			})
+			}, l)
 			return ua, nil
 		})
 

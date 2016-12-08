@@ -16,6 +16,7 @@ package main
 import (
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -49,13 +50,15 @@ type UserAdm struct {
 	jwtHandler JWTHandler
 	db         DataStore
 	config     UserAdmConfig
+	log        *log.Logger
 }
 
-func NewUserAdm(jwtHandler JWTHandler, db DataStore, config UserAdmConfig) *UserAdm {
+func NewUserAdm(jwtHandler JWTHandler, db DataStore, config UserAdmConfig, log *log.Logger) *UserAdm {
 	return &UserAdm{
 		jwtHandler: jwtHandler,
 		db:         db,
 		config:     config,
+		log:        log,
 	}
 }
 
