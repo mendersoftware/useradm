@@ -29,6 +29,10 @@ var (
 // JWTHandler jwt generator/verifier
 type JWTHandler interface {
 	ToJWT(t *Token) (string, error)
+	// FromJWT parses the token and does basic validity checks (Claims.Valid().
+	// returns:
+	// ErrTokenExpired when the token is valid but expired
+	// ErrTokenInvalid when the token is invalid (malformed, missing required claims, etc.)
 	FromJWT(string) (*Token, error)
 	WithLog(l *log.Logger) JWTHandler
 	log.ContextLogger
@@ -68,13 +72,15 @@ func (j *JWTHandlerRS256) FromJWT(tokstr string) (*Token, error) {
 		return &j.privKey.PublicKey, nil
 	})
 
+	// our Claims return Mender-specific validation errors
+	// go-jwt will wrap them in a generic ValidationError - unwrap and return directly
 	if err != nil {
-		if vErr, ok := err.(*jwt.ValidationError); ok {
-			if (vErr.Errors & jwt.ValidationErrorExpired) != 0 {
-				return nil, ErrTokenExpired
-			}
+		err, ok := err.(*jwt.ValidationError)
+		if ok && err.Inner != nil {
+			return nil, err.Inner
+		} else {
+			return nil, err
 		}
-		return nil, ErrTokenInvalid
 	}
 
 	token := Token{}

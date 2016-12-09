@@ -13,6 +13,10 @@
 //    limitations under the License.
 package main
 
+import (
+	"time"
+)
+
 type Claims struct {
 	Audience  string `json:"aud,omitempty"`
 	ExpiresAt int64  `json:"exp,omitempty"`
@@ -25,6 +29,24 @@ type Claims struct {
 }
 
 // Valid checks if claims are valid. Returns error if validation fails.
+// Note that for now we're only using iss, exp, sub, scp.
+// Basic checks are done here, field correctness (e.g. issuer) - at the service level, where this info is available.
 func (c *Claims) Valid() error {
+	if c.Issuer == "" ||
+		c.ExpiresAt == 0 ||
+		c.Subject == "" ||
+		c.Scope == "" {
+		return ErrTokenInvalid
+	}
+
+	if !verifyExp(c.ExpiresAt) {
+		return ErrTokenExpired
+	}
+
 	return nil
+}
+
+func verifyExp(exp int64) bool {
+	now := time.Now().Unix()
+	return now <= exp
 }
