@@ -14,8 +14,14 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"io/ioutil"
 	"testing"
+
+	"github.com/mendersoftware/useradm/jwt"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleAuthzAuthorize(t *testing.T) {
@@ -27,7 +33,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 	//
 	//
 	privkey := loadPrivKey("crypto/private.pem", t)
-	jwth := NewJWTHandlerRS256(privkey, nil)
+	jwth := jwt.NewJWTHandlerRS256(privkey, nil)
 
 	testCases := map[string]struct {
 		inResource string
@@ -106,7 +112,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
-		authz := NewSimpleAuthz(jwth, nil)
+		authz := &SimpleAuthz{}
 
 		err := authz.Authorize(tc.inToken, tc.inResource, tc.inAction)
 
@@ -116,4 +122,25 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			assert.EqualError(t, err, tc.outErr)
 		}
 	}
+}
+
+func loadPrivKey(path string, t *testing.T) *rsa.PrivateKey {
+	pem_data, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.FailNow()
+	}
+
+	block, _ := pem.Decode(pem_data)
+
+	if block == nil ||
+		block.Type != "RSA PRIVATE KEY" {
+		t.FailNow()
+	}
+
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		t.FailNow()
+	}
+
+	return key
 }
