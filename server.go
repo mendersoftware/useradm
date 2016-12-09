@@ -52,9 +52,7 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
 
-	jwth := jwt.NewJWTHandlerRS256(privKey, l)
-
-	authz := NewSimpleAuthz(jwth, l)
+	authz := &SimpleAuthz{l: l}
 
 	useradmapi := NewUserAdmApiHandlers(
 		func(l *log.Logger) (UserAdmApp, error) {
