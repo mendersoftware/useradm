@@ -11,12 +11,12 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package jwt
 
 import (
 	"crypto/rsa"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 )
@@ -57,7 +57,7 @@ func NewJWTHandlerRS256(privKey *rsa.PrivateKey, l *log.Logger) *JWTHandlerRS256
 
 func (j *JWTHandlerRS256) ToJWT(token *Token) (string, error) {
 	//generate
-	jt := jwt.NewWithClaims(jwt.SigningMethodRS256, &token.Claims)
+	jt := jwtgo.NewWithClaims(jwtgo.SigningMethodRS256, &token.Claims)
 
 	//sign
 	data, err := jt.SignedString(j.privKey)
@@ -65,8 +65,8 @@ func (j *JWTHandlerRS256) ToJWT(token *Token) (string, error) {
 }
 
 func (j *JWTHandlerRS256) FromJWT(tokstr string) (*Token, error) {
-	jwttoken, err := jwt.ParseWithClaims(tokstr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+	jwttoken, err := jwtgo.ParseWithClaims(tokstr, &Claims{}, func(token *jwtgo.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwtgo.SigningMethodRSA); !ok {
 			return nil, errors.New("unexpected signing method: " + token.Method.Alg())
 		}
 		return &j.privKey.PublicKey, nil
@@ -75,7 +75,7 @@ func (j *JWTHandlerRS256) FromJWT(tokstr string) (*Token, error) {
 	// our Claims return Mender-specific validation errors
 	// go-jwt will wrap them in a generic ValidationError - unwrap and return directly
 	if err != nil {
-		err, ok := err.(*jwt.ValidationError)
+		err, ok := err.(*jwtgo.ValidationError)
 		if ok && err.Inner != nil {
 			return nil, err.Inner
 		} else {
