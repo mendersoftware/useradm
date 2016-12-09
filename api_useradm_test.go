@@ -26,6 +26,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -49,7 +50,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 	testCases := map[string]struct {
 		inAuthHeader string
 
-		uaToken *Token
+		uaToken *jwt.Token
 		uaError error
 
 		signed  string
@@ -60,7 +61,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		"ok: regular flow": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &Token{},
+			uaToken:      &jwt.Token{},
 
 			signed: "dummytoken",
 
@@ -118,7 +119,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		},
 		"error: sign error": {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &Token{},
+			uaToken:      &jwt.Token{},
 			signErr:      errors.New("sign error"),
 			checker: mt.NewJSONResponse(
 				http.StatusInternalServerError,
@@ -133,7 +134,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 
 		//make mock useradm
 		useradm := &mockUserAdmApp{
-			sign: func(_ *Token) (string, error) {
+			sign: func(_ *jwt.Token) (string, error) {
 				return tc.signed, tc.signErr
 			},
 		}
@@ -177,7 +178,7 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	privKey, err := getRSAPrivKey("crypto/private.pem")
 	assert.NoError(t, err)
 
-	jwth := NewJWTHandlerRS256(privKey, nil)
+	jwth := jwt.NewJWTHandlerRS256(privKey, nil)
 
 	//allow access without authz on /login
 	//all other enpoinds protected

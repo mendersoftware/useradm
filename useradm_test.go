@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -45,7 +46,7 @@ func TestUserAdmSignToken(t *testing.T) {
 
 		mockJWTHandler := MockJWTHandler{}
 		mockJWTHandler.On("ToJWT",
-			mock.AnythingOfType("*main.Token"),
+			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)
 
 		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config, nil)
@@ -54,7 +55,7 @@ func TestUserAdmSignToken(t *testing.T) {
 
 		assert.NotNil(t, sf)
 
-		signed, err := sf(&Token{})
+		signed, err := sf(&jwt.Token{})
 
 		if tc.signErr != nil {
 			assert.EqualError(t, err, tc.signErr.Error())
@@ -78,7 +79,7 @@ func TestUserAdmLogin(t *testing.T) {
 		dbUserErr error
 
 		outErr   error
-		outToken *Token
+		outToken *jwt.Token
 
 		config UserAdmConfig
 	}{
@@ -93,8 +94,8 @@ func TestUserAdmLogin(t *testing.T) {
 			dbUserErr: nil,
 
 			outErr: nil,
-			outToken: &Token{
-				Claims: Claims{
+			outToken: &jwt.Token{
+				Claims: jwt.Claims{
 					Subject: "initial",
 					Scope:   ScopeInitialUserCreate,
 				},
@@ -121,8 +122,8 @@ func TestUserAdmLogin(t *testing.T) {
 			dbUserErr: nil,
 
 			outErr: nil,
-			outToken: &Token{
-				Claims: Claims{
+			outToken: &jwt.Token{
+				Claims: jwt.Claims{
 					Subject: "1234",
 					Scope:   ScopeAll,
 				},
