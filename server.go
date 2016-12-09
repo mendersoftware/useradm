@@ -24,6 +24,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 )
 
@@ -51,7 +52,7 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
 
-	jwth := NewJWTHandlerRS256(privKey, l)
+	jwth := jwt.NewJWTHandlerRS256(privKey, l)
 
 	authz := NewSimpleAuthz(jwth, l)
 
@@ -62,7 +63,7 @@ func RunServer(c config.Reader) error {
 				return nil, errors.Wrap(err, "database connection failed")
 			}
 
-			jwtHandler := NewJWTHandlerRS256(privKey, l)
+			jwtHandler := jwt.NewJWTHandlerRS256(privKey, l)
 
 			ua := NewUserAdm(jwtHandler, db, UserAdmConfig{
 				Issuer:         c.GetString(SettingJWTIssuer),
