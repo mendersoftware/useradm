@@ -15,6 +15,7 @@ package authz
 
 import (
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 )
 
@@ -31,6 +32,6 @@ type Authorizer interface {
 	// nil if authorization is granted
 	// ErrAuthzUnauthorized otherwise
 	// ErrAuthzTokenInvalid if can't parse token
-	Authorize(token, resource, action string) error
+	Authorize(token *jwt.Token, resource, action string) error
 	WithLog(l *log.Logger) Authorizer
 }

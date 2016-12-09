@@ -14,6 +14,9 @@
 package authz
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -24,7 +27,9 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -42,7 +47,19 @@ func TestAuthzMiddleware(t *testing.T) {
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			token:  "dummy",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
+				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
+				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
+				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
+				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
+				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
+				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
+				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
+				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
+				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
+				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
+				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
 			action: "GET",
 
 			resource:    "foo:bar",
@@ -56,6 +73,7 @@ func TestAuthzMiddleware(t *testing.T) {
 				map[string]string{"foo": "bar"},
 			),
 		},
+
 		"error: missing token header": {
 			token:  "",
 			action: "GET",
@@ -71,8 +89,21 @@ func TestAuthzMiddleware(t *testing.T) {
 				restError("missing or invalid auth header"),
 			),
 		},
+
 		"error: resource id error": {
-			token:  "dummy",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
+				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
+				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
+				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
+				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
+				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
+				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
+				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
+				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
+				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
+				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
+				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
 			action: "GET",
 
 			resource:    "",
@@ -102,7 +133,19 @@ func TestAuthzMiddleware(t *testing.T) {
 			),
 		},
 		"error: unauthorized token": {
-			token:  "dummy",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
+				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
+				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
+				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
+				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
+				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
+				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
+				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
+				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
+				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
+				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
+				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
 			action: "GET",
 
 			resource:    "foo:bar",
@@ -117,7 +160,19 @@ func TestAuthzMiddleware(t *testing.T) {
 			),
 		},
 		"error: authorizer internal error": {
-			token:  "dummy",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
+				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
+				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
+				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
+				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
+				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
+				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
+				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
+				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
+				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
+				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
+				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
 			action: "GET",
 
 			resource:    "foo:bar",
@@ -133,17 +188,8 @@ func TestAuthzMiddleware(t *testing.T) {
 		},
 	}
 
-	//cases
-	// x tok hdr ok, auth ok, res ok
-	// x no token hdr
-	// x resid err
-
-	// Authorizer: Unauthorized
-	// x Authorizer: InvTokn
-	// Authorizer: internal
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
-		t.Logf("TOKEN: %v", tc.token)
 
 		//setup api
 		api := rest.NewApi()
@@ -158,7 +204,7 @@ func TestAuthzMiddleware(t *testing.T) {
 		//setup mocks
 		a := &MockAuthorizer{}
 		a.On("Authorize",
-			tc.token,
+			mock.AnythingOfType("*jwt.Token"),
 			tc.resource,
 			tc.action).Return(tc.authErr)
 
@@ -171,9 +217,12 @@ func TestAuthzMiddleware(t *testing.T) {
 		}
 
 		//finish setting up the middleware
+		privkey := loadPrivKey("../crypto/private.pem", t)
+		jwth := jwt.NewJWTHandlerRS256(privkey, nil)
 		mw := AuthzMiddleware{
-			Authz:   a,
-			ResFunc: resfunc,
+			Authz:      a,
+			ResFunc:    resfunc,
+			JWTHandler: jwth,
 		}
 		api.Use(&mw)
 
@@ -211,4 +260,43 @@ func makeReq(method, url, auth string, body interface{}) *http.Request {
 
 func restError(status string) map[string]interface{} {
 	return map[string]interface{}{"error": status, "request_id": "test"}
+}
+
+func loadPrivKey(path string, t *testing.T) *rsa.PrivateKey {
+	pem_data, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.FailNow()
+	}
+
+	block, _ := pem.Decode(pem_data)
+
+	if block == nil ||
+		block.Type != "RSA PRIVATE KEY" {
+		t.FailNow()
+	}
+
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		t.FailNow()
+	}
+
+	return key
+}
+
+func TestGetRequestToken(t *testing.T) {
+	token := &jwt.Token{
+		Claims: jwt.Claims{
+			Subject:   "foo",
+			Issuer:    "bar",
+			ExpiresAt: 12345,
+		},
+	}
+
+	env := map[string]interface{}{
+		"authz_token": token,
+	}
+
+	outToken := GetRequestToken(env)
+	assert.Equal(t, token, outToken)
+
 }
