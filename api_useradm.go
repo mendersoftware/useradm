@@ -25,6 +25,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
+	"github.com/mendersoftware/useradm/authz"
 	"github.com/pkg/errors"
 )
 
@@ -112,7 +113,28 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 }
 
 func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {
-	w.(http.ResponseWriter).WriteHeader(http.StatusOK)
+	l := requestlog.GetRequestLogger(r.Env)
+
+	// note that the request has passed through authz - the token is valid
+	token := authz.GetRequestToken(r.Env)
+
+	useradm, err := u.createUserAdm(l)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	err = useradm.Verify(token)
+	if err != nil {
+		if err == ErrUnauthorized {
+			rest_utils.RestErrWithLog(w, r, l, ErrUnauthorized, http.StatusUnauthorized)
+		} else {
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
