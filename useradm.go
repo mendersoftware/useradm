@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -24,6 +25,8 @@ import (
 
 var (
 	ErrUnauthorized   = errors.New("unauthorized")
+	ErrAuthExpired    = errors.New("token expired")
+	ErrAuthInvalid    = errors.New("token is invalid")
 	ErrUserNotInitial = errors.New("user database not empty")
 )
 
@@ -32,6 +35,7 @@ type UserAdmApp interface {
 	Login(email, pass string) (*jwt.Token, error)
 	CreateUser(u *UserModel) error
 	CreateUserInitial(u *UserModel) error
+	Verify(token *jwt.Token) error
 
 	// SignToken returns a function that can be used for generating a signed
 	// token using configuration & method set up in UserAdmApp
@@ -153,4 +157,26 @@ func (ua *UserAdm) CreateUserInitial(u *UserModel) error {
 	} else {
 		return ErrUserNotInitial
 	}
+}
+
+func (ua *UserAdm) Verify(token *jwt.Token) error {
+	if token == nil {
+		return ErrUnauthorized
+	}
+
+	//check service-specific claims - iss
+	if token.Claims.Issuer != ua.config.Issuer {
+		return ErrUnauthorized
+	}
+
+	user, err := ua.db.GetUserById(token.Claims.Subject)
+	if user == nil && err == nil {
+		return ErrUnauthorized
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get user")
+	}
+
+	return nil
 }

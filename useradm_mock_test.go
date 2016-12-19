@@ -14,6 +14,7 @@
 package main
 
 import (
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -64,6 +65,20 @@ func (_m *mockUserAdmApp) CreateUserInitial(u *UserModel) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*UserModel) error); ok {
 		r0 = rf(u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Verify provides a mock function with given fields: tokstr
+func (_m *mockUserAdmApp) Verify(token *jwt.Token) error {
+	ret := _m.Called(token)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*jwt.Token) error); ok {
+		r0 = rf(token)
 	} else {
 		r0 = ret.Error(0)
 	}

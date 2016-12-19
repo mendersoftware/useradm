@@ -382,5 +382,78 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 }
 
 func TestUserAdmVerify(t *testing.T) {
-	//in: token
+	testCases := map[string]struct {
+		token *jwt.Token
+
+		dbUser *UserModel
+		dbErr  error
+
+		err error
+	}{
+		"ok": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			dbUser: &UserModel{
+				ID: "1234",
+			},
+			dbErr: nil,
+			err:   nil,
+		},
+		"error: invalid token issuer": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "foo",
+				},
+			},
+			dbUser: nil,
+			dbErr:  nil,
+			err:    ErrUnauthorized,
+		},
+		"error: user not found": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			dbUser: nil,
+			err:    ErrUnauthorized,
+		},
+		"error: db": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			dbUser: nil,
+			dbErr:  errors.New("db internal error"),
+
+			err: errors.New("useradm: failed to get user: db internal error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		config := UserAdmConfig{Issuer: "mender"}
+
+		db := &mockDataStore{}
+		db.On("GetUserById", tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+
+		useradm := NewUserAdm(nil, db, config, nil)
+
+		err := useradm.Verify(tc.token)
+
+		if tc.err != nil {
+			assert.EqualError(t, err, tc.err.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+	}
 }
