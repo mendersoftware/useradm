@@ -36,5 +36,6 @@ type DataStore interface {
 	CreateUser(u *UserModel) error
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(email string) (*UserModel, error)
+	GetUserById(id string) (*UserModel, error)
 	log.ContextLogger
 }
