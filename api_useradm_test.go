@@ -175,17 +175,15 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	)
 
 	//setup the authz middleware
-	privKey, err := getRSAPrivKey("crypto/private.pem")
-	assert.NoError(t, err)
-
-	jwth := jwt.NewJWTHandlerRS256(privKey, nil)
+	privkey := loadPrivKey("crypto/private.pem", t)
 
 	//allow access without authz on /login
 	//all other enpoinds protected
-	authorizer := NewSimpleAuthz(jwth, nil)
+	authorizer := &SimpleAuthz{}
 	authzmw := &authz.AuthzMiddleware{
-		Authz:   authorizer,
-		ResFunc: extractResourceId,
+		Authz:      authorizer,
+		ResFunc:    extractResourceId,
+		JWTHandler: jwt.NewJWTHandlerRS256(privkey, nil),
 	}
 
 	ifmw := &rest.IfMiddleware{
