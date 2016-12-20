@@ -26,6 +26,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -49,7 +50,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 	testCases := map[string]struct {
 		inAuthHeader string
 
-		uaToken *Token
+		uaToken *jwt.Token
 		uaError error
 
 		signed  string
@@ -60,7 +61,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		"ok: regular flow": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &Token{},
+			uaToken:      &jwt.Token{},
 
 			signed: "dummytoken",
 
@@ -118,7 +119,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		},
 		"error: sign error": {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &Token{},
+			uaToken:      &jwt.Token{},
 			signErr:      errors.New("sign error"),
 			checker: mt.NewJSONResponse(
 				http.StatusInternalServerError,
@@ -133,7 +134,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 
 		//make mock useradm
 		useradm := &mockUserAdmApp{
-			sign: func(_ *Token) (string, error) {
+			sign: func(_ *jwt.Token) (string, error) {
 				return tc.signed, tc.signErr
 			},
 		}
@@ -174,17 +175,15 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	)
 
 	//setup the authz middleware
-	privKey, err := getRSAPrivKey("crypto/private.pem")
-	assert.NoError(t, err)
-
-	jwth := NewJWTHandlerRS256(privKey, nil)
+	privkey := loadPrivKey("crypto/private.pem", t)
 
 	//allow access without authz on /login
 	//all other enpoinds protected
-	authorizer := NewSimpleAuthz(jwth, nil)
+	authorizer := &SimpleAuthz{}
 	authzmw := &authz.AuthzMiddleware{
-		Authz:   authorizer,
-		ResFunc: extractResourceId,
+		Authz:      authorizer,
+		ResFunc:    extractResourceId,
+		JWTHandler: jwt.NewJWTHandlerRS256(privkey, nil),
 	}
 
 	ifmw := &rest.IfMiddleware{
@@ -443,6 +442,100 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			"http://1.2.3.4/api/0.1.0/users/initial",
 			authHdr,
 			tc.inBody)
+
+		//test
+		recorded := test.RunRequest(t, api, req)
+		mt.CheckResponse(t, tc.checker, recorded)
+	}
+}
+
+func TestUserAdmApiPostVerify(t *testing.T) {
+	t.Parallel()
+
+	// we setup authz, so a real token is needed
+	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJleHAiOjQ0ODE4OTM5MDAsImlzcyI6Im1lb" +
+		"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
+		"NwIjoibWVuZGVyLioifQ.NzXNhh_59_03mal_" +
+		"-KImArI8sfvnNFyCW0dEqmnW1gYojmTjWBBEJK" +
+		"xCnh8hbHhY2mfv6Jk9wk1dEnT8_8mCACrBrw97" +
+		"7oRUzlogu8yV2z1m65jpvDBGK_IsJz_GfZA2w" +
+		"SBz55hkqiMEzFqswIEC46xW5RMY0vfMMSVIO7f" +
+		"ncOlmTgJTdCVtr9RVDREBJIoWoC-OLGYat9ivx" +
+		"yA_N_mRvu5iFPZI3FniYaBjY9k_jR62I-QPIVk" +
+		"j3zWev8zKVH0Sef0lB6SAapVs1GS3rK3-oy6wk" +
+		"ACNbKY1tB7Ox6CKiJ9F8Hhvh_icOtfvjCuiY-HkJL55T4wziFQNv2xU_2W7Lw"
+
+	testCases := map[string]struct {
+		uaCreateError error
+
+		uaError error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			uaCreateError: nil,
+			uaError:       nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				nil,
+			),
+		},
+		"error: useradm unauthorized": {
+			uaCreateError: nil,
+			uaError:       ErrUnauthorized,
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnauthorized,
+				nil,
+				restError("unauthorized"),
+			),
+		},
+		"error: useradm internal": {
+			uaCreateError: nil,
+			uaError:       errors.New("some internal error"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+		"error: useradm create": {
+			uaCreateError: errors.New("some internal error"),
+			uaError:       nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %v", name)
+
+		//make mock useradm
+		useradm := &mockUserAdmApp{}
+		useradm.On("Verify",
+			mock.AnythingOfType("*jwt.Token")).
+			Return(tc.uaError)
+
+		//make handler
+		factory := func(l *log.Logger) (UserAdmApp, error) {
+			return useradm, tc.uaCreateError
+		}
+
+		api := makeMockApiHandler(t, factory)
+
+		//make request
+		req := makeReq("POST",
+			"http://1.2.3.4/api/0.1.0/auth/verify",
+			"Bearer "+token,
+			nil)
 
 		//test
 		recorded := test.RunRequest(t, api, req)

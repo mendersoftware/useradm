@@ -14,6 +14,7 @@
 package main
 
 import (
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -21,18 +22,18 @@ import (
 type mockUserAdmApp struct {
 	mock.Mock
 
-	sign SignFunc
+	sign jwt.SignFunc
 }
 
 // Login provides a mock function with given fields: email, pass
-func (_m *mockUserAdmApp) Login(email string, pass string) (*Token, error) {
+func (_m *mockUserAdmApp) Login(email string, pass string) (*jwt.Token, error) {
 	ret := _m.Called(email, pass)
-	tok, _ := ret.Get(0).(*Token)
+	tok, _ := ret.Get(0).(*jwt.Token)
 
 	return tok, ret.Error(1)
 }
 
-func (_m *mockUserAdmApp) SignToken() SignFunc {
+func (_m *mockUserAdmApp) SignToken() jwt.SignFunc {
 	_m.Called()
 	// this does not work with mock, because SignFunc is defined as:
 	//   func(*Token) (string, error)
@@ -64,6 +65,20 @@ func (_m *mockUserAdmApp) CreateUserInitial(u *UserModel) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*UserModel) error); ok {
 		r0 = rf(u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Verify provides a mock function with given fields: tokstr
+func (_m *mockUserAdmApp) Verify(token *jwt.Token) error {
+	ret := _m.Called(token)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*jwt.Token) error); ok {
+		r0 = rf(token)
 	} else {
 		r0 = ret.Error(0)
 	}

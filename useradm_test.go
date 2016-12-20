@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -45,16 +46,16 @@ func TestUserAdmSignToken(t *testing.T) {
 
 		mockJWTHandler := MockJWTHandler{}
 		mockJWTHandler.On("ToJWT",
-			mock.AnythingOfType("*main.Token"),
+			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)
 
-		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
+		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config, nil)
 
 		sf := useradm.SignToken()
 
 		assert.NotNil(t, sf)
 
-		signed, err := sf(&Token{})
+		signed, err := sf(&jwt.Token{})
 
 		if tc.signErr != nil {
 			assert.EqualError(t, err, tc.signErr.Error())
@@ -78,7 +79,7 @@ func TestUserAdmLogin(t *testing.T) {
 		dbUserErr error
 
 		outErr   error
-		outToken *Token
+		outToken *jwt.Token
 
 		config UserAdmConfig
 	}{
@@ -93,8 +94,8 @@ func TestUserAdmLogin(t *testing.T) {
 			dbUserErr: nil,
 
 			outErr: nil,
-			outToken: &Token{
-				Claims: Claims{
+			outToken: &jwt.Token{
+				Claims: jwt.Claims{
 					Subject: "initial",
 					Scope:   ScopeInitialUserCreate,
 				},
@@ -121,8 +122,8 @@ func TestUserAdmLogin(t *testing.T) {
 			dbUserErr: nil,
 
 			outErr: nil,
-			outToken: &Token{
-				Claims: Claims{
+			outToken: &jwt.Token{
+				Claims: jwt.Claims{
 					Subject: "1234",
 					Scope:   ScopeAll,
 				},
@@ -227,7 +228,7 @@ func TestUserAdmLogin(t *testing.T) {
 		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
 		db.On("GetUserByEmail", tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
-		useradm := NewUserAdm(nil, db, tc.config)
+		useradm := NewUserAdm(nil, db, tc.config, nil)
 
 		token, err := useradm.Login(tc.inEmail, tc.inPassword)
 
@@ -294,7 +295,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 			mock.AnythingOfType("*main.UserModel")).
 			Return(tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, UserAdmConfig{})
+		useradm := NewUserAdm(nil, db, UserAdmConfig{}, nil)
 
 		err := useradm.CreateUser(&tc.inUser)
 
@@ -368,12 +369,89 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			mock.AnythingOfType("*main.UserModel")).
 			Return(tc.dbCreateErr)
 
-		useradm := NewUserAdm(nil, db, UserAdmConfig{})
+		useradm := NewUserAdm(nil, db, UserAdmConfig{}, nil)
 
 		err := useradm.CreateUserInitial(&tc.inUser)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+}
+
+func TestUserAdmVerify(t *testing.T) {
+	testCases := map[string]struct {
+		token *jwt.Token
+
+		dbUser *UserModel
+		dbErr  error
+
+		err error
+	}{
+		"ok": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			dbUser: &UserModel{
+				ID: "1234",
+			},
+			dbErr: nil,
+			err:   nil,
+		},
+		"error: invalid token issuer": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "foo",
+				},
+			},
+			dbUser: nil,
+			dbErr:  nil,
+			err:    ErrUnauthorized,
+		},
+		"error: user not found": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			dbUser: nil,
+			err:    ErrUnauthorized,
+		},
+		"error: db": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			dbUser: nil,
+			dbErr:  errors.New("db internal error"),
+
+			err: errors.New("useradm: failed to get user: db internal error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		config := UserAdmConfig{Issuer: "mender"}
+
+		db := &mockDataStore{}
+		db.On("GetUserById", tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+
+		useradm := NewUserAdm(nil, db, config, nil)
+
+		err := useradm.Verify(tc.token)
+
+		if tc.err != nil {
+			assert.EqualError(t, err, tc.err.Error())
 		} else {
 			assert.NoError(t, err)
 		}

@@ -14,25 +14,27 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/mendersoftware/useradm/jwt"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestToken(t *testing.T) {
-	var tok Token
+	var tok jwt.Token
 
-	tok = Token{
-		Claims: Claims{
+	tok = jwt.Token{
+		Claims: jwt.Claims{
 			Scope: "foo",
 		},
 	}
 
-	assert.False(t, tok.IsInitial())
+	assert.False(t, IsInitial(&tok))
 
-	tok = Token{
-		Claims: Claims{
+	tok = jwt.Token{
+		Claims: jwt.Claims{
 			Scope: ScopeInitialUserCreate,
 		},
 	}
-	assert.True(t, tok.IsInitial())
+	assert.True(t, IsInitial(&tok))
 }

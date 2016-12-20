@@ -64,6 +64,28 @@ func (m *mockDataStore) GetUserByEmail(email string) (*UserModel, error) {
 	return r0, r1
 }
 
+func (m *mockDataStore) GetUserById(id string) (*UserModel, error) {
+	ret := m.Called(id)
+
+	var r0 *UserModel
+	if rf, ok := ret.Get(0).(func(string) *UserModel); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*UserModel)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UseLog provides a mock function with given fields: l
 func (m *mockDataStore) UseLog(l *log.Logger) {
 	m.Called(l)

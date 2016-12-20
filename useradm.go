@@ -16,6 +16,8 @@ package main
 import (
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -23,18 +25,21 @@ import (
 
 var (
 	ErrUnauthorized   = errors.New("unauthorized")
+	ErrAuthExpired    = errors.New("token expired")
+	ErrAuthInvalid    = errors.New("token is invalid")
 	ErrUserNotInitial = errors.New("user database not empty")
 )
 
 type UserAdmApp interface {
 	// Login accepts email/password, returns JWT
-	Login(email, pass string) (*Token, error)
+	Login(email, pass string) (*jwt.Token, error)
 	CreateUser(u *UserModel) error
 	CreateUserInitial(u *UserModel) error
+	Verify(token *jwt.Token) error
 
 	// SignToken returns a function that can be used for generating a signed
 	// token using configuration & method set up in UserAdmApp
-	SignToken() SignFunc
+	SignToken() jwt.SignFunc
 }
 
 type UserAdmConfig struct {
@@ -46,20 +51,22 @@ type UserAdmConfig struct {
 
 type UserAdm struct {
 	// JWT serialized/deserializer
-	jwtHandler JWTHandler
+	jwtHandler jwt.JWTHandler
 	db         DataStore
 	config     UserAdmConfig
+	log        *log.Logger
 }
 
-func NewUserAdm(jwtHandler JWTHandler, db DataStore, config UserAdmConfig) *UserAdm {
+func NewUserAdm(jwtHandler jwt.JWTHandler, db DataStore, config UserAdmConfig, log *log.Logger) *UserAdm {
 	return &UserAdm{
 		jwtHandler: jwtHandler,
 		db:         db,
 		config:     config,
+		log:        log,
 	}
 }
 
-func (u *UserAdm) Login(email, pass string) (*Token, error) {
+func (u *UserAdm) Login(email, pass string) (*jwt.Token, error) {
 	if email == "" && pass == "" {
 		return u.doInitialLogin()
 	}
@@ -69,7 +76,7 @@ func (u *UserAdm) Login(email, pass string) (*Token, error) {
 
 // implements the initial/first-time login flow
 // issues a token for user creation if no users defined yet
-func (u *UserAdm) doInitialLogin() (*Token, error) {
+func (u *UserAdm) doInitialLogin() (*jwt.Token, error) {
 	empty, err := u.db.IsEmpty()
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to query database")
@@ -85,7 +92,7 @@ func (u *UserAdm) doInitialLogin() (*Token, error) {
 
 // implements the regular login flow
 // needs real creds, issues a general-purpose token
-func (u *UserAdm) doRegularLogin(email, password string) (*Token, error) {
+func (u *UserAdm) doRegularLogin(email, password string) (*jwt.Token, error) {
 	//get user
 	user, err := u.db.GetUserByEmail(email)
 	if user == nil && err == nil {
@@ -108,9 +115,9 @@ func (u *UserAdm) doRegularLogin(email, password string) (*Token, error) {
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope string) *Token {
-	return &Token{
-		Claims: Claims{
+func (u *UserAdm) generateToken(subject, scope string) *jwt.Token {
+	return &jwt.Token{
+		Claims: jwt.Claims{
 			ID:        uuid.NewV4().String(),
 			Issuer:    u.config.Issuer,
 			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
@@ -120,8 +127,8 @@ func (u *UserAdm) generateToken(subject, scope string) *Token {
 	}
 }
 
-func (u *UserAdm) SignToken() SignFunc {
-	return func(t *Token) (string, error) {
+func (u *UserAdm) SignToken() jwt.SignFunc {
+	return func(t *jwt.Token) (string, error) {
 		return u.jwtHandler.ToJWT(t)
 	}
 }
@@ -150,4 +157,26 @@ func (ua *UserAdm) CreateUserInitial(u *UserModel) error {
 	} else {
 		return ErrUserNotInitial
 	}
+}
+
+func (ua *UserAdm) Verify(token *jwt.Token) error {
+	if token == nil {
+		return ErrUnauthorized
+	}
+
+	//check service-specific claims - iss
+	if token.Claims.Issuer != ua.config.Issuer {
+		return ErrUnauthorized
+	}
+
+	user, err := ua.db.GetUserById(token.Claims.Subject)
+	if user == nil && err == nil {
+		return ErrUnauthorized
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get user")
+	}
+
+	return nil
 }

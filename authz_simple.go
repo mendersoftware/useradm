@@ -16,6 +16,7 @@ package main
 import (
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/jwt"
 )
 
 const (
@@ -26,31 +27,23 @@ const (
 // SimpleAuthz is a trivial authorizer, mostly ensuring
 // proper permission check for the 'create initial user' case.
 type SimpleAuthz struct {
-	jwth JWTHandler
-	l    *log.Logger
-}
-
-func NewSimpleAuthz(jwth JWTHandler, l *log.Logger) *SimpleAuthz {
-	return &SimpleAuthz{
-		jwth: jwth,
-		l:    l}
+	l *log.Logger
 }
 
 // Authorize makes SimpleAuthz implement the Authorizer interface.
-func (sa *SimpleAuthz) Authorize(token string, resource, action string) error {
+func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) error {
+	if token == nil {
+		return authz.ErrAuthzUnauthorized
+	}
+
 	// bypass checks for login
+	// for other resources - verify authz
 	if resource == ResourceLogin {
 		return nil
 	}
 
-	// for other resources - parse token
-	tok, err := sa.jwth.WithLog(sa.l).FromJWT(token)
-	if err != nil {
-		return authz.ErrAuthzTokenInvalid
-	}
-
 	// check correct scope for initial user creation
-	scope := tok.Claims.Scope
+	scope := token.Claims.Scope
 	if scope == ScopeInitialUserCreate {
 		if action == "POST" && resource == ResourceInitialUser {
 			return nil
@@ -69,7 +62,6 @@ func (sa *SimpleAuthz) Authorize(token string, resource, action string) error {
 
 func (sa *SimpleAuthz) WithLog(l *log.Logger) authz.Authorizer {
 	return &SimpleAuthz{
-		jwth: sa.jwth.WithLog(l),
-		l:    l,
+		l: l,
 	}
 }

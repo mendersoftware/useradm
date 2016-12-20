@@ -202,3 +202,72 @@ func TestMongoGetUserByEmail(t *testing.T) {
 		session.Close()
 	}
 }
+
+func TestMongoGetUserById(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	existingUsers := []interface{}{
+		UserModel{
+			ID:       "1",
+			Email:    "foo@bar.com",
+			Password: "passwordhash12345",
+		},
+		UserModel{
+			ID:       "2",
+			Email:    "bar@bar.com",
+			Password: "passwordhashqwerty",
+		},
+	}
+
+	testCases := map[string]struct {
+		inId    string
+		outUser *UserModel
+	}{
+		"ok - found 1": {
+			inId: "1",
+			outUser: &UserModel{
+				ID:       "1",
+				Email:    "foo@bar.com",
+				Password: "passwordhash12345",
+			},
+		},
+		"ok - found 2": {
+			inId: "2",
+			outUser: &UserModel{
+				ID:       "2",
+				Email:    "bar@bar.com",
+				Password: "passwordhashqwerty",
+			},
+		},
+		"not found": {
+			inId:    "3",
+			outUser: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		err = session.DB(DbName).C(DbUsersColl).Insert(existingUsers...)
+		assert.NoError(t, err)
+
+		user, err := store.GetUserById(tc.inId)
+
+		if tc.outUser != nil {
+			assert.Equal(t, *tc.outUser, *user)
+		} else {
+			assert.Nil(t, user)
+			assert.Nil(t, err)
+		}
+
+		session.Close()
+	}
+}

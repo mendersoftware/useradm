@@ -11,13 +11,13 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package jwt
 
 import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	jwt "github.com/dgrijalva/jwt-go"
+	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -25,7 +25,7 @@ import (
 )
 
 func TestNewJWTHandlerRS256(t *testing.T) {
-	privKey := loadPrivKey("crypto/private.pem", t)
+	privKey := loadPrivKey("../crypto/private.pem", t)
 	jwtHandler := NewJWTHandlerRS256(privKey, nil)
 
 	assert.NotNil(t, jwtHandler)
@@ -39,7 +39,7 @@ func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 		expiresInSec int64
 	}{
 		"ok": {
-			privKey: loadPrivKey("crypto/private.pem", t),
+			privKey: loadPrivKey("../crypto/private.pem", t),
 			claims: Claims{
 				Issuer:  "Mender",
 				Subject: "foo",
@@ -71,7 +71,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 		outErr   error
 	}{
 		"ok (all claims)": {
-			privKey: loadPrivKey("crypto/private.pem", t),
+			privKey: loadPrivKey("../crypto/private.pem", t),
 
 			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJhdWQiOiJNZW5kZXIiLCJleHAiOjIxNDc0ODM2NDcsImp" +
@@ -100,7 +100,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 			},
 		},
 		"ok (some claims)": {
-			privKey: loadPrivKey("crypto/private.pem", t),
+			privKey: loadPrivKey("../crypto/private.pem", t),
 
 			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJle" +
 				"HAiOjIxNDc0ODM2NDcsImp0aSI6InNvbWVpZCIsIml" +
@@ -127,12 +127,12 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 			},
 		},
 		"error - token invalid": {
-			privKey: loadPrivKey("crypto/private.pem", t),
+			privKey: loadPrivKey("../crypto/private.pem", t),
 
 			inToken: "1234123412341234",
 
 			outToken: Token{},
-			outErr:   errors.New("jwt: token invalid"),
+			outErr:   errors.New("token contains an invalid number of segments"),
 		},
 	}
 
@@ -171,9 +171,9 @@ func loadPrivKey(path string, t *testing.T) *rsa.PrivateKey {
 	return key
 }
 
-func parseGeneratedTokenRS256(t *testing.T, token string, key *rsa.PrivateKey) *jwt.Token {
-	tokenParsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+func parseGeneratedTokenRS256(t *testing.T, token string, key *rsa.PrivateKey) *jwtgo.Token {
+	tokenParsed, err := jwtgo.Parse(token, func(token *jwtgo.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwtgo.SigningMethodRSA); !ok {
 			return nil, errors.New("Unexpected signing method: " + token.Method.Alg())
 		}
 		return &key.PublicKey, nil

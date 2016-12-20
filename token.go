@@ -14,36 +14,10 @@
 package main
 
 import (
-	"github.com/pkg/errors"
+	"github.com/mendersoftware/useradm/jwt"
 )
 
-// SignFunc will sign and encode token.
-type SignFunc func(token *Token) (string, error)
-
-// Token wrapper
-type Token struct {
-	Claims Claims
-}
-
-// MarshalJWT marshals Token into JWT comaptible format. `sign` provides means
-// for generating a signed JWT token.
-func (t *Token) MarshalJWT(sign SignFunc) ([]byte, error) {
-	if sign == nil {
-		panic("no signature helper")
-	}
-
-	signed, err := sign(t)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to sign token")
-	}
-	return []byte(signed), nil
-}
-
-func (t *Token) UnmarshalJWT([]byte) error {
-	return nil
-}
-
 // IsInitial returns true if token scope allows for initial user setup
-func (t *Token) IsInitial() bool {
+func IsInitial(t *jwt.Token) bool {
 	return t.Claims.Scope == ScopeInitialUserCreate
 }

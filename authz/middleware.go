@@ -20,13 +20,20 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
+	"github.com/mendersoftware/useradm/jwt"
+)
+
+const (
+	// token's key in request.Env
+	ReqToken = "authz_token"
 )
 
 // AuthzMiddleware checks the authorization on a given request.
-// It retrieves the requested resource and action, and delegates the authz check to an Authorizer.
+// It retrieves the token + requested resource and action, and delegates the authz check to an Authorizer.
 type AuthzMiddleware struct {
-	Authz   Authorizer
-	ResFunc ResourceExtractor
+	Authz      Authorizer
+	ResFunc    ResourceExtractor
+	JWTHandler jwt.JWTHandler
 }
 
 // ResourceExtractor extract resource IDs from requests.
@@ -38,11 +45,20 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 		l := requestlog.GetRequestLogger(r.Env)
 
 		//get token, no token header = http 401
-		token := extractToken(r.Header)
-		if token == "" {
+		tokstr := extractToken(r.Header)
+		if tokstr == "" {
 			rest_utils.RestErrWithLog(w, r, l, ErrAuthzNoAuthHeader, http.StatusUnauthorized)
 			return
 		}
+
+		// parse token, insert into env
+		token, err := mw.JWTHandler.WithLog(l).FromJWT(tokstr)
+		if err != nil {
+			rest_utils.RestErrWithLog(w, r, l, ErrAuthzTokenInvalid, http.StatusUnauthorized)
+			return
+		}
+
+		r.Env[ReqToken] = token
 
 		// extract resource id
 		resid, err := mw.ResFunc(r)
@@ -81,4 +97,8 @@ func extractToken(header http.Header) string {
 	tokenStr := strings.Replace(authHeader, "Bearer", "", 1)
 	tokenStr = strings.Replace(tokenStr, "bearer", "", 1)
 	return strings.TrimSpace(tokenStr)
+}
+
+func GetRequestToken(env map[string]interface{}) *jwt.Token {
+	return env[ReqToken].(*jwt.Token)
 }
