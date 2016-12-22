@@ -28,9 +28,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func SetupAPI(stacktype string, authz authz.Authorizer) (*rest.Api, error) {
+func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.JWTHandler) (*rest.Api, error) {
 	api := rest.NewApi()
-	if err := SetupMiddleware(api, stacktype, authz); err != nil {
+	if err := SetupMiddleware(api, stacktype, authz, jwth); err != nil {
 		return nil, errors.Wrap(err, "failed to setup middleware")
 	}
 
@@ -53,6 +53,7 @@ func RunServer(c config.Reader) error {
 	}
 
 	authz := &SimpleAuthz{l: l}
+	jwth := jwt.NewJWTHandlerRS256(privKey, l)
 
 	useradmapi := NewUserAdmApiHandlers(
 		func(l *log.Logger) (UserAdmApp, error) {
@@ -61,7 +62,7 @@ func RunServer(c config.Reader) error {
 				return nil, errors.Wrap(err, "database connection failed")
 			}
 
-			jwtHandler := jwt.NewJWTHandlerRS256(privKey, l)
+			jwtHandler := jwth
 
 			ua := NewUserAdm(jwtHandler, db, UserAdmConfig{
 				Issuer:         c.GetString(SettingJWTIssuer),
@@ -70,7 +71,7 @@ func RunServer(c config.Reader) error {
 			return ua, nil
 		})
 
-	api, err := SetupAPI(c.GetString(SettingMiddleware), authz)
+	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {
 		return errors.Wrap(err, "API setup failed")
 	}

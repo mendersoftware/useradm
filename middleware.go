@@ -24,6 +24,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/jwt"
 )
 
 const (
@@ -82,7 +83,7 @@ var (
 	}
 )
 
-func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer) error {
+func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, jwth jwt.JWTHandler) error {
 
 	l := dlog.New(dlog.Ctx{})
 
@@ -139,8 +140,9 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer) 
 	})
 
 	authzmw := &authz.AuthzMiddleware{
-		Authz:   authorizer,
-		ResFunc: extractResourceId,
+		Authz:      authorizer,
+		ResFunc:    extractResourceId,
+		JWTHandler: jwth,
 	}
 
 	//allow access without authz on /login
