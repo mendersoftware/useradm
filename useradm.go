@@ -169,6 +169,12 @@ func (ua *UserAdm) Verify(token *jwt.Token) error {
 		return ErrUnauthorized
 	}
 
+	// don't check the db if it's the initial user creation request
+	if token.Claims.Scope == ScopeInitialUserCreate &&
+		token.Claims.Subject == "initial" {
+		return nil
+	}
+
 	user, err := ua.db.GetUserById(token.Claims.Subject)
 	if user == nil && err == nil {
 		return ErrUnauthorized
