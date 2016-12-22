@@ -21,6 +21,7 @@ import (
 
 const (
 	ResourceLogin       = "auth:login"
+	ResourceVerify      = "auth:verify"
 	ResourceInitialUser = "users:initial"
 )
 
@@ -34,6 +35,12 @@ type SimpleAuthz struct {
 func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) error {
 	if token == nil {
 		return authz.ErrAuthzUnauthorized
+	}
+
+	// 'verify' is a special case - it will be called on all mgmt API calls in the system
+	// return immediately and let the target service handle authz
+	if resource == ResourceVerify {
+		return nil
 	}
 
 	// bypass checks for login
