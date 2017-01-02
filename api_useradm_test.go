@@ -340,21 +340,6 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 				restError("invalid user info: password too short"),
 			),
 		},
-		"error: valid body, password to weak": {
-			inToken: validToken,
-			inBody: UserModel{
-				Email:    "foo@bar.com",
-				Password: "asdf1234",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusBadRequest,
-				nil,
-				restError("invalid user info: password too weak"),
-			),
-		},
 		"error: useradm error": {
 			inToken: validToken,
 			inBody: UserModel{
