@@ -69,6 +69,19 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			},
 			outErr: "unauthorized",
 		},
+		"error: use 'mender.users.initial.create' with an incorrect resource/action": {
+			inResource: "foo:bar",
+			inAction:   "POST",
+			inToken: &jwt.Token{
+				Claims: jwt.Claims{
+					Issuer:    "mender",
+					ExpiresAt: 2147483647,
+					Subject:   "testsubject",
+					Scope:     ScopeInitialUserCreate,
+				},
+			},
+			outErr: "unauthorized",
+		},
 	}
 
 	for name, tc := range testCases {

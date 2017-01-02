@@ -33,23 +33,17 @@ type SimpleAuthz struct {
 
 // Authorize makes SimpleAuthz implement the Authorizer interface.
 func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) error {
+	// immediately fail when no token present
 	if token == nil {
 		return authz.ErrAuthzUnauthorized
 	}
 
-	// 'verify' is a special case - it will be called on all mgmt API calls in the system
-	// return immediately and let the target service handle authz
-	if resource == ResourceVerify {
-		return nil
-	}
-
-	// bypass checks for login
-	// for other resources - verify authz
+	// bypass checks for login - doesn't use token at all
 	if resource == ResourceLogin {
 		return nil
 	}
 
-	// check correct scope for initial user creation
+	// allow just a single action for ScopeInitialUserCreate
 	scope := token.Claims.Scope
 	if scope == ScopeInitialUserCreate {
 		if action == "POST" && resource == ResourceInitialUser {
@@ -57,10 +51,9 @@ func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) erro
 		} else {
 			return authz.ErrAuthzUnauthorized
 		}
-	}
-
-	// allow all for 'mender.*'
-	if scope == ScopeAll {
+	} else if scope == ScopeAll {
+		// allow all actions for ScopeAll
+		// note: this rule also applies to POST /verify, called upon every mgmt api request
 		return nil
 	}
 
