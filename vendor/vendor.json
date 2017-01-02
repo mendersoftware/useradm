@@ -176,12 +176,6 @@
 			"revisionTime": "2016-10-20T16:18:36Z"
 		},
 		{
-			"checksumSHA1": "DP8R0Q7TDlHbhz9Livyj8RkRKvU=",
-			"path": "github.com/nbutton23/zxcvbn-go",
-			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",
-			"revisionTime": "2016-06-27T00:44:24Z"
-		},
-		{
 			"checksumSHA1": "HEqKoRuKJ86gic8DPZqtDKZNo7E=",
 			"path": "github.com/nbutton23/zxcvbn-go/adjacency",
 			"revision": "a22cb81b2ecdde8b68e9ffb8824731cbf88e1de4",

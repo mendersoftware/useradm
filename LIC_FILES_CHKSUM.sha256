@@ -22,9 +22,6 @@ f56f51f3aac08674202e9c399e4f32e733c12953c09e15464b0cc3227ac442c0  vendor/github.
 fde7d610b9b95fc5a6304055c4dae951025b630aaa42a24e95ebf76675ae832c  vendor/github.com/stretchr/objx/LICENSE.md
 f71d43124a8b70fbaef7c835d1639e89a7acdb252b05dda35652247902880724  vendor/github.com/dgrijalva/jwt-go/LICENSE
 012d0f6caf604aedba723982c0d8a28f664ecd957de5131bc22c87a0d36b7115  vendor/github.com/asaskevich/govalidator/LICENSE
-cf0492a938bfb94aeff5261fe47da430ae8742ae0363e11894f99f0bb6ddbdf5  vendor/github.com/nbutton23/zxcvbn-go/LICENSE.txt
-
-
 
 # Mozilla Public 2.0
 bef1747eda88b9ed46e94830b0d978c3499dad5dfe38d364971760881901dadd  vendor/github.com/hashicorp/hcl/LICENSE
