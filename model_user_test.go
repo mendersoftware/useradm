@@ -52,13 +52,6 @@ func TestValidateNew(t *testing.T) {
 			},
 			outErr: "password too short",
 		},
-		"email ok, pass invalid (too weak)": {
-			inUser: UserModel{
-				Email:    "foo@bar.com",
-				Password: "h4x0r1234",
-			},
-			outErr: "password too weak",
-		},
 	}
 
 	for name, tc := range testCases {

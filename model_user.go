@@ -16,12 +16,10 @@ package main
 
 import (
 	"github.com/asaskevich/govalidator"
-	zxcvbn "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
 )
 
 const (
-	MinPasswordScore  = 3
 	MinPasswordLength = 8
 )
 
@@ -55,10 +53,6 @@ func (u UserModel) ValidateNew() error {
 func checkPwd(password string) error {
 	if len(password) < MinPasswordLength {
 		return errors.New("password too short")
-	}
-
-	if zxcvbn.PasswordStrength(password, nil).Score < MinPasswordScore {
-		return errors.New("password too weak")
 	}
 
 	return nil
