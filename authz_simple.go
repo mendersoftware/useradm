@@ -20,9 +20,11 @@ import (
 )
 
 const (
-	ResourceLogin       = "auth:login"
-	ResourceVerify      = "auth:verify"
-	ResourceInitialUser = "users:initial"
+	ServiceName = "useradm"
+
+	ResourceLogin       = ServiceName + ":auth:login"
+	ResourceVerify      = ServiceName + ":auth:verify"
+	ResourceInitialUser = ServiceName + ":users:initial"
 )
 
 // SimpleAuthz is a trivial authorizer, mostly ensuring
