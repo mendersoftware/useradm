@@ -39,29 +39,18 @@ func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) erro
 		return authz.ErrAuthzUnauthorized
 	}
 
-	// 'verify' is a special case - it will be called on all mgmt API calls in the system
-	// return immediately and let the target service handle authz
-	if resource == ResourceVerify {
-		return nil
-	}
-
-	// bypass checks for login
-	// for other resources - verify authz
-	if resource == ResourceLogin {
-		return nil
-	}
-
-	// check correct scope for initial user creation
 	scope := token.Claims.Scope
-	if scope == ScopeInitialUserCreate {
-		if action == "POST" && resource == ResourceInitialUser {
+
+	// restrict the 'initial token' to a single action
+	if action == "POST" && resource == ResourceInitialUser {
+		if scope == ScopeInitialUserCreate {
 			return nil
 		} else {
 			return authz.ErrAuthzUnauthorized
 		}
 	}
 
-	// allow all for 'mender.*'
+	// allow all actions on all services for 'mender.*'
 	if scope == ScopeAll {
 		return nil
 	}
