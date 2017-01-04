@@ -32,12 +32,18 @@ const (
 // It retrieves the token + requested resource and action, and delegates the authz check to an Authorizer.
 type AuthzMiddleware struct {
 	Authz      Authorizer
-	ResFunc    ResourceExtractor
+	ResFunc    ResourceActionExtractor
 	JWTHandler jwt.JWTHandler
 }
 
-// ResourceExtractor extract resource IDs from requests.
-type ResourceExtractor func(r *rest.Request) (string, error)
+// Action combines info about the requested resourd + http method.
+type Action struct {
+	Resource string
+	Method   string
+}
+
+// ResourceActionExtractor extracts Actions from requests.
+type ResourceActionExtractor func(r *rest.Request) (*Action, error)
 
 // MiddlewareFunc makes AuthzMiddleware implement the Middleware interface.
 func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
@@ -60,8 +66,8 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 
 		r.Env[ReqToken] = token
 
-		// extract resource id
-		resid, err := mw.ResFunc(r)
+		// extract resource action
+		action, err := mw.ResFunc(r)
 		if err != nil {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 			return
@@ -69,7 +75,7 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 
 		//authorize, no authz = http 403
 		a := mw.Authz.WithLog(l)
-		err = a.Authorize(token, resid, r.Method)
+		err = a.Authorize(token, action.Resource, action.Method)
 		if err != nil {
 			if err == ErrAuthzUnauthorized {
 				rest_utils.RestErrWithLog(w, r, l,
