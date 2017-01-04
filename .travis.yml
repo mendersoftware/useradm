@@ -49,12 +49,11 @@ before_install:
     - sudo apt-get -qq update
     - sudo apt-get install -y mongodb-org
 
-    # Install swagger-cli
-    - sudo apt-get -qq update && sudo apt-get -qq install -y npm
+
+    - sudo apt-get -qq update && sudo apt-get -qq install -y npm e2tools
     - sudo npm install -g swagger-cli
 
-    # Install yaml python module
-    - pip install pyyaml
+    - pip2.7 install -U --user paramiko fabric PyYAML pytest requests
 
     # Get our own Swagger verifier
     - wget https://raw.githubusercontent.com/mendersoftware/autodocs/master/verify_docs.py
