@@ -146,17 +146,16 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 		JWTHandler: jwth,
 	}
 
-	//allow access without authz on /login
-	//all other enpoinds protected
+	//force authz only on /verify
 	ifmw := &rest.IfMiddleware{
 		Condition: func(r *rest.Request) bool {
-			if r.URL.Path == uriAuthLogin && r.Method == http.MethodPost {
+			if r.URL.Path == uriAuthVerify && r.Method == http.MethodPost {
 				return true
 			} else {
 				return false
 			}
 		},
-		IfFalse: authzmw,
+		IfTrue: authzmw,
 	}
 
 	api.Use(ifmw)
