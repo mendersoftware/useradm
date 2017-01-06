@@ -2,4 +2,4 @@ version: '2'
 services:
     mender-useradm:
             # built/tagged locally and only used for testing
-            image: mendersoftware/useradm
+            image: mendersoftware/useradm:pr
