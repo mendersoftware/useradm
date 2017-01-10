@@ -5,7 +5,7 @@ info:
   description: |
     An API for user administration and user authentication handling. Intended for use by the web GUI.
 
-basePath: '/api/integrations/0.1/useradm'
+basePath: '/api/management/0.1/useradm'
 host: 'docker.mender.io:8080'
 schemes:
   - https
