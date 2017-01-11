@@ -17,8 +17,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -174,10 +172,7 @@ func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *r
 		return
 	}
 
-	userurl := buildURL(r, uriUser, map[string]string{
-		":id": user.ID,
-	})
-	w.Header().Set("Location", userurl.String())
+	w.Header().Set("Location", user.ID)
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -189,16 +184,4 @@ func readBodyRaw(r *rest.Request) ([]byte, error) {
 	}
 
 	return content, nil
-}
-
-func buildURL(r *rest.Request, template string, params map[string]string) *url.URL {
-	url := r.BaseUrl()
-
-	path := template
-	for k, v := range params {
-		path = strings.Replace(path, k, v, -1)
-	}
-	url.Path = path
-
-	return url
 }
