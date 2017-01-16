@@ -14,6 +14,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -141,21 +142,20 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
-		ResFunc:    extractResourceId,
+		ResFunc:    extractResourceAction,
 		JWTHandler: jwth,
 	}
 
-	//allow access without authz on /login
-	//all other enpoinds protected
+	//force authz only on /verify
 	ifmw := &rest.IfMiddleware{
 		Condition: func(r *rest.Request) bool {
-			if r.URL.Path == uriAuthLogin && r.Method == http.MethodPost {
+			if r.URL.Path == uriAuthVerify && r.Method == http.MethodPost {
 				return true
 			} else {
 				return false
 			}
 		},
-		IfFalse: authzmw,
+		IfTrue: authzmw,
 	}
 
 	api.Use(ifmw)
@@ -163,12 +163,25 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 	return nil
 }
 
-// extracts resource ID from the request url
-func extractResourceId(r *rest.Request) (string, error) {
-	//tokenize everything past the api version
-	path := r.URL.Path
+// extracts resource action from the request url
+func extractResourceAction(r *rest.Request) (*authz.Action, error) {
+	action := authz.Action{}
 
-	path = strings.Replace(path, uriBase, "", 1)
+	// extract original uri
+	uri := r.Header.Get("X-Original-URI")
+	uriItems := strings.Split(uri, "/")
 
-	return strings.Replace(path, "/", ":", 1), nil
+	if uri == "" || len(uriItems) < 4 {
+		return nil, errors.New("can't parse service name from original uri " + uri)
+	}
+
+	action.Resource = strings.Join(uriItems[4:], ":")
+
+	// extract original http method
+	action.Method = r.Header.Get("X-Original-Method")
+	if action.Method == "" {
+		return nil, errors.New("can't parse original request method")
+	}
+
+	return &action, nil
 }

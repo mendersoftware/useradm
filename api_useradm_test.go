@@ -177,24 +177,23 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	//setup the authz middleware
 	privkey := loadPrivKey("crypto/private.pem", t)
 
-	//allow access without authz on /login
-	//all other enpoinds protected
+	//force authz only on /verify
 	authorizer := &SimpleAuthz{}
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
-		ResFunc:    extractResourceId,
+		ResFunc:    extractResourceAction,
 		JWTHandler: jwt.NewJWTHandlerRS256(privkey, nil),
 	}
 
 	ifmw := &rest.IfMiddleware{
 		Condition: func(r *rest.Request) bool {
-			if r.URL.Path == uriAuthLogin && r.Method == http.MethodPost {
+			if r.URL.Path == uriAuthVerify && r.Method == http.MethodPost {
 				return true
 			} else {
 				return false
 			}
 		},
-		IfFalse: authzmw,
+		IfTrue: authzmw,
 	}
 
 	api.Use(ifmw)
@@ -213,50 +212,14 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 func TestUserAdmApiPostUsersInitial(t *testing.T) {
 	t.Parallel()
 
-	// token error - incorrect scope
-
-	validToken := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-		"eyJleHAiOjIxNDc0ODM2NDcsImp0aSI6IjEyM" +
-		"zQ1NjciLCJpYXQiOjEyMzQ1NjcsImlzcyI6Ik" +
-		"1lbmRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiw" +
-		"ic2NwIjoibWVuZGVyLnVzZXJzLmluaXRpYWwu" +
-		"Y3JlYXRlIn0.vcg5XS81mZT9oFpFiPsU5KYz5" +
-		"UAaSWnmlxopW5qsrcV3IQ4mODo63rqvZnfLgc" +
-		"eBW3qfdmi025BLhiajtEGHhggXZdTD5Q_3q08" +
-		"dqWFaePI42FzmAITqmzWAnNS78xUh0EZ3uNnz" +
-		"RPPWDOV5IDpsJHtV44_vZ341dxssTWEsuSMxm" +
-		"Jk8_VergMGQ8hJSk7_ioAP11kRCuKz1R5ruPS" +
-		"kicrrw5Z9vmx86zFPLXhy98Jz3cuMKhy4npEu" +
-		"3GhdTYhWIFv2_xwCFTEamWB1PQ7JVkNdjMHt7" +
-		"9AxEXYoDxYpCWvjdeEXs7gVPFvMespq3fRGxw" +
-		"IvgDV1UmL2nb9AlzkInJw"
-
-	invalidTokenScope := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-		"eyJleHAiOjIxNDc0ODM2NDcsImp0aSI6IjEyM" +
-		"zQ1NjciLCJpYXQiOjEyMzQ1NjcsImlzcyI6Ik" +
-		"1lbmRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiw" +
-		"ic2NwIjoic29tZS5pbnZhbGlkLnNjb3BlIn0." +
-		"VNkvs52FSJpFcacnqydoTmHdmOBjLq6OXbKLa" +
-		"f6dR3iRxry-75Gan2j2ZtZqt2tq8bpf_lWRdh" +
-		"kCCQcA542jrIkWrqvY_w632JDNh_2wyglG9R_" +
-		"6Xitz31HVE-Wj4WQzmAQyl3my0DWiMn-dtbox" +
-		"hp9jZfHUjYxJzus7fpRkkew0ckmiDS-ULFdAe" +
-		"WBuAQHypVwtpCN7maFrWbATJ29We5T8QQpSi2" +
-		"6RrW8I8NyXQE2YRR2mGoyHLjnEQdxJHV8U8xY" +
-		"t8nde8Fe1NQVTeNz0tTgQyUByLPt2NpIBkb29" +
-		"NA1ygq8umitZdh13m_gwNnFxAbrEGRlFLIIVK" +
-		"TtzWorsZw"
-
 	testCases := map[string]struct {
-		inToken string
-		inBody  interface{}
+		inBody interface{}
 
 		uaError error
 
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			inToken: validToken,
 			inBody: UserModel{
 				Email:    "email@foo.com",
 				Password: "correcthorsebatterystaple",
@@ -271,8 +234,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: invalid body": {
-			inToken: validToken,
-			inBody:  "asdf",
+			inBody: "asdf",
 
 			uaError: nil,
 
@@ -283,7 +245,6 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: valid body, no email": {
-			inToken: validToken,
 			inBody: UserModel{
 				Password: "correcthorsebatterystaple",
 			},
@@ -297,7 +258,6 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: valid body, invalid email": {
-			inToken: validToken,
 			inBody: UserModel{
 				Email:    "username",
 				Password: "correcthorsebatterystaple",
@@ -312,7 +272,6 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: valid body, missing password": {
-			inToken: validToken,
 			inBody: UserModel{
 				Email: "foo@bar.com",
 			},
@@ -325,8 +284,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 				restError("invalid user info: password can't be empty"),
 			),
 		},
-		"error: valid body, password to short": {
-			inToken: validToken,
+		"error: valid body, password too short": {
 			inBody: UserModel{
 				Email:    "foo@bar.com",
 				Password: "asdf123",
@@ -341,7 +299,6 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: useradm error": {
-			inToken: validToken,
 			inBody: UserModel{
 				Email:    "email@foo.com",
 				Password: "correcthorsebatterystaple",
@@ -353,51 +310,6 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 				http.StatusInternalServerError,
 				nil,
 				restError("internal error"),
-			),
-		},
-		"error: no token": {
-			inToken: "",
-			inBody: UserModel{
-				Email:    "email@foo.com",
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusUnauthorized,
-				nil,
-				restError("missing or invalid auth header"),
-			),
-		},
-		"error: invalid token": {
-			inToken: "asdf",
-			inBody: UserModel{
-				Email:    "email@foo.com",
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusUnauthorized,
-				nil,
-				restError("invalid jwt"),
-			),
-		},
-		"error: token valid, incorrect scope": {
-			inToken: invalidTokenScope,
-			inBody: UserModel{
-				Email:    "email@foo.com",
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusForbidden,
-				nil,
-				restError("unauthorized"),
 			),
 		},
 	}
@@ -417,15 +329,9 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 
 		api := makeMockApiHandler(t, factory)
 
-		//make request
-		authHdr := ""
-		if tc.inToken != "" {
-			authHdr = "Bearer " + tc.inToken
-		}
-
 		req := makeReq("POST",
 			"http://1.2.3.4/api/0.1.0/users/initial",
-			authHdr,
+			"",
 			tc.inBody)
 
 		//test
@@ -452,14 +358,14 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		"ACNbKY1tB7Ox6CKiJ9F8Hhvh_icOtfvjCuiY-HkJL55T4wziFQNv2xU_2W7Lw"
 
 	testCases := map[string]struct {
-		uaCreateError error
+		uaVerifyError error
 
 		uaError error
 
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			uaCreateError: nil,
+			uaVerifyError: nil,
 			uaError:       nil,
 
 			checker: mt.NewJSONResponse(
@@ -469,7 +375,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 			),
 		},
 		"error: useradm unauthorized": {
-			uaCreateError: nil,
+			uaVerifyError: nil,
 			uaError:       ErrUnauthorized,
 
 			checker: mt.NewJSONResponse(
@@ -479,7 +385,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 			),
 		},
 		"error: useradm internal": {
-			uaCreateError: nil,
+			uaVerifyError: nil,
 			uaError:       errors.New("some internal error"),
 
 			checker: mt.NewJSONResponse(
@@ -488,8 +394,8 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 				restError("internal error"),
 			),
 		},
-		"error: useradm create": {
-			uaCreateError: errors.New("some internal error"),
+		"error: useradm verify": {
+			uaVerifyError: errors.New("some internal error"),
 			uaError:       nil,
 
 			checker: mt.NewJSONResponse(
@@ -511,7 +417,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 
 		//make handler
 		factory := func(l *log.Logger) (UserAdmApp, error) {
-			return useradm, tc.uaCreateError
+			return useradm, tc.uaVerifyError
 		}
 
 		api := makeMockApiHandler(t, factory)
@@ -521,6 +427,10 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 			"http://1.2.3.4/api/0.1.0/auth/verify",
 			"Bearer "+token,
 			nil)
+
+		// set these to make the middleware happy
+		req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
+		req.Header.Add("X-Original-Method", "POST")
 
 		//test
 		recorded := test.RunRequest(t, api, req)

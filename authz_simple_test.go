@@ -33,7 +33,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 		outErr string
 	}{
 		"ok - create init user with dedicated scope": {
-			inResource: "users:initial",
+			inResource: "useradm:users:initial",
 			inAction:   "POST",
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
@@ -44,8 +44,46 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 				},
 			},
 		},
-		"ok - do sth with the 'all' scope": {
-			inResource: "some:resource:id",
+		"error - use initial scope with incompatible useradm action": {
+			inResource: "useradm:some:resource:id",
+			inAction:   "POST",
+			inToken: &jwt.Token{
+				Claims: jwt.Claims{
+					Issuer:    "mender",
+					ExpiresAt: 2147483647,
+					Subject:   "testsubject",
+					Scope:     ScopeInitialUserCreate,
+				},
+			},
+			outErr: "unauthorized",
+		},
+		"error - use initial scope outside of useradm": {
+			inResource: "otherservice:some:resource:id",
+			inAction:   "POST",
+			inToken: &jwt.Token{
+				Claims: jwt.Claims{
+					Issuer:    "mender",
+					ExpiresAt: 2147483647,
+					Subject:   "testsubject",
+					Scope:     ScopeInitialUserCreate,
+				},
+			},
+			outErr: "unauthorized",
+		},
+		"ok - do sth in useradm with the 'all' scope": {
+			inResource: "useradm:some:resource:id",
+			inAction:   "POST",
+			inToken: &jwt.Token{
+				Claims: jwt.Claims{
+					Issuer:    "mender",
+					ExpiresAt: 2147483647,
+					Subject:   "testsubject",
+					Scope:     ScopeAll,
+				},
+			},
+		},
+		"ok - do sth in another service with the 'all' scope": {
+			inResource: "otherservice:some:resource:id",
 			inAction:   "POST",
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{

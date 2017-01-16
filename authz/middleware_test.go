@@ -36,11 +36,10 @@ import (
 func TestAuthzMiddleware(t *testing.T) {
 
 	testCases := map[string]struct {
-		token  string
-		action string
+		token string
 
-		resource    string
-		resourceErr error
+		action    *Action
+		actionErr error
 
 		authErr error
 
@@ -60,10 +59,12 @@ func TestAuthzMiddleware(t *testing.T) {
 				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
 				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
 				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
-			action: "GET",
+			action: &Action{
+				Resource: "foo:bar",
+				Method:   "GET",
+			},
 
-			resource:    "foo:bar",
-			resourceErr: nil,
+			actionErr: nil,
 
 			authErr: nil,
 
@@ -75,11 +76,13 @@ func TestAuthzMiddleware(t *testing.T) {
 		},
 
 		"error: missing token header": {
-			token:  "",
-			action: "GET",
+			token: "",
+			action: &Action{
+				Resource: "foo:bar",
+				Method:   "GET",
+			},
 
-			resource:    "foo:bar",
-			resourceErr: nil,
+			actionErr: nil,
 
 			authErr: nil,
 
@@ -104,10 +107,11 @@ func TestAuthzMiddleware(t *testing.T) {
 				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
 				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
 				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
-			action: "GET",
-
-			resource:    "",
-			resourceErr: errors.New("can't identify resource"),
+			action: &Action{
+				Resource: "",
+				Method:   "GET",
+			},
+			actionErr: errors.New("can't identify resource"),
 
 			authErr: nil,
 
@@ -118,11 +122,12 @@ func TestAuthzMiddleware(t *testing.T) {
 			),
 		},
 		"error: invalid token": {
-			token:  "dummy",
-			action: "GET",
-
-			resource:    "foo:bar",
-			resourceErr: nil,
+			token: "dummy",
+			action: &Action{
+				Resource: "foo:bar",
+				Method:   "GET",
+			},
+			actionErr: errors.New("can't identify resource"),
 
 			authErr: ErrAuthzTokenInvalid,
 
@@ -146,10 +151,11 @@ func TestAuthzMiddleware(t *testing.T) {
 				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
 				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
 				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
-			action: "GET",
-
-			resource:    "foo:bar",
-			resourceErr: nil,
+			action: &Action{
+				Resource: "foo:bar",
+				Method:   "GET",
+			},
+			actionErr: nil,
 
 			authErr: ErrAuthzUnauthorized,
 
@@ -173,10 +179,11 @@ func TestAuthzMiddleware(t *testing.T) {
 				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
 				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
 				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
-			action: "GET",
-
-			resource:    "foo:bar",
-			resourceErr: nil,
+			action: &Action{
+				Resource: "foo:bar",
+				Method:   "GET",
+			},
+			actionErr: nil,
 
 			authErr: errors.New("some internal error"),
 
@@ -205,15 +212,15 @@ func TestAuthzMiddleware(t *testing.T) {
 		a := &MockAuthorizer{}
 		a.On("Authorize",
 			mock.AnythingOfType("*jwt.Token"),
-			tc.resource,
-			tc.action).Return(tc.authErr)
+			tc.action.Resource,
+			tc.action.Method).Return(tc.authErr)
 
 		a.On("WithLog",
 			mock.AnythingOfType("*log.Logger")).
 			Return(a)
 
-		resfunc := func(r *rest.Request) (string, error) {
-			return tc.resource, tc.resourceErr
+		resfunc := func(r *rest.Request) (*Action, error) {
+			return tc.action, tc.actionErr
 		}
 
 		//finish setting up the middleware
@@ -237,7 +244,7 @@ func TestAuthzMiddleware(t *testing.T) {
 			authhdr = "Bearer " + tc.token
 		}
 
-		req := makeReq(tc.action,
+		req := makeReq(tc.action.Method,
 			"localhost",
 			authhdr,
 			nil)
