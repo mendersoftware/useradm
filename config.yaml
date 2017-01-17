@@ -8,9 +8,13 @@ listen: :8080
     #       development environment
     #   prod
     #       production environment
+    #   noauth
+    #       development environment with user authorization switched off
+    #       by default; MUST be removed once `Create Tenant administrator`
+    #       feature is fully implemented
     #
     # Defaults to: prod
-middleware: dev
+middleware: noauth
 
     # Private key path - used for JWT signing
     # Defaults to: /etc/useradm/rsa/private.pem
