@@ -15,6 +15,7 @@ package main
 
 import (
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -89,4 +90,10 @@ func (m *mockDataStore) GetUserById(id string) (*UserModel, error) {
 // UseLog provides a mock function with given fields: l
 func (m *mockDataStore) UseLog(l *log.Logger) {
 	m.Called(l)
+}
+
+func (m *mockDataStore) Migrate(version string, migrations []migrate.Migration) error {
+	ret := m.Called(version, migrations)
+
+	return ret.Error(0)
 }
