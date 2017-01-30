@@ -11,3 +11,8 @@ bbb303820971c294a9a8e5eba5affcf1379036e877ea61c11cbf9400b2949483  vendor/github.
 
 # MIT license.
 feb6d17a0e7a64e5ab0f7e2b0e0ee3e69c1a6396626fd554dc0cddaa06851b44  vendor/github.com/spf13/viper/LICENSE
+
+# BSD 2 license.
+4367cb0287ad1fb0676409ba770bb50be231ab573c212bca7327c23191e1eac2  vendor/gopkg.in/mgo.v2/LICENSE
+150ff9d2cacd75cb54bd69c0c5cbcb17aff49b2a24ee7b3d83981228c55d7006  vendor/gopkg.in/mgo.v2/bson/LICENSE
+dd26a7abddd02e2d0aba97805b31f248ef7835d9e10da289b22e3b8ab78b324d  vendor/gopkg.in/mgo.v2/internal/json/LICENSE
