@@ -1,12 +1,12 @@
 swagger: '2.0'
 info:
-  version: '0.1'
+  version: '1'
   title: User administration and authentication
   description: |
     An API for user administration and user authentication handling. Intended for use by the web GUI.
 
-basePath: '/api/management/0.1/useradm'
-host: 'docker.mender.io:8080'
+basePath: '/api/management/v1/useradm'
+host: 'docker.mender.io'
 schemes:
   - https
 

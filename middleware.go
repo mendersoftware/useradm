@@ -21,6 +21,7 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/accesslog"
+	"github.com/mendersoftware/go-lib-micro/customheader"
 	dlog "github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
@@ -87,6 +88,11 @@ var (
 func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, jwth jwt.JWTHandler) error {
 
 	l := dlog.New(dlog.Ctx{})
+
+	api.Use(&customheader.CustomHeaderMiddleware{
+		HeaderName:  "X-USERADM-VERSION",
+		HeaderValue: CreateVersionString(),
+	})
 
 	l.Infof("setting up %s middleware", mwtype)
 
