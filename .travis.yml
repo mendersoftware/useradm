@@ -100,7 +100,8 @@ script:
     - sudo docker build -t $DOCKER_REPOSITORY:pr .
 
     # Clone integration repo. for api testing (purposely after license checking..)
-    - git clone https://github.com/mendersoftware/integration.git
+    # Exexutes acceptance/integration tasts with branch: master
+    - git clone -b master https://github.com/mendersoftware/integration.git
 
     # Move script to testing directory
     - mv integration/extra/travis-testing/run-test-environment tests
