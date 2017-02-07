@@ -100,7 +100,8 @@ script:
     - sudo docker build -t $DOCKER_REPOSITORY:pr .
 
     # Clone integration repo. for api testing (purposely after license checking..)
-    - git clone https://github.com/mendersoftware/integration.git
+    # Exexutes acceptance/integration tasts with branch: master
+    - git clone -b master https://github.com/mendersoftware/integration.git
 
     # Move script to testing directory
     - mv integration/extra/travis-testing/run-test-environment tests
@@ -121,18 +122,11 @@ after_success:
     - git show --stat ${TRAVIS_COMMIT_RANGE} | grep -E "docs/.+\.yml" && export API_DOCS_CHANGED=true
 
 before_deploy:
-    # Master is always lastest
     - if [ ! -z "$TRAVIS_TAG" ]; then export IMAGE_TAG=$TRAVIS_TAG; else export IMAGE_TAG=$TRAVIS_BRANCH; fi
     - docker tag $DOCKER_REPOSITORY:pr $DOCKER_REPOSITORY:$IMAGE_TAG
 
     # Upload image to docker registry only on PUSH
     - docker login --email=$DOCKER_HUB_EMAIL --username=$DOCKER_HUB_USERNAME --password=$DOCKER_HUB_PASSWORD
-
-    # Set latest tag only for HEAD of master branch
-    - if [ "$TRAVIS_BRANCH" = "master" ]; then
-        docker tag $DOCKER_REPOSITORY:pr $DOCKER_REPOSITORY:latest;
-        docker push $DOCKER_REPOSITORY:latest;
-      fi
     - docker push $DOCKER_REPOSITORY:$IMAGE_TAG
 
 deploy:
@@ -144,11 +138,11 @@ deploy:
         secret_access_key: $AWS_SECRET_ACCESS_KEY
         bucket: $AWS_BUCKET_DOCS
         region: $AWS_REGION
-        upload-dir: $DEPLOY_REPO/latest/$TRAVIS_BRANCH
+        upload-dir: $TRAVIS_REPO_SLUG/latest/$TRAVIS_BRANCH
         local_dir: docs
         skip_cleanup: true
         acl: public_read
         on:
-            repo: $DEPLOY_REPO
+            repo: $TRAVIS_REPO_SLUG
             all_branches: true
             condition: $API_DOCS_CHANGED = true
