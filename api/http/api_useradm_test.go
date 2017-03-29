@@ -32,6 +32,7 @@ import (
 	"github.com/mendersoftware/useradm/authz"
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/user"
 	museradm "github.com/mendersoftware/useradm/user/mocks"
@@ -182,7 +183,10 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	)
 
 	//setup the authz middleware
-	privkey := loadPrivKey("crypto/private.pem", t)
+	privkey, err := keys.LoadRSAPrivate("../../crypto/private.pem")
+	if !assert.NoError(t, err) {
+		t.Fatalf("faied to load private key: %v", err)
+	}
 
 	authorizer := &mauthz.Authorizer{}
 	authorizer.On("Authorize",

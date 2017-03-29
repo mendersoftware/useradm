@@ -24,6 +24,7 @@ import (
 	api_http "github.com/mendersoftware/useradm/api/http"
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/store/mongo"
 	"github.com/mendersoftware/useradm/user"
 )
@@ -47,7 +48,7 @@ func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
-	privKey, err := getRSAPrivKey(c.GetString(SettingPrivKeyPath))
+	privKey, err := keys.LoadRSAPrivate(c.GetString(SettingPrivKeyPath))
 	if err != nil {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
@@ -86,31 +87,4 @@ func RunServer(c config.Reader) error {
 	l.Printf("listening on %s", addr)
 
 	return http.ListenAndServe(addr, api.MakeHandler())
-}
-
-func getRSAPrivKey(privKeyPath string) (*rsa.PrivateKey, error) {
-	// read key from file
-	pemData, err := ioutil.ReadFile(privKeyPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "jwt: can't open key")
-	}
-
-	// decode pem key
-	block, _ := pem.Decode(pemData)
-	if block == nil {
-		return nil, errors.Wrap(err, "jwt: can't decode key")
-	}
-
-	// check if it is an RSA PRIVATE KEY
-	if got, want := block.Type, "RSA PRIVATE KEY"; got != want {
-		return nil, errors.New("jwt: can't open key - not an rsa private key")
-	}
-
-	// return parsed key
-	privkey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "jwt: can't parse key")
-	}
-
-	return privkey, nil
 }
