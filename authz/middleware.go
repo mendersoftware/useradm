@@ -20,6 +20,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
+
 	"github.com/mendersoftware/useradm/jwt"
 )
 

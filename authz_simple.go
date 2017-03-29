@@ -15,6 +15,7 @@ package main
 
 import (
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
 )

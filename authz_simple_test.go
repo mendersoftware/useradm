@@ -20,8 +20,9 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mendersoftware/useradm/jwt"
 )
 
 func TestSimpleAuthzAuthorize(t *testing.T) {

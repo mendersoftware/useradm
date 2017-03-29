@@ -16,8 +16,9 @@ package main
 import (
 	"testing"
 
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mendersoftware/useradm/jwt"
 )
 
 func TestToken(t *testing.T) {

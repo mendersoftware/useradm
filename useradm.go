@@ -17,10 +17,11 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/mendersoftware/useradm/jwt"
 )
 
 var (

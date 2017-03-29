@@ -23,8 +23,9 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
-	"github.com/mendersoftware/useradm/authz"
 	"github.com/pkg/errors"
+
+	"github.com/mendersoftware/useradm/authz"
 )
 
 const (
