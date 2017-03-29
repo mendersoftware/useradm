@@ -18,7 +18,6 @@ import (
 	"errors"
 
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 )
 
 var (
@@ -38,7 +37,6 @@ type DataStore interface {
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(email string) (*UserModel, error)
 	GetUserById(id string) (*UserModel, error)
-	// Run migrations
-	Migrate(version string, migrations []migrate.Migration) error
+
 	log.ContextLogger
 }
