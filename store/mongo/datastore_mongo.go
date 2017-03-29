@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package main
+package mongo
 
 import (
 	"context"
@@ -24,6 +24,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/store"
 )
 
 const (
@@ -102,7 +105,7 @@ func (db *DataStoreMongo) IsEmpty() (bool, error) {
 	return false, err
 }
 
-func (db *DataStoreMongo) CreateUser(u *UserModel) error {
+func (db *DataStoreMongo) CreateUser(u *model.User) error {
 	s := db.session.Copy()
 	defer s.Close()
 
@@ -116,7 +119,7 @@ func (db *DataStoreMongo) CreateUser(u *UserModel) error {
 	err = s.DB(DbName).C(DbUsersColl).Insert(u)
 	if err != nil {
 		if mgo.IsDup(err) {
-			return ErrDuplicateEmail
+			return store.ErrDuplicateEmail
 		}
 
 		return errors.Wrap(err, "failed to insert user")
@@ -125,11 +128,11 @@ func (db *DataStoreMongo) CreateUser(u *UserModel) error {
 	return nil
 }
 
-func (db *DataStoreMongo) GetUserByEmail(email string) (*UserModel, error) {
+func (db *DataStoreMongo) GetUserByEmail(email string) (*model.User, error) {
 	s := db.session.Copy()
 	defer s.Close()
 
-	var user UserModel
+	var user model.User
 
 	err := s.DB(DbName).C(DbUsersColl).Find(bson.M{DbUserEmail: email}).One(&user)
 
@@ -144,11 +147,11 @@ func (db *DataStoreMongo) GetUserByEmail(email string) (*UserModel, error) {
 	return &user, nil
 }
 
-func (db *DataStoreMongo) GetUserById(id string) (*UserModel, error) {
+func (db *DataStoreMongo) GetUserById(id string) (*model.User, error) {
 	s := db.session.Copy()
 	defer s.Close()
 
-	var user UserModel
+	var user model.User
 
 	err := s.DB(DbName).C(DbUsersColl).FindId(id).One(&user)
 

@@ -14,10 +14,6 @@
 package main
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
@@ -25,8 +21,11 @@ import (
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 
+	api_http "github.com/mendersoftware/useradm/api/http"
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/store/mongo"
+	"github.com/mendersoftware/useradm/user"
 )
 
 func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.JWTHandler) (*rest.Api, error) {
@@ -56,16 +55,16 @@ func RunServer(c config.Reader) error {
 	authz := &SimpleAuthz{l: l}
 	jwth := jwt.NewJWTHandlerRS256(privKey, l)
 
-	useradmapi := NewUserAdmApiHandlers(
-		func(l *log.Logger) (UserAdmApp, error) {
-			db, err := GetDataStoreMongo(c.GetString(SettingDb), l)
+	useradmapi := api_http.NewUserAdmApiHandlers(
+		func(l *log.Logger) (useradm.UserAdmApp, error) {
+			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb), l)
 			if err != nil {
 				return nil, errors.Wrap(err, "database connection failed")
 			}
 
 			jwtHandler := jwth
 
-			ua := NewUserAdm(jwtHandler, db, UserAdmConfig{
+			ua := useradm.NewUserAdm(jwtHandler, db, useradm.Config{
 				Issuer:         c.GetString(SettingJWTIssuer),
 				ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
 			}, l)

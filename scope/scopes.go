@@ -11,31 +11,11 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package scope
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/mendersoftware/useradm/jwt"
+var (
+	// inital user creation
+	InitialUserCreate = "mender.users.initial.create"
+	// full permissions for the tenant admin
+	All = "mender.*"
 )
-
-func TestToken(t *testing.T) {
-	var tok jwt.Token
-
-	tok = jwt.Token{
-		Claims: jwt.Claims{
-			Scope: "foo",
-		},
-	}
-
-	assert.False(t, IsInitial(&tok))
-
-	tok = jwt.Token{
-		Claims: jwt.Claims{
-			Scope: ScopeInitialUserCreate,
-		},
-	}
-	assert.True(t, IsInitial(&tok))
-}

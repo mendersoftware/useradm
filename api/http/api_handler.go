@@ -11,13 +11,14 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package http
 
 import (
-	"github.com/mendersoftware/useradm/jwt"
+	"github.com/ant0ine/go-json-rest/rest"
 )
 
-// IsInitial returns true if token scope allows for initial user setup
-func IsInitial(t *jwt.Token) bool {
-	return t.Claims.Scope == ScopeInitialUserCreate
+// thin API handler interface
+type ApiHandler interface {
+	// produce a rest.App with routing setup or an error
+	GetApp() (rest.App, error)
 }

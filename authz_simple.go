@@ -18,6 +18,7 @@ import (
 
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/scope"
 )
 
 const (
@@ -40,11 +41,11 @@ func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) erro
 		return authz.ErrAuthzUnauthorized
 	}
 
-	scope := token.Claims.Scope
+	tokenScope := token.Claims.Scope
 
 	// restrict the 'initial token' to a single action
 	if action == "POST" && resource == ResourceInitialUser {
-		if scope == ScopeInitialUserCreate {
+		if tokenScope == scope.InitialUserCreate {
 			return nil
 		} else {
 			return authz.ErrAuthzUnauthorized
@@ -52,7 +53,7 @@ func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) erro
 	}
 
 	// allow all actions on all services for 'mender.*'
-	if scope == ScopeAll {
+	if tokenScope == scope.All {
 		return nil
 	}
 

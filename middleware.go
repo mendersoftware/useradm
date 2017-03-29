@@ -14,10 +14,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/accesslog"
@@ -26,6 +24,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 
+	api_http "github.com/mendersoftware/useradm/api/http"
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
 )
@@ -149,46 +148,17 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
-		ResFunc:    extractResourceAction,
+		ResFunc:    api_http.ExtractResourceAction,
 		JWTHandler: jwth,
 	}
 
-	//force authz only on /verify
+	//force authz only on verification endpoint
 	ifmw := &rest.IfMiddleware{
-		Condition: func(r *rest.Request) bool {
-			if r.URL.Path == uriAuthVerify && r.Method == http.MethodPost {
-				return true
-			} else {
-				return false
-			}
-		},
-		IfTrue: authzmw,
+		Condition: api_http.IsVerificationEndpoint,
+		IfTrue:    authzmw,
 	}
 
 	api.Use(ifmw)
 
 	return nil
-}
-
-// extracts resource action from the request url
-func extractResourceAction(r *rest.Request) (*authz.Action, error) {
-	action := authz.Action{}
-
-	// extract original uri
-	uri := r.Header.Get("X-Original-URI")
-	uriItems := strings.Split(uri, "/")
-
-	if uri == "" || len(uriItems) < 4 {
-		return nil, errors.New("can't parse service name from original uri " + uri)
-	}
-
-	action.Resource = strings.Join(uriItems[4:], ":")
-
-	// extract original http method
-	action.Method = r.Header.Get("X-Original-Method")
-	if action.Method == "" {
-		return nil, errors.New("can't parse original request method")
-	}
-
-	return &action, nil
 }

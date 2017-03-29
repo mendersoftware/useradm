@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package mongo
 
 import (
 	"context"
@@ -20,6 +20,8 @@ import (
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/mendersoftware/useradm/model"
 )
 
 func TestMongoIsEmpty(t *testing.T) {
@@ -70,12 +72,12 @@ func TestMongoCreateUser(t *testing.T) {
 	}
 
 	exisitingUsers := []interface{}{
-		UserModel{
+		model.User{
 			ID:       "1",
 			Email:    "foo@bar.com",
 			Password: "pretenditsahash",
 		},
-		UserModel{
+		model.User{
 			ID:       "2",
 			Email:    "bar@bar.com",
 			Password: "pretenditsahash",
@@ -83,11 +85,11 @@ func TestMongoCreateUser(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inUser UserModel
+		inUser model.User
 		outErr string
 	}{
 		"ok": {
-			inUser: UserModel{
+			inUser: model.User{
 				ID:       "1234",
 				Email:    "baz@bar.com",
 				Password: "correcthorsebatterystaple",
@@ -95,7 +97,7 @@ func TestMongoCreateUser(t *testing.T) {
 			outErr: "",
 		},
 		"duplicate email error": {
-			inUser: UserModel{
+			inUser: model.User{
 				ID:       "1234",
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
@@ -121,7 +123,7 @@ func TestMongoCreateUser(t *testing.T) {
 
 		if tc.outErr == "" {
 			//fetch user by id, verify password checks out
-			var user UserModel
+			var user model.User
 			err := session.DB(DbName).C(DbUsersColl).FindId("1234").One(&user)
 			assert.NoError(t, err)
 			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
@@ -142,12 +144,12 @@ func TestMongoGetUserByEmail(t *testing.T) {
 	}
 
 	existingUsers := []interface{}{
-		UserModel{
+		model.User{
 			ID:       "1",
 			Email:    "foo@bar.com",
 			Password: "passwordhash12345",
 		},
-		UserModel{
+		model.User{
 			ID:       "2",
 			Email:    "bar@bar.com",
 			Password: "passwordhashqwerty",
@@ -156,11 +158,11 @@ func TestMongoGetUserByEmail(t *testing.T) {
 
 	testCases := map[string]struct {
 		inEmail string
-		outUser *UserModel
+		outUser *model.User
 	}{
 		"ok - found 1": {
 			inEmail: "foo@bar.com",
-			outUser: &UserModel{
+			outUser: &model.User{
 				ID:       "1",
 				Email:    "foo@bar.com",
 				Password: "passwordhash12345",
@@ -168,7 +170,7 @@ func TestMongoGetUserByEmail(t *testing.T) {
 		},
 		"ok - found 2": {
 			inEmail: "bar@bar.com",
-			outUser: &UserModel{
+			outUser: &model.User{
 				ID:       "2",
 				Email:    "bar@bar.com",
 				Password: "passwordhashqwerty",
@@ -211,12 +213,12 @@ func TestMongoGetUserById(t *testing.T) {
 	}
 
 	existingUsers := []interface{}{
-		UserModel{
+		model.User{
 			ID:       "1",
 			Email:    "foo@bar.com",
 			Password: "passwordhash12345",
 		},
-		UserModel{
+		model.User{
 			ID:       "2",
 			Email:    "bar@bar.com",
 			Password: "passwordhashqwerty",
@@ -225,11 +227,11 @@ func TestMongoGetUserById(t *testing.T) {
 
 	testCases := map[string]struct {
 		inId    string
-		outUser *UserModel
+		outUser *model.User
 	}{
 		"ok - found 1": {
 			inId: "1",
-			outUser: &UserModel{
+			outUser: &model.User{
 				ID:       "1",
 				Email:    "foo@bar.com",
 				Password: "passwordhash12345",
@@ -237,7 +239,7 @@ func TestMongoGetUserById(t *testing.T) {
 		},
 		"ok - found 2": {
 			inId: "2",
-			outUser: &UserModel{
+			outUser: &model.User{
 				ID:       "2",
 				Email:    "bar@bar.com",
 				Password: "passwordhashqwerty",

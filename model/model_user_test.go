@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package model
 
 import (
 	"testing"
@@ -21,33 +21,33 @@ import (
 
 func TestValidateNew(t *testing.T) {
 	testCases := map[string]struct {
-		inUser UserModel
+		inUser User
 
 		outErr string
 	}{
 		"email ok, pass ok": {
-			inUser: UserModel{
+			inUser: User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
 			outErr: "",
 		},
 		"email invalid, pass ok": {
-			inUser: UserModel{
+			inUser: User{
 				Email:    "foobar",
 				Password: "correcthorsebatterystaple",
 			},
 			outErr: "Email: foobar does not validate as email;",
 		},
 		"email ok, pass invalid (empty)": {
-			inUser: UserModel{
+			inUser: User{
 				Email:    "foo@bar.com",
 				Password: "",
 			},
 			outErr: "password can't be empty",
 		},
 		"email ok, pass invalid (too short)": {
-			inUser: UserModel{
+			inUser: User{
 				Email:    "foo@bar.com",
 				Password: "asdf",
 			},
