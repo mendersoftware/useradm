@@ -139,7 +139,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		uadm := &museradm.UserAdmApp{}
+		uadm := &museradm.App{}
 		uadm.On("Login",
 			mock.AnythingOfType("string"),
 			mock.AnythingOfType("string")).
@@ -156,7 +156,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.UserAdmApp, error) {
+		factory := func(l *log.Logger) (useradm.App, error) {
 			return uadm, nil
 		}
 
@@ -328,13 +328,13 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		uadm := &museradm.UserAdmApp{}
+		uadm := &museradm.App{}
 		uadm.On("CreateUserInitial",
 			mock.AnythingOfType("*model.User")).
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.UserAdmApp, error) {
+		factory := func(l *log.Logger) (useradm.App, error) {
 			return uadm, nil
 		}
 
@@ -421,13 +421,13 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		uadm := &museradm.UserAdmApp{}
+		uadm := &museradm.App{}
 		uadm.On("Verify",
 			mock.AnythingOfType("*jwt.Token")).
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.UserAdmApp, error) {
+		factory := func(l *log.Logger) (useradm.App, error) {
 			return uadm, tc.uaVerifyError
 		}
 

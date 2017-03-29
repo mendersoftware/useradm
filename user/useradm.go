@@ -34,7 +34,7 @@ var (
 	ErrUserNotInitial = errors.New("user database not empty")
 )
 
-type UserAdmApp interface {
+type App interface {
 	// Login accepts email/password, returns JWT
 	Login(email, pass string) (*jwt.Token, error)
 	CreateUser(u *model.User) error

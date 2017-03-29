@@ -42,7 +42,7 @@ var (
 	ErrAuthHeader = errors.New("invalid or missing auth header")
 )
 
-type UserAdmFactory func(l *log.Logger) (useradm.UserAdmApp, error)
+type UserAdmFactory func(l *log.Logger) (useradm.App, error)
 
 type UserAdmApiHandlers struct {
 	createUserAdm UserAdmFactory
