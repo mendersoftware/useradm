@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
@@ -304,14 +305,16 @@ func TestMigrate(t *testing.T) {
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
 
-		err = store.Migrate(tc.version, nil)
+		ctx := context.Background()
+
+		err = store.Migrate(ctx, tc.version, nil)
 		if tc.err == "" {
 			assert.NoError(t, err)
 			var out []migrate.MigrationEntry
 			session.DB(DbName).C(migrate.DbMigrationsColl).Find(nil).All(&out)
 			assert.Len(t, out, 1)
 			v, _ := migrate.NewVersion(tc.version)
-			assert.Equal(t, v, out[0].Version)
+			assert.Equal(t, *v, out[0].Version)
 		} else {
 			assert.EqualError(t, err, tc.err)
 		}

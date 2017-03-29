@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"sync"
 
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -162,7 +163,7 @@ func (db *DataStoreMongo) GetUserById(id string) (*UserModel, error) {
 	return &user, nil
 }
 
-func (db *DataStoreMongo) Migrate(version string, migrations []migrate.Migration) error {
+func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migrations []migrate.Migration) error {
 	m := migrate.DummyMigrator{
 		Session: db.session,
 		Db:      DbName,
@@ -173,7 +174,7 @@ func (db *DataStoreMongo) Migrate(version string, migrations []migrate.Migration
 		return errors.Wrap(err, "failed to parse service version")
 	}
 
-	err = m.Apply(ver, migrations)
+	err = m.Apply(ctx, *ver, migrations)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply migrations")
 	}

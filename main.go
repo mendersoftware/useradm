@@ -14,7 +14,9 @@
 package main
 
 import (
+	"context"
 	"flag"
+
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 )
@@ -58,12 +60,14 @@ func main() {
 	/*l.Printf("Inventory Service, version %s starting up",
 	CreateVersionString())*/
 
+	ctx := context.Background()
+
 	db, err := NewDataStoreMongo(config.Config.GetString(SettingDb))
 	if err != nil {
 		l.Fatal("failed to connect to db")
 	}
 
-	err = db.Migrate(DbVersion, nil)
+	err = db.Migrate(ctx, DbVersion, nil)
 	if err != nil {
 		l.Fatal("failed to run migrations")
 	}
