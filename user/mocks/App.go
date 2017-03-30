@@ -13,6 +13,7 @@
 //    limitations under the License.
 package mocks
 
+import context "context"
 import jwt "github.com/mendersoftware/useradm/jwt"
 import mock "github.com/stretchr/testify/mock"
 import model "github.com/mendersoftware/useradm/model"
@@ -23,13 +24,13 @@ type App struct {
 	mock.Mock
 }
 
-// CreateUser provides a mock function with given fields: u
-func (_m *App) CreateUser(u *model.User) error {
-	ret := _m.Called(u)
+// CreateUser provides a mock function with given fields: ctx, u
+func (_m *App) CreateUser(ctx context.Context, u *model.User) error {
+	ret := _m.Called(ctx, u)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.User) error); ok {
-		r0 = rf(u)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
+		r0 = rf(ctx, u)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -37,13 +38,13 @@ func (_m *App) CreateUser(u *model.User) error {
 	return r0
 }
 
-// CreateUserInitial provides a mock function with given fields: u
-func (_m *App) CreateUserInitial(u *model.User) error {
-	ret := _m.Called(u)
+// CreateUserInitial provides a mock function with given fields: ctx, u
+func (_m *App) CreateUserInitial(ctx context.Context, u *model.User) error {
+	ret := _m.Called(ctx, u)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.User) error); ok {
-		r0 = rf(u)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
+		r0 = rf(ctx, u)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -51,13 +52,13 @@ func (_m *App) CreateUserInitial(u *model.User) error {
 	return r0
 }
 
-// Login provides a mock function with given fields: email, pass
-func (_m *App) Login(email string, pass string) (*jwt.Token, error) {
-	ret := _m.Called(email, pass)
+// Login provides a mock function with given fields: ctx, email, pass
+func (_m *App) Login(ctx context.Context, email string, pass string) (*jwt.Token, error) {
+	ret := _m.Called(ctx, email, pass)
 
 	var r0 *jwt.Token
-	if rf, ok := ret.Get(0).(func(string, string) *jwt.Token); ok {
-		r0 = rf(email, pass)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *jwt.Token); ok {
+		r0 = rf(ctx, email, pass)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*jwt.Token)
@@ -65,8 +66,8 @@ func (_m *App) Login(email string, pass string) (*jwt.Token, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(email, pass)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, email, pass)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,13 +75,13 @@ func (_m *App) Login(email string, pass string) (*jwt.Token, error) {
 	return r0, r1
 }
 
-// SignToken provides a mock function with given fields:
-func (_m *App) SignToken() jwt.SignFunc {
-	ret := _m.Called()
+// SignToken provides a mock function with given fields: ctx
+func (_m *App) SignToken(ctx context.Context) jwt.SignFunc {
+	ret := _m.Called(ctx)
 
 	var r0 jwt.SignFunc
-	if rf, ok := ret.Get(0).(func() jwt.SignFunc); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) jwt.SignFunc); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(jwt.SignFunc)
@@ -90,13 +91,13 @@ func (_m *App) SignToken() jwt.SignFunc {
 	return r0
 }
 
-// Verify provides a mock function with given fields: token
-func (_m *App) Verify(token *jwt.Token) error {
-	ret := _m.Called(token)
+// Verify provides a mock function with given fields: ctx, token
+func (_m *App) Verify(ctx context.Context, token *jwt.Token) error {
+	ret := _m.Called(ctx, token)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*jwt.Token) error); ok {
-		r0 = rf(token)
+	if rf, ok := ret.Get(0).(func(context.Context, *jwt.Token) error); ok {
+		r0 = rf(ctx, token)
 	} else {
 		r0 = ret.Error(0)
 	}
