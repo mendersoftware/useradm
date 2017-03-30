@@ -15,11 +15,12 @@ package testing
 
 import (
 	"encoding/json"
-	"github.com/ant0ine/go-json-rest/rest/test"
-	"github.com/stretchr/testify/assert"
 	"mime"
 	"strings"
 	"testing"
+
+	"github.com/ant0ine/go-json-rest/rest/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func CheckResponse(t *testing.T, want ResponseChecker, have *test.Recorded) {
