@@ -74,8 +74,10 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 			return
 		}
 
+		ctx := r.Context()
+
 		//authorize, no authz = http 403
-		err = mw.Authz.Authorize(token, action.Resource, action.Method)
+		err = mw.Authz.Authorize(ctx, token, action.Resource, action.Method)
 		if err != nil {
 			if err == ErrAuthzUnauthorized {
 				rest_utils.RestErrWithLog(w, r, l,

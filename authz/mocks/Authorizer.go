@@ -14,6 +14,7 @@
 package mocks
 
 import authz "github.com/mendersoftware/useradm/authz"
+import context "context"
 import jwt "github.com/mendersoftware/useradm/jwt"
 import mock "github.com/stretchr/testify/mock"
 
@@ -22,13 +23,13 @@ type Authorizer struct {
 	mock.Mock
 }
 
-// Authorize provides a mock function with given fields: token, resource, action
-func (_m *Authorizer) Authorize(token *jwt.Token, resource string, action string) error {
-	ret := _m.Called(token, resource, action)
+// Authorize provides a mock function with given fields: ctx, token, resource, action
+func (_m *Authorizer) Authorize(ctx context.Context, token *jwt.Token, resource string, action string) error {
+	ret := _m.Called(ctx, token, resource, action)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*jwt.Token, string, string) error); ok {
-		r0 = rf(token, resource, action)
+	if rf, ok := ret.Get(0).(func(context.Context, *jwt.Token, string, string) error); ok {
+		r0 = rf(ctx, token, resource, action)
 	} else {
 		r0 = ret.Error(0)
 	}

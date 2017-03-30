@@ -192,6 +192,7 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 
 	authorizer := &mauthz.Authorizer{}
 	authorizer.On("Authorize",
+		mock.MatchedBy(func(c context.Context) bool { return true }),
 		mock.AnythingOfType("*jwt.Token"),
 		mock.AnythingOfType("string"),
 		mock.AnythingOfType("string")).Return(nil)

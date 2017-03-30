@@ -14,6 +14,8 @@
 package authz
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/useradm/jwt"
@@ -32,5 +34,5 @@ type Authorizer interface {
 	// nil if authorization is granted
 	// ErrAuthzUnauthorized otherwise
 	// ErrAuthzTokenInvalid if can't parse token
-	Authorize(token *jwt.Token, resource, action string) error
+	Authorize(ctx context.Context, token *jwt.Token, resource, action string) error
 }

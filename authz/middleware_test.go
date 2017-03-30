@@ -14,6 +14,7 @@
 package authz_test
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -211,9 +212,12 @@ func TestAuthzMiddleware(t *testing.T) {
 		)
 		rest.ErrorFieldName = "error"
 
+		ctx := context.Background()
+
 		//setup mocks
 		a := &mauthz.Authorizer{}
 		a.On("Authorize",
+			ctx,
 			mock.AnythingOfType("*jwt.Token"),
 			tc.action.Resource,
 			tc.action.Method).Return(tc.authErr)

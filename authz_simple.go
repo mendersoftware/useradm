@@ -14,6 +14,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/scope"
@@ -33,7 +35,7 @@ type SimpleAuthz struct {
 }
 
 // Authorize makes SimpleAuthz implement the Authorizer interface.
-func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) error {
+func (sa *SimpleAuthz) Authorize(_ context.Context, token *jwt.Token, resource, action string) error {
 	if token == nil {
 		return authz.ErrAuthzUnauthorized
 	}
