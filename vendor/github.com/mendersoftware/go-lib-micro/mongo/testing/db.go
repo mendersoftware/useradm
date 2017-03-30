@@ -11,41 +11,33 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-
-package mongo
+package testing
 
 import (
 	"io/ioutil"
 	"os"
-	"testing"
 
-	"log"
-
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/dbtest"
 )
 
-var db *dbtest.DBServer
+// TestDBRunner exports selected calls of dbtest.DBServer API, just the ones
+// that are useful in tests.
+type TestDBRunner interface {
+	Session() *mgo.Session
+	Wipe()
+}
 
-// Overwrites test execution and allows for test database setup
-func TestMain(m *testing.M) {
-	log.Println("test")
+// WithDB will set up a test DB instance and pass it to `f` callback as
+// `dbtest`. Once `f()` is finished, the DB will be cleaned up. Value returned
+// from `f()` is obtained as return status of a call to WithDB().
+func WithDB(f func(dbtest TestDBRunner) int) int {
 	dbdir, _ := ioutil.TempDir("", "dbsetup-test")
-	// os.Exit would ignore defers, workaround
-	status := func() int {
-		// Start test database server
-		if !testing.Short() {
-			db = &dbtest.DBServer{}
-			db.SetPath(dbdir)
-			// Tear down databaser server
-			// Note:
-			// if test panics, it will require manual database tear down
-			// testing package executes tests in goroutines therefore
-			// we can't catch panics issued in tests.
-			defer os.RemoveAll(dbdir)
-			defer db.Stop()
-		}
-		return m.Run()
-	}()
+	db := &dbtest.DBServer{}
+	db.SetPath(dbdir)
 
-	os.Exit(status)
+	defer os.RemoveAll(dbdir)
+	defer db.Stop()
+
+	return f(db)
 }

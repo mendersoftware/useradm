@@ -140,6 +140,12 @@
 			"revisionTime": "2017-03-21T09:59:38Z"
 		},
 		{
+			"checksumSHA1": "aFpMSIKd5L05oFey4tkL1UEBtnE=",
+			"path": "github.com/mendersoftware/go-lib-micro/mongo/testing",
+			"revision": "62ee11f8cd52c2fd0928c6150a830d0a4c3bed8a",
+			"revisionTime": "2017-03-21T09:59:38Z"
+		},
+		{
 			"checksumSHA1": "b6DpKldPbfbpDlefXa9JsXLiD3M=",
 			"path": "github.com/mendersoftware/go-lib-micro/requestid",
 			"revision": "62ee11f8cd52c2fd0928c6150a830d0a4c3bed8a",
