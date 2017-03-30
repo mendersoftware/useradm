@@ -58,7 +58,7 @@ func TestUserAdmSignToken(t *testing.T) {
 			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)
 
-		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config, nil)
+		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
 
 		sf := useradm.SignToken(ctx)
 
@@ -239,7 +239,7 @@ func TestUserAdmLogin(t *testing.T) {
 		db.On("IsEmpty", ctx).Return(tc.dbEmpty, tc.dbEmptyErr)
 		db.On("GetUserByEmail", ctx, tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
-		useradm := NewUserAdm(nil, db, tc.config, nil)
+		useradm := NewUserAdm(nil, db, tc.config)
 
 		token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword)
 
@@ -308,7 +308,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 			mock.AnythingOfType("*model.User")).
 			Return(tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, Config{}, nil)
+		useradm := NewUserAdm(nil, db, Config{})
 
 		err := useradm.CreateUser(ctx, &tc.inUser)
 
@@ -384,7 +384,7 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			mock.AnythingOfType("*model.User")).
 			Return(tc.dbCreateErr)
 
-		useradm := NewUserAdm(nil, db, Config{}, nil)
+		useradm := NewUserAdm(nil, db, Config{})
 
 		err := useradm.CreateUserInitial(ctx, &tc.inUser)
 
@@ -464,7 +464,7 @@ func TestUserAdmVerify(t *testing.T) {
 		db.On("GetUserById", ctx,
 			tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, config, nil)
+		useradm := NewUserAdm(nil, db, config)
 
 		err := useradm.Verify(ctx, tc.token)
 
