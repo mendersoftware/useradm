@@ -201,7 +201,7 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
 		ResFunc:    ExtractResourceAction,
-		JWTHandler: jwt.NewJWTHandlerRS256(privkey, nil),
+		JWTHandler: jwt.NewJWTHandlerRS256(privkey),
 	}
 
 	ifmw := &rest.IfMiddleware{

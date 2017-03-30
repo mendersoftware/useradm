@@ -226,7 +226,7 @@ func TestAuthzMiddleware(t *testing.T) {
 
 		//finish setting up the middleware
 		privkey := loadPrivKey("../crypto/private.pem", t)
-		jwth := jwt.NewJWTHandlerRS256(privkey, nil)
+		jwth := jwt.NewJWTHandlerRS256(privkey)
 		mw := AuthzMiddleware{
 			Authz:      a,
 			ResFunc:    resfunc,

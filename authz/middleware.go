@@ -59,7 +59,7 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 		}
 
 		// parse token, insert into env
-		token, err := mw.JWTHandler.WithLog(l).FromJWT(tokstr)
+		token, err := mw.JWTHandler.FromJWT(tokstr)
 		if err != nil {
 			rest_utils.RestErrWithLog(w, r, l, ErrAuthzTokenInvalid, http.StatusUnauthorized)
 			return

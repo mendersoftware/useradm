@@ -54,7 +54,7 @@ func RunServer(c config.Reader) error {
 	}
 
 	authz := &SimpleAuthz{l: l}
-	jwth := jwt.NewJWTHandlerRS256(privKey, l)
+	jwth := jwt.NewJWTHandlerRS256(privKey)
 
 	useradmapi := api_http.NewUserAdmApiHandlers(
 		func() (useradm.App, error) {
