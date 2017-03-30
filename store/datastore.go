@@ -17,8 +17,6 @@ package store
 import (
 	"errors"
 
-	"github.com/mendersoftware/go-lib-micro/log"
-
 	"github.com/mendersoftware/useradm/model"
 )
 
@@ -39,6 +37,4 @@ type DataStore interface {
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(email string) (*model.User, error)
 	GetUserById(id string) (*model.User, error)
-
-	log.ContextLogger
 }

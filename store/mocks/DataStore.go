@@ -13,7 +13,6 @@
 //    limitations under the License.
 package mocks
 
-import log "github.com/mendersoftware/go-lib-micro/log"
 import mock "github.com/stretchr/testify/mock"
 import model "github.com/mendersoftware/useradm/model"
 import store "github.com/mendersoftware/useradm/store"
@@ -102,11 +101,6 @@ func (_m *DataStore) IsEmpty() (bool, error) {
 	}
 
 	return r0, r1
-}
-
-// UseLog provides a mock function with given fields: l
-func (_m *DataStore) UseLog(l *log.Logger) {
-	_m.Called(l)
 }
 
 var _ store.DataStore = (*DataStore)(nil)

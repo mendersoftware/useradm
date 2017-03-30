@@ -18,7 +18,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
@@ -48,16 +47,13 @@ var (
 
 type DataStoreMongo struct {
 	session *mgo.Session
-	log     *log.Logger
 }
 
-func GetDataStoreMongo(db string, l *log.Logger) (*DataStoreMongo, error) {
+func GetDataStoreMongo(db string) (*DataStoreMongo, error) {
 	d, err := NewDataStoreMongo(db)
 	if err != nil {
 		return nil, errors.Wrap(err, "database connection failed")
 	}
-	d.UseLog(l)
-
 	return d, nil
 }
 
@@ -65,7 +61,6 @@ func NewDataStoreMongoWithSession(session *mgo.Session) (*DataStoreMongo, error)
 
 	db := &DataStoreMongo{
 		session: session,
-		log:     log.New(log.Ctx{}),
 	}
 
 	err := db.Index()
@@ -197,8 +192,4 @@ func (db *DataStoreMongo) Index() error {
 	}
 
 	return session.DB(DbName).C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
-}
-
-func (db *DataStoreMongo) UseLog(l *log.Logger) {
-	db.log = l.F(log.Ctx{})
 }

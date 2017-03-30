@@ -58,7 +58,7 @@ func RunServer(c config.Reader) error {
 
 	useradmapi := api_http.NewUserAdmApiHandlers(
 		func(l *log.Logger) (useradm.App, error) {
-			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb), l)
+			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
 			if err != nil {
 				return nil, errors.Wrap(err, "database connection failed")
 			}
