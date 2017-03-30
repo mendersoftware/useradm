@@ -22,7 +22,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
-	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
@@ -159,7 +158,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.App, error) {
+		factory := func() (useradm.App, error) {
 			return uadm, nil
 		}
 
@@ -339,7 +338,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.App, error) {
+		factory := func() (useradm.App, error) {
 			return uadm, nil
 		}
 
@@ -434,7 +433,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.App, error) {
+		factory := func() (useradm.App, error) {
 			return uadm, tc.uaVerifyError
 		}
 

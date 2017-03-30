@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
@@ -42,7 +41,7 @@ var (
 	ErrAuthHeader = errors.New("invalid or missing auth header")
 )
 
-type UserAdmFactory func(l *log.Logger) (useradm.App, error)
+type UserAdmFactory func() (useradm.App, error)
 
 type UserAdmApiHandlers struct {
 	createUserAdm UserAdmFactory
@@ -86,7 +85,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	uadm, err := u.createUserAdm(l)
+	uadm, err := u.createUserAdm()
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
@@ -121,7 +120,7 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	// note that the request has passed through authz - the token is valid
 	token := authz.GetRequestToken(r.Env)
 
-	uadm, err := u.createUserAdm(l)
+	uadm, err := u.createUserAdm()
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
@@ -167,7 +166,7 @@ func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *r
 		return
 	}
 
-	useradm, err := u.createUserAdm(l)
+	useradm, err := u.createUserAdm()
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return

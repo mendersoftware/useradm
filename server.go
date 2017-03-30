@@ -57,7 +57,7 @@ func RunServer(c config.Reader) error {
 	jwth := jwt.NewJWTHandlerRS256(privKey, l)
 
 	useradmapi := api_http.NewUserAdmApiHandlers(
-		func(l *log.Logger) (useradm.App, error) {
+		func() (useradm.App, error) {
 			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
 			if err != nil {
 				return nil, errors.Wrap(err, "database connection failed")
