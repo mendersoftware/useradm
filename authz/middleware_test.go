@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package authz
+package authz_test
 
 import (
 	"crypto/rsa"
@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	. "github.com/mendersoftware/useradm/authz"
+	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
 )
 
@@ -210,7 +212,7 @@ func TestAuthzMiddleware(t *testing.T) {
 		rest.ErrorFieldName = "error"
 
 		//setup mocks
-		a := &MockAuthorizer{}
+		a := &mauthz.Authorizer{}
 		a.On("Authorize",
 			mock.AnythingOfType("*jwt.Token"),
 			tc.action.Resource,
