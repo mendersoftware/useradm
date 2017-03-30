@@ -92,7 +92,9 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	token, err := uadm.Login(email, pass)
+	ctx := r.Context()
+
+	token, err := uadm.Login(ctx, email, pass)
 	if err != nil {
 		switch {
 		case err == useradm.ErrUnauthorized:
@@ -103,7 +105,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	raw, err := token.MarshalJWT(uadm.SignToken())
+	raw, err := token.MarshalJWT(uadm.SignToken(ctx))
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
@@ -125,7 +127,9 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 		return
 	}
 
-	err = uadm.Verify(token)
+	ctx := r.Context()
+
+	err = uadm.Verify(ctx, token)
 	if err != nil {
 		if err == useradm.ErrUnauthorized {
 			rest_utils.RestErrWithLog(w, r, l, useradm.ErrUnauthorized, http.StatusUnauthorized)
@@ -169,7 +173,9 @@ func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *r
 		return
 	}
 
-	err = useradm.CreateUserInitial(&user)
+	ctx := r.Context()
+
+	err = useradm.CreateUserInitial(ctx, &user)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return

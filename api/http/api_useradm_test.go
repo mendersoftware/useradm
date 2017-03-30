@@ -14,6 +14,7 @@
 package http
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -138,9 +139,11 @@ func TestUserAdmApiLogin(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
+		ctx := context.TODO()
+
 		//make mock useradm
 		uadm := &museradm.App{}
-		uadm.On("Login",
+		uadm.On("Login", ctx,
 			mock.AnythingOfType("string"),
 			mock.AnythingOfType("string")).
 			Return(tc.uaToken, tc.uaError)
@@ -150,7 +153,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		}
 		// sf is explicitly of type jwt.SignFunc, this avoids silly type
 		// assertions in mocks
-		uadm.On("SignToken").Return(sf)
+		uadm.On("SignToken", ctx).Return(sf)
 
 		//make mock request
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
@@ -327,9 +330,11 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
+		ctx := context.TODO()
+
 		//make mock useradm
 		uadm := &museradm.App{}
-		uadm.On("CreateUserInitial",
+		uadm.On("CreateUserInitial", ctx,
 			mock.AnythingOfType("*model.User")).
 			Return(tc.uaError)
 
@@ -420,9 +425,11 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
+		ctx := context.TODO()
+
 		//make mock useradm
 		uadm := &museradm.App{}
-		uadm.On("Verify",
+		uadm.On("Verify", ctx,
 			mock.AnythingOfType("*jwt.Token")).
 			Return(tc.uaError)
 
