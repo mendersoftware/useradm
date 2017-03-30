@@ -14,8 +14,6 @@
 package main
 
 import (
-	"github.com/mendersoftware/go-lib-micro/log"
-
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/scope"
@@ -32,7 +30,6 @@ const (
 // SimpleAuthz is a trivial authorizer, mostly ensuring
 // proper permission check for the 'create initial user' case.
 type SimpleAuthz struct {
-	l *log.Logger
 }
 
 // Authorize makes SimpleAuthz implement the Authorizer interface.
@@ -58,10 +55,4 @@ func (sa *SimpleAuthz) Authorize(token *jwt.Token, resource, action string) erro
 	}
 
 	return authz.ErrAuthzUnauthorized
-}
-
-func (sa *SimpleAuthz) WithLog(l *log.Logger) authz.Authorizer {
-	return &SimpleAuthz{
-		l: l,
-	}
 }
