@@ -11,16 +11,20 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package useradm
 
 import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/scope"
+	"github.com/mendersoftware/useradm/store"
 )
 
 var (
@@ -30,11 +34,11 @@ var (
 	ErrUserNotInitial = errors.New("user database not empty")
 )
 
-type UserAdmApp interface {
+type App interface {
 	// Login accepts email/password, returns JWT
 	Login(email, pass string) (*jwt.Token, error)
-	CreateUser(u *UserModel) error
-	CreateUserInitial(u *UserModel) error
+	CreateUser(u *model.User) error
+	CreateUserInitial(u *model.User) error
 	Verify(token *jwt.Token) error
 
 	// SignToken returns a function that can be used for generating a signed
@@ -42,7 +46,7 @@ type UserAdmApp interface {
 	SignToken() jwt.SignFunc
 }
 
-type UserAdmConfig struct {
+type Config struct {
 	// token issuer
 	Issuer string
 	// token expiration time
@@ -52,12 +56,12 @@ type UserAdmConfig struct {
 type UserAdm struct {
 	// JWT serialized/deserializer
 	jwtHandler jwt.JWTHandler
-	db         DataStore
-	config     UserAdmConfig
+	db         store.DataStore
+	config     Config
 	log        *log.Logger
 }
 
-func NewUserAdm(jwtHandler jwt.JWTHandler, db DataStore, config UserAdmConfig, log *log.Logger) *UserAdm {
+func NewUserAdm(jwtHandler jwt.JWTHandler, db store.DataStore, config Config, log *log.Logger) *UserAdm {
 	return &UserAdm{
 		jwtHandler: jwtHandler,
 		db:         db,
@@ -85,7 +89,7 @@ func (u *UserAdm) doInitialLogin() (*jwt.Token, error) {
 		return nil, ErrUnauthorized
 	}
 
-	t := u.generateToken("initial", ScopeInitialUserCreate)
+	t := u.generateToken("initial", scope.InitialUserCreate)
 
 	return t, nil
 }
@@ -110,7 +114,7 @@ func (u *UserAdm) doRegularLogin(email, password string) (*jwt.Token, error) {
 	}
 
 	//generate token
-	t := u.generateToken(user.ID, ScopeAll)
+	t := u.generateToken(user.ID, scope.All)
 
 	return t, nil
 }
@@ -133,11 +137,11 @@ func (u *UserAdm) SignToken() jwt.SignFunc {
 	}
 }
 
-func (ua *UserAdm) CreateUser(u *UserModel) error {
+func (ua *UserAdm) CreateUser(u *model.User) error {
 	u.ID = uuid.NewV4().String()
 
 	if err := ua.db.CreateUser(u); err != nil {
-		if err == ErrDuplicateEmail {
+		if err == store.ErrDuplicateEmail {
 			return err
 		}
 		return errors.Wrap(err, "useradm: failed to create user in the db")
@@ -146,7 +150,7 @@ func (ua *UserAdm) CreateUser(u *UserModel) error {
 	return nil
 }
 
-func (ua *UserAdm) CreateUserInitial(u *UserModel) error {
+func (ua *UserAdm) CreateUserInitial(u *model.User) error {
 	empty, err := ua.db.IsEmpty()
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to check if db is empty")
@@ -170,7 +174,7 @@ func (ua *UserAdm) Verify(token *jwt.Token) error {
 	}
 
 	// don't check the db if it's the initial user creation request
-	if token.Claims.Scope == ScopeInitialUserCreate &&
+	if token.Claims.Scope == scope.InitialUserCreate &&
 		token.Claims.Subject == "initial" {
 		return nil
 	}

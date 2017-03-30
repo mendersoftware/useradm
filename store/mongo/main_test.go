@@ -11,11 +11,29 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
 
-var (
-	// inital user creation
-	ScopeInitialUserCreate = "mender.users.initial.create"
-	// full permissions for the tenant admin
-	ScopeAll = "mender.*"
+package mongo
+
+import (
+	"os"
+	"testing"
+
+	mtesting "github.com/mendersoftware/go-lib-micro/mongo/testing"
 )
+
+var db mtesting.TestDBRunner
+
+// Overwrites test execution and allows for test database setup
+func TestMain(m *testing.M) {
+	var status int
+	if !testing.Short() {
+		status = mtesting.WithDB(func(dbtest mtesting.TestDBRunner) int {
+			db = dbtest
+			return m.Run()
+		})
+	} else {
+		status = m.Run()
+	}
+
+	os.Exit(status)
+}

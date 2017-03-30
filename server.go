@@ -14,18 +14,19 @@
 package main
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/pkg/errors"
+
+	api_http "github.com/mendersoftware/useradm/api/http"
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/jwt"
-	"github.com/pkg/errors"
+	"github.com/mendersoftware/useradm/keys"
+	"github.com/mendersoftware/useradm/store/mongo"
+	"github.com/mendersoftware/useradm/user"
 )
 
 func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.JWTHandler) (*rest.Api, error) {
@@ -47,7 +48,7 @@ func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
-	privKey, err := getRSAPrivKey(c.GetString(SettingPrivKeyPath))
+	privKey, err := keys.LoadRSAPrivate(c.GetString(SettingPrivKeyPath))
 	if err != nil {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
@@ -55,16 +56,16 @@ func RunServer(c config.Reader) error {
 	authz := &SimpleAuthz{l: l}
 	jwth := jwt.NewJWTHandlerRS256(privKey, l)
 
-	useradmapi := NewUserAdmApiHandlers(
-		func(l *log.Logger) (UserAdmApp, error) {
-			db, err := GetDataStoreMongo(c.GetString(SettingDb), l)
+	useradmapi := api_http.NewUserAdmApiHandlers(
+		func(l *log.Logger) (useradm.App, error) {
+			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb), l)
 			if err != nil {
 				return nil, errors.Wrap(err, "database connection failed")
 			}
 
 			jwtHandler := jwth
 
-			ua := NewUserAdm(jwtHandler, db, UserAdmConfig{
+			ua := useradm.NewUserAdm(jwtHandler, db, useradm.Config{
 				Issuer:         c.GetString(SettingJWTIssuer),
 				ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
 			}, l)
@@ -86,31 +87,4 @@ func RunServer(c config.Reader) error {
 	l.Printf("listening on %s", addr)
 
 	return http.ListenAndServe(addr, api.MakeHandler())
-}
-
-func getRSAPrivKey(privKeyPath string) (*rsa.PrivateKey, error) {
-	// read key from file
-	pemData, err := ioutil.ReadFile(privKeyPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "jwt: can't open key")
-	}
-
-	// decode pem key
-	block, _ := pem.Decode(pemData)
-	if block == nil {
-		return nil, errors.Wrap(err, "jwt: can't decode key")
-	}
-
-	// check if it is an RSA PRIVATE KEY
-	if got, want := block.Type, "RSA PRIVATE KEY"; got != want {
-		return nil, errors.New("jwt: can't open key - not an rsa private key")
-	}
-
-	// return parsed key
-	privkey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "jwt: can't parse key")
-	}
-
-	return privkey, nil
 }

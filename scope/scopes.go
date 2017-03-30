@@ -11,14 +11,11 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package scope
 
-import (
-	"github.com/ant0ine/go-json-rest/rest"
+var (
+	// inital user creation
+	InitialUserCreate = "mender.users.initial.create"
+	// full permissions for the tenant admin
+	All = "mender.*"
 )
-
-// thin API handler interface
-type ApiHandler interface {
-	// produce a rest.App with routing setup or an error
-	GetApp() (rest.App, error)
-}

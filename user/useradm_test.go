@@ -11,16 +11,22 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package useradm
 
 import (
 	"testing"
 	"time"
 
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/mendersoftware/useradm/jwt"
+	mjwt "github.com/mendersoftware/useradm/jwt/mocks"
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/scope"
+	"github.com/mendersoftware/useradm/store"
+	mstore "github.com/mendersoftware/useradm/store/mocks"
 )
 
 func TestUserAdmSignToken(t *testing.T) {
@@ -29,7 +35,7 @@ func TestUserAdmSignToken(t *testing.T) {
 		signed  string
 		signErr error
 
-		config UserAdmConfig
+		config Config
 	}{
 		"ok": {
 			signed:  "foo",
@@ -44,7 +50,7 @@ func TestUserAdmSignToken(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
-		mockJWTHandler := MockJWTHandler{}
+		mockJWTHandler := mjwt.JWTHandler{}
 		mockJWTHandler.On("ToJWT",
 			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)
@@ -75,13 +81,13 @@ func TestUserAdmLogin(t *testing.T) {
 		dbEmpty    bool
 		dbEmptyErr error
 
-		dbUser    *UserModel
+		dbUser    *model.User
 		dbUserErr error
 
 		outErr   error
 		outToken *jwt.Token
 
-		config UserAdmConfig
+		config Config
 	}{
 		"ok: initial login": {
 			inEmail:    "",
@@ -97,11 +103,11 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "initial",
-					Scope:   ScopeInitialUserCreate,
+					Scope:   scope.InitialUserCreate,
 				},
 			},
 
-			config: UserAdmConfig{
+			config: Config{
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
@@ -114,7 +120,7 @@ func TestUserAdmLogin(t *testing.T) {
 			dbEmpty:    false,
 			dbEmptyErr: nil,
 
-			dbUser: &UserModel{
+			dbUser: &model.User{
 				ID:       "1234",
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
@@ -125,11 +131,11 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
-					Scope:   ScopeAll,
+					Scope:   scope.All,
 				},
 			},
 
-			config: UserAdmConfig{
+			config: Config{
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
@@ -156,7 +162,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr:   ErrUnauthorized,
 			outToken: nil,
 
-			config: UserAdmConfig{
+			config: Config{
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
@@ -174,7 +180,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr:   ErrUnauthorized,
 			outToken: nil,
 
-			config: UserAdmConfig{
+			config: Config{
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
@@ -186,7 +192,7 @@ func TestUserAdmLogin(t *testing.T) {
 			dbEmpty:    false,
 			dbEmptyErr: nil,
 
-			dbUser: &UserModel{
+			dbUser: &model.User{
 				ID:       "1234",
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
@@ -196,7 +202,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr:   ErrUnauthorized,
 			outToken: nil,
 
-			config: UserAdmConfig{
+			config: Config{
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
@@ -214,7 +220,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr:   errors.New("useradm: failed to get user: db: internal error"),
 			outToken: nil,
 
-			config: UserAdmConfig{
+			config: Config{
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
@@ -224,7 +230,7 @@ func TestUserAdmLogin(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
-		db := &mockDataStore{}
+		db := &mstore.DataStore{}
 		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
 		db.On("GetUserByEmail", tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
@@ -254,14 +260,14 @@ func TestUserAdmLogin(t *testing.T) {
 
 func TestUserAdmCreateUser(t *testing.T) {
 	testCases := map[string]struct {
-		inUser UserModel
+		inUser model.User
 
 		dbErr error
 
 		outErr error
 	}{
 		"ok": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -269,15 +275,15 @@ func TestUserAdmCreateUser(t *testing.T) {
 			outErr: nil,
 		},
 		"db error: duplicate email": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
-			dbErr:  ErrDuplicateEmail,
-			outErr: ErrDuplicateEmail,
+			dbErr:  store.ErrDuplicateEmail,
+			outErr: store.ErrDuplicateEmail,
 		},
 		"db error: general": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -290,12 +296,12 @@ func TestUserAdmCreateUser(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
-		db := &mockDataStore{}
+		db := &mstore.DataStore{}
 		db.On("CreateUser",
-			mock.AnythingOfType("*main.UserModel")).
+			mock.AnythingOfType("*model.User")).
 			Return(tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, UserAdmConfig{}, nil)
+		useradm := NewUserAdm(nil, db, Config{}, nil)
 
 		err := useradm.CreateUser(&tc.inUser)
 
@@ -310,7 +316,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 
 func TestUserAdmCreateUserInitial(t *testing.T) {
 	testCases := map[string]struct {
-		inUser UserModel
+		inUser model.User
 
 		dbEmpty     bool
 		dbEmptyErr  error
@@ -319,7 +325,7 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 		outErr error
 	}{
 		"ok": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -329,7 +335,7 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			outErr:      nil,
 		},
 		"error: not an initial user": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -339,7 +345,7 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			outErr:      ErrUserNotInitial,
 		},
 		"db error: IsEmpty()": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -349,7 +355,7 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 			outErr:      errors.New("useradm: failed to check if db is empty: no reachable servers"),
 		},
 		"db error: CreateUser()": {
-			inUser: UserModel{
+			inUser: model.User{
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -363,13 +369,13 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
-		db := &mockDataStore{}
+		db := &mstore.DataStore{}
 		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
 		db.On("CreateUser",
-			mock.AnythingOfType("*main.UserModel")).
+			mock.AnythingOfType("*model.User")).
 			Return(tc.dbCreateErr)
 
-		useradm := NewUserAdm(nil, db, UserAdmConfig{}, nil)
+		useradm := NewUserAdm(nil, db, Config{}, nil)
 
 		err := useradm.CreateUserInitial(&tc.inUser)
 
@@ -385,7 +391,7 @@ func TestUserAdmVerify(t *testing.T) {
 	testCases := map[string]struct {
 		token *jwt.Token
 
-		dbUser *UserModel
+		dbUser *model.User
 		dbErr  error
 
 		err error
@@ -397,7 +403,7 @@ func TestUserAdmVerify(t *testing.T) {
 					Issuer:  "mender",
 				},
 			},
-			dbUser: &UserModel{
+			dbUser: &model.User{
 				ID: "1234",
 			},
 			dbErr: nil,
@@ -441,9 +447,9 @@ func TestUserAdmVerify(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
-		config := UserAdmConfig{Issuer: "mender"}
+		config := Config{Issuer: "mender"}
 
-		db := &mockDataStore{}
+		db := &mstore.DataStore{}
 		db.On("GetUserById", tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
 
 		useradm := NewUserAdm(nil, db, config, nil)

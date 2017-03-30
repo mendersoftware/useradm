@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package main
+package model
 
 import (
 	"github.com/asaskevich/govalidator"
@@ -23,13 +23,13 @@ const (
 	MinPasswordLength = 8
 )
 
-type UserModel struct {
+type User struct {
 	ID       string `json:"id" bson:"_id"`
 	Email    string `json:"email" bson:",omitempty" valid:"email"`
 	Password string `json:"password" bson:"password"`
 }
 
-func (u UserModel) ValidateNew() error {
+func (u User) ValidateNew() error {
 	if u.Email == "" {
 		return errors.New("email can't be empty")
 	}

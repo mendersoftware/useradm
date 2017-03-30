@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package http
 
 import (
 	"io/ioutil"
@@ -25,11 +25,17 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
-	"github.com/mendersoftware/useradm/authz"
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/mendersoftware/useradm/authz"
+	mauthz "github.com/mendersoftware/useradm/authz/mocks"
+	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/keys"
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/user"
+	museradm "github.com/mendersoftware/useradm/user/mocks"
 )
 
 func makeApi(router rest.App) *rest.Api {
@@ -85,7 +91,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			signed:       "initial",
-			uaError:      ErrUnauthorized,
+			uaError:      useradm.ErrUnauthorized,
 
 			checker: mt.NewJSONResponse(
 				http.StatusUnauthorized,
@@ -133,23 +139,25 @@ func TestUserAdmApiLogin(t *testing.T) {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		useradm := &mockUserAdmApp{
-			sign: func(_ *jwt.Token) (string, error) {
-				return tc.signed, tc.signErr
-			},
-		}
-		useradm.On("Login",
+		uadm := &museradm.App{}
+		uadm.On("Login",
 			mock.AnythingOfType("string"),
 			mock.AnythingOfType("string")).
 			Return(tc.uaToken, tc.uaError)
-		useradm.On("SignToken").Return()
+
+		var sf jwt.SignFunc = func(_ *jwt.Token) (string, error) {
+			return tc.signed, tc.signErr
+		}
+		// sf is explicitly of type jwt.SignFunc, this avoids silly type
+		// assertions in mocks
+		uadm.On("SignToken").Return(sf)
 
 		//make mock request
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
 
 		//make handler
-		factory := func(l *log.Logger) (UserAdmApp, error) {
-			return useradm, nil
+		factory := func(l *log.Logger) (useradm.App, error) {
+			return uadm, nil
 		}
 
 		api := makeMockApiHandler(t, factory)
@@ -175,25 +183,28 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	)
 
 	//setup the authz middleware
-	privkey := loadPrivKey("crypto/private.pem", t)
+	privkey, err := keys.LoadRSAPrivate("../../crypto/private.pem")
+	if !assert.NoError(t, err) {
+		t.Fatalf("faied to load private key: %v", err)
+	}
 
-	//force authz only on /verify
-	authorizer := &SimpleAuthz{}
+	authorizer := &mauthz.Authorizer{}
+	authorizer.On("Authorize",
+		mock.AnythingOfType("*jwt.Token"),
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("string")).Return(nil)
+	authorizer.On("WithLog",
+		mock.AnythingOfType("*log.Logger")).Return(authorizer)
+
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
-		ResFunc:    extractResourceAction,
+		ResFunc:    ExtractResourceAction,
 		JWTHandler: jwt.NewJWTHandlerRS256(privkey, nil),
 	}
 
 	ifmw := &rest.IfMiddleware{
-		Condition: func(r *rest.Request) bool {
-			if r.URL.Path == uriAuthVerify && r.Method == http.MethodPost {
-				return true
-			} else {
-				return false
-			}
-		},
-		IfTrue: authzmw,
+		Condition: IsVerificationEndpoint,
+		IfTrue:    authzmw,
 	}
 
 	api.Use(ifmw)
@@ -220,7 +231,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			inBody: UserModel{
+			inBody: model.User{
 				Email:    "email@foo.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -241,11 +252,11 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError("failed to decode user info: json: cannot unmarshal string into Go value of type main.UserModel"),
+				restError("failed to decode user info: json: cannot unmarshal string into Go value of type model.User"),
 			),
 		},
 		"error: valid body, no email": {
-			inBody: UserModel{
+			inBody: model.User{
 				Password: "correcthorsebatterystaple",
 			},
 
@@ -258,7 +269,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: valid body, invalid email": {
-			inBody: UserModel{
+			inBody: model.User{
 				Email:    "username",
 				Password: "correcthorsebatterystaple",
 			},
@@ -272,7 +283,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: valid body, missing password": {
-			inBody: UserModel{
+			inBody: model.User{
 				Email: "foo@bar.com",
 			},
 
@@ -285,7 +296,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: valid body, password too short": {
-			inBody: UserModel{
+			inBody: model.User{
 				Email:    "foo@bar.com",
 				Password: "asdf123",
 			},
@@ -299,7 +310,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			),
 		},
 		"error: useradm error": {
-			inBody: UserModel{
+			inBody: model.User{
 				Email:    "email@foo.com",
 				Password: "correcthorsebatterystaple",
 			},
@@ -317,14 +328,14 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		useradm := &mockUserAdmApp{}
-		useradm.On("CreateUserInitial",
-			mock.AnythingOfType("*main.UserModel")).
+		uadm := &museradm.App{}
+		uadm.On("CreateUserInitial",
+			mock.AnythingOfType("*model.User")).
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (UserAdmApp, error) {
-			return useradm, nil
+		factory := func(l *log.Logger) (useradm.App, error) {
+			return uadm, nil
 		}
 
 		api := makeMockApiHandler(t, factory)
@@ -376,7 +387,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		},
 		"error: useradm unauthorized": {
 			uaVerifyError: nil,
-			uaError:       ErrUnauthorized,
+			uaError:       useradm.ErrUnauthorized,
 
 			checker: mt.NewJSONResponse(
 				http.StatusUnauthorized,
@@ -410,14 +421,14 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		t.Logf("test case: %v", name)
 
 		//make mock useradm
-		useradm := &mockUserAdmApp{}
-		useradm.On("Verify",
+		uadm := &museradm.App{}
+		uadm.On("Verify",
 			mock.AnythingOfType("*jwt.Token")).
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (UserAdmApp, error) {
-			return useradm, tc.uaVerifyError
+		factory := func(l *log.Logger) (useradm.App, error) {
+			return uadm, tc.uaVerifyError
 		}
 
 		api := makeMockApiHandler(t, factory)

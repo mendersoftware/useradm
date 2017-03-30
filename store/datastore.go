@@ -12,13 +12,14 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package main
+package store
 
 import (
 	"errors"
 
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
+
+	"github.com/mendersoftware/useradm/model"
 )
 
 var (
@@ -34,11 +35,10 @@ type DataStore interface {
 	// system)
 	IsEmpty() (bool, error)
 	// CreateUser persists the user
-	CreateUser(u *UserModel) error
+	CreateUser(u *model.User) error
 	//GetUserByEmail returns nil,nil if not found
-	GetUserByEmail(email string) (*UserModel, error)
-	GetUserById(id string) (*UserModel, error)
-	// Run migrations
-	Migrate(version string, migrations []migrate.Migration) error
+	GetUserByEmail(email string) (*model.User, error)
+	GetUserById(id string) (*model.User, error)
+
 	log.ContextLogger
 }

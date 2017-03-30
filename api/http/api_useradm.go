@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package main
+package http
 
 import (
 	"encoding/json"
@@ -23,8 +23,11 @@ import (
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
-	"github.com/mendersoftware/useradm/authz"
 	"github.com/pkg/errors"
+
+	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/user"
 )
 
 const (
@@ -39,7 +42,7 @@ var (
 	ErrAuthHeader = errors.New("invalid or missing auth header")
 )
 
-type UserAdmFactory func(l *log.Logger) (UserAdmApp, error)
+type UserAdmFactory func(l *log.Logger) (useradm.App, error)
 
 type UserAdmApiHandlers struct {
 	createUserAdm UserAdmFactory
@@ -83,16 +86,16 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	useradm, err := u.createUserAdm(l)
+	uadm, err := u.createUserAdm(l)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
 
-	token, err := useradm.Login(email, pass)
+	token, err := uadm.Login(email, pass)
 	if err != nil {
 		switch {
-		case err == ErrUnauthorized:
+		case err == useradm.ErrUnauthorized:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnauthorized)
 		default:
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
@@ -100,7 +103,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	raw, err := token.MarshalJWT(useradm.SignToken())
+	raw, err := token.MarshalJWT(uadm.SignToken())
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
@@ -116,16 +119,16 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	// note that the request has passed through authz - the token is valid
 	token := authz.GetRequestToken(r.Env)
 
-	useradm, err := u.createUserAdm(l)
+	uadm, err := u.createUserAdm(l)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
 
-	err = useradm.Verify(token)
+	err = uadm.Verify(token)
 	if err != nil {
-		if err == ErrUnauthorized {
-			rest_utils.RestErrWithLog(w, r, l, ErrUnauthorized, http.StatusUnauthorized)
+		if err == useradm.ErrUnauthorized {
+			rest_utils.RestErrWithLog(w, r, l, useradm.ErrUnauthorized, http.StatusUnauthorized)
 		} else {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 		}
@@ -139,7 +142,7 @@ func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *r
 	l := requestlog.GetRequestLogger(r.Env)
 
 	// get and validate user from body
-	var user UserModel
+	var user model.User
 	body, err := readBodyRaw(r)
 	if err != nil {
 		err = errors.Wrap(err, "failed to decode user info")

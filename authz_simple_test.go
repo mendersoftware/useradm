@@ -20,8 +20,10 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mendersoftware/useradm/jwt"
+	"github.com/mendersoftware/useradm/scope"
 )
 
 func TestSimpleAuthzAuthorize(t *testing.T) {
@@ -40,7 +42,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					Issuer:    "mender",
 					ExpiresAt: 2147483647,
 					Subject:   "testsubject",
-					Scope:     ScopeInitialUserCreate,
+					Scope:     scope.InitialUserCreate,
 				},
 			},
 		},
@@ -52,7 +54,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					Issuer:    "mender",
 					ExpiresAt: 2147483647,
 					Subject:   "testsubject",
-					Scope:     ScopeInitialUserCreate,
+					Scope:     scope.InitialUserCreate,
 				},
 			},
 			outErr: "unauthorized",
@@ -65,7 +67,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					Issuer:    "mender",
 					ExpiresAt: 2147483647,
 					Subject:   "testsubject",
-					Scope:     ScopeInitialUserCreate,
+					Scope:     scope.InitialUserCreate,
 				},
 			},
 			outErr: "unauthorized",
@@ -78,7 +80,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					Issuer:    "mender",
 					ExpiresAt: 2147483647,
 					Subject:   "testsubject",
-					Scope:     ScopeAll,
+					Scope:     scope.All,
 				},
 			},
 		},
@@ -90,7 +92,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					Issuer:    "mender",
 					ExpiresAt: 2147483647,
 					Subject:   "testsubject",
-					Scope:     ScopeAll,
+					Scope:     scope.All,
 				},
 			},
 		},
