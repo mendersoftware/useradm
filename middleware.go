@@ -19,6 +19,7 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/accesslog"
+	mcontext "github.com/mendersoftware/go-lib-micro/context"
 	"github.com/mendersoftware/go-lib-micro/customheader"
 	dlog "github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestid"
@@ -143,6 +144,15 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 		AccessControlExposeHeaders: []string{
 			"Location",
 			"Link",
+		},
+	})
+
+	// populate request context with data from rest.Request.Env just before
+	// going to AuthzMiddleware/IfMiddleware
+	api.Use(&mcontext.UpdateContextMiddleware{
+		Updates: []mcontext.UpdateContextFunc{
+			mcontext.RepackLoggerToContext,
+			mcontext.RepackRequestIdToContext,
 		},
 	})
 
