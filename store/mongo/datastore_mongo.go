@@ -89,7 +89,7 @@ func NewDataStoreMongo(host string) (*DataStoreMongo, error) {
 	return db, nil
 }
 
-func (db *DataStoreMongo) IsEmpty() (bool, error) {
+func (db *DataStoreMongo) IsEmpty(ctx context.Context) (bool, error) {
 	s := db.session.Copy()
 	defer s.Close()
 
@@ -100,7 +100,7 @@ func (db *DataStoreMongo) IsEmpty() (bool, error) {
 	return false, err
 }
 
-func (db *DataStoreMongo) CreateUser(u *model.User) error {
+func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	s := db.session.Copy()
 	defer s.Close()
 
@@ -123,7 +123,7 @@ func (db *DataStoreMongo) CreateUser(u *model.User) error {
 	return nil
 }
 
-func (db *DataStoreMongo) GetUserByEmail(email string) (*model.User, error) {
+func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	s := db.session.Copy()
 	defer s.Close()
 
@@ -142,7 +142,7 @@ func (db *DataStoreMongo) GetUserByEmail(email string) (*model.User, error) {
 	return &user, nil
 }
 
-func (db *DataStoreMongo) GetUserById(id string) (*model.User, error) {
+func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.User, error) {
 	s := db.session.Copy()
 	defer s.Close()
 

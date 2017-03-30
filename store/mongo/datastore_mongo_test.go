@@ -55,7 +55,8 @@ func TestMongoIsEmpty(t *testing.T) {
 			session.DB(DbName).C(DbUsersColl).Insert(tc)
 		}
 
-		empty, err := store.IsEmpty()
+		ctx := context.Background()
+		empty, err := store.IsEmpty(ctx)
 
 		assert.Equal(t, tc.empty, empty)
 		assert.NoError(t, err)
@@ -111,6 +112,8 @@ func TestMongoCreateUser(t *testing.T) {
 
 		db.Wipe()
 
+		ctx := context.Background()
+
 		session := db.Session()
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
@@ -119,7 +122,7 @@ func TestMongoCreateUser(t *testing.T) {
 		assert.NoError(t, err)
 
 		pass := tc.inUser.Password
-		err = store.CreateUser(&tc.inUser)
+		err = store.CreateUser(ctx, &tc.inUser)
 
 		if tc.outErr == "" {
 			//fetch user by id, verify password checks out
@@ -187,6 +190,8 @@ func TestMongoGetUserByEmail(t *testing.T) {
 
 		db.Wipe()
 
+		ctx := context.Background()
+
 		session := db.Session()
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
@@ -194,7 +199,7 @@ func TestMongoGetUserByEmail(t *testing.T) {
 		err = session.DB(DbName).C(DbUsersColl).Insert(existingUsers...)
 		assert.NoError(t, err)
 
-		user, err := store.GetUserByEmail(tc.inEmail)
+		user, err := store.GetUserByEmail(ctx, tc.inEmail)
 
 		if tc.outUser != nil {
 			assert.Equal(t, *tc.outUser, *user)
@@ -256,6 +261,8 @@ func TestMongoGetUserById(t *testing.T) {
 
 		db.Wipe()
 
+		ctx := context.Background()
+
 		session := db.Session()
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
@@ -263,7 +270,7 @@ func TestMongoGetUserById(t *testing.T) {
 		err = session.DB(DbName).C(DbUsersColl).Insert(existingUsers...)
 		assert.NoError(t, err)
 
-		user, err := store.GetUserById(tc.inId)
+		user, err := store.GetUserById(ctx, tc.inId)
 
 		if tc.outUser != nil {
 			assert.Equal(t, *tc.outUser, *user)
