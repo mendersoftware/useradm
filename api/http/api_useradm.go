@@ -19,7 +19,7 @@ import (
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/mendersoftware/go-lib-micro/requestlog"
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
 	"github.com/pkg/errors"
@@ -75,7 +75,9 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 }
 
 func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Request) {
-	l := requestlog.GetRequestLogger(r.Env)
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
 
 	//parse auth header
 	email, pass, ok := r.BasicAuth()
@@ -90,8 +92,6 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
-
-	ctx := r.Context()
 
 	token, err := uadm.Login(ctx, email, pass)
 	if err != nil {
@@ -115,7 +115,9 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 }
 
 func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {
-	l := requestlog.GetRequestLogger(r.Env)
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
 
 	// note that the request has passed through authz - the token is valid
 	token := authz.GetRequestToken(r.Env)
@@ -125,8 +127,6 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
-
-	ctx := r.Context()
 
 	err = uadm.Verify(ctx, token)
 	if err != nil {
@@ -142,7 +142,9 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 }
 
 func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
-	l := requestlog.GetRequestLogger(r.Env)
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
 
 	// get and validate user from body
 	var user model.User
@@ -171,8 +173,6 @@ func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *r
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
-
-	ctx := r.Context()
 
 	err = useradm.CreateUserInitial(ctx, &user)
 	if err != nil {
