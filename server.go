@@ -56,21 +56,18 @@ func RunServer(c config.Reader) error {
 	authz := &SimpleAuthz{}
 	jwth := jwt.NewJWTHandlerRS256(privKey)
 
+	db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
+	if err != nil {
+		return errors.Wrap(err, "database connection failed")
+	}
+
+	ua := useradm.NewUserAdm(jwth, db, useradm.Config{
+		Issuer:         c.GetString(SettingJWTIssuer),
+		ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+	})
+
 	useradmapi := api_http.NewUserAdmApiHandlers(
-		func() (useradm.App, error) {
-			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
-			if err != nil {
-				return nil, errors.Wrap(err, "database connection failed")
-			}
-
-			jwtHandler := jwth
-
-			ua := useradm.NewUserAdm(jwtHandler, db, useradm.Config{
-				Issuer:         c.GetString(SettingJWTIssuer),
-				ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
-			})
-			return ua, nil
-		})
+		func() (useradm.App, error) { return ua, nil })
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {
