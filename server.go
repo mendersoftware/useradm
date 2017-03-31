@@ -66,8 +66,7 @@ func RunServer(c config.Reader) error {
 		ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
 	})
 
-	useradmapi := api_http.NewUserAdmApiHandlers(
-		func() (useradm.App, error) { return ua, nil })
+	useradmapi := api_http.NewUserAdmApiHandlers(ua)
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {

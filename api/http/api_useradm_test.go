@@ -157,12 +157,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		//make mock request
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
 
-		//make handler
-		factory := func() (useradm.App, error) {
-			return uadm, nil
-		}
-
-		api := makeMockApiHandler(t, factory)
+		api := makeMockApiHandler(t, uadm)
 
 		//test
 		recorded := test.RunRequest(t, api, req)
@@ -170,8 +165,8 @@ func TestUserAdmApiLogin(t *testing.T) {
 	}
 }
 
-func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
-	handlers := NewUserAdmApiHandlers(f)
+func makeMockApiHandler(t *testing.T, uadm useradm.App) http.Handler {
+	handlers := NewUserAdmApiHandlers(uadm)
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()
@@ -339,11 +334,7 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 			Return(tc.uaError)
 
 		//make handler
-		factory := func() (useradm.App, error) {
-			return uadm, nil
-		}
-
-		api := makeMockApiHandler(t, factory)
+		api := makeMockApiHandler(t, uadm)
 
 		req := makeReq("POST",
 			"http://1.2.3.4/api/0.1.0/users/initial",
@@ -410,16 +401,6 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 				restError("internal error"),
 			),
 		},
-		"error: useradm verify": {
-			uaVerifyError: errors.New("some internal error"),
-			uaError:       nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusInternalServerError,
-				nil,
-				restError("internal error"),
-			),
-		},
 	}
 
 	for name, tc := range testCases {
@@ -434,11 +415,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 			Return(tc.uaError)
 
 		//make handler
-		factory := func() (useradm.App, error) {
-			return uadm, tc.uaVerifyError
-		}
-
-		api := makeMockApiHandler(t, factory)
+		api := makeMockApiHandler(t, uadm)
 
 		//make request
 		req := makeReq("POST",
