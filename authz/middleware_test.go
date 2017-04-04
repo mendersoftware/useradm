@@ -11,9 +11,10 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package authz
+package authz_test
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -31,6 +32,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	. "github.com/mendersoftware/useradm/authz"
+	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
 )
 
@@ -209,9 +212,12 @@ func TestAuthzMiddleware(t *testing.T) {
 		)
 		rest.ErrorFieldName = "error"
 
+		ctx := context.Background()
+
 		//setup mocks
-		a := &MockAuthorizer{}
+		a := &mauthz.Authorizer{}
 		a.On("Authorize",
+			ctx,
 			mock.AnythingOfType("*jwt.Token"),
 			tc.action.Resource,
 			tc.action.Method).Return(tc.authErr)
@@ -226,7 +232,7 @@ func TestAuthzMiddleware(t *testing.T) {
 
 		//finish setting up the middleware
 		privkey := loadPrivKey("../crypto/private.pem", t)
-		jwth := jwt.NewJWTHandlerRS256(privkey, nil)
+		jwth := jwt.NewJWTHandlerRS256(privkey)
 		mw := AuthzMiddleware{
 			Authz:      a,
 			ResFunc:    resfunc,

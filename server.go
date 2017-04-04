@@ -53,24 +53,20 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
 
-	authz := &SimpleAuthz{l: l}
-	jwth := jwt.NewJWTHandlerRS256(privKey, l)
+	authz := &SimpleAuthz{}
+	jwth := jwt.NewJWTHandlerRS256(privKey)
 
-	useradmapi := api_http.NewUserAdmApiHandlers(
-		func(l *log.Logger) (useradm.App, error) {
-			db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb), l)
-			if err != nil {
-				return nil, errors.Wrap(err, "database connection failed")
-			}
+	db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
+	if err != nil {
+		return errors.Wrap(err, "database connection failed")
+	}
 
-			jwtHandler := jwth
+	ua := useradm.NewUserAdm(jwth, db, useradm.Config{
+		Issuer:         c.GetString(SettingJWTIssuer),
+		ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+	})
 
-			ua := useradm.NewUserAdm(jwtHandler, db, useradm.Config{
-				Issuer:         c.GetString(SettingJWTIssuer),
-				ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
-			}, l)
-			return ua, nil
-		})
+	useradmapi := api_http.NewUserAdmApiHandlers(ua)
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {

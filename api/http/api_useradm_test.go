@@ -14,6 +14,7 @@
 package http
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -21,7 +22,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
-	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
@@ -138,9 +138,11 @@ func TestUserAdmApiLogin(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
+		ctx := context.TODO()
+
 		//make mock useradm
 		uadm := &museradm.App{}
-		uadm.On("Login",
+		uadm.On("Login", ctx,
 			mock.AnythingOfType("string"),
 			mock.AnythingOfType("string")).
 			Return(tc.uaToken, tc.uaError)
@@ -150,17 +152,12 @@ func TestUserAdmApiLogin(t *testing.T) {
 		}
 		// sf is explicitly of type jwt.SignFunc, this avoids silly type
 		// assertions in mocks
-		uadm.On("SignToken").Return(sf)
+		uadm.On("SignToken", ctx).Return(sf)
 
 		//make mock request
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
 
-		//make handler
-		factory := func(l *log.Logger) (useradm.App, error) {
-			return uadm, nil
-		}
-
-		api := makeMockApiHandler(t, factory)
+		api := makeMockApiHandler(t, uadm)
 
 		//test
 		recorded := test.RunRequest(t, api, req)
@@ -168,8 +165,8 @@ func TestUserAdmApiLogin(t *testing.T) {
 	}
 }
 
-func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
-	handlers := NewUserAdmApiHandlers(f)
+func makeMockApiHandler(t *testing.T, uadm useradm.App) http.Handler {
+	handlers := NewUserAdmApiHandlers(uadm)
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()
@@ -190,6 +187,7 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 
 	authorizer := &mauthz.Authorizer{}
 	authorizer.On("Authorize",
+		mock.MatchedBy(func(c context.Context) bool { return true }),
 		mock.AnythingOfType("*jwt.Token"),
 		mock.AnythingOfType("string"),
 		mock.AnythingOfType("string")).Return(nil)
@@ -199,7 +197,7 @@ func makeMockApiHandler(t *testing.T, f UserAdmFactory) http.Handler {
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
 		ResFunc:    ExtractResourceAction,
-		JWTHandler: jwt.NewJWTHandlerRS256(privkey, nil),
+		JWTHandler: jwt.NewJWTHandlerRS256(privkey),
 	}
 
 	ifmw := &rest.IfMiddleware{
@@ -327,18 +325,16 @@ func TestUserAdmApiPostUsersInitial(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
+		ctx := context.TODO()
+
 		//make mock useradm
 		uadm := &museradm.App{}
-		uadm.On("CreateUserInitial",
+		uadm.On("CreateUserInitial", ctx,
 			mock.AnythingOfType("*model.User")).
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.App, error) {
-			return uadm, nil
-		}
-
-		api := makeMockApiHandler(t, factory)
+		api := makeMockApiHandler(t, uadm)
 
 		req := makeReq("POST",
 			"http://1.2.3.4/api/0.1.0/users/initial",
@@ -405,33 +401,21 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 				restError("internal error"),
 			),
 		},
-		"error: useradm verify": {
-			uaVerifyError: errors.New("some internal error"),
-			uaError:       nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusInternalServerError,
-				nil,
-				restError("internal error"),
-			),
-		},
 	}
 
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
+		ctx := context.TODO()
+
 		//make mock useradm
 		uadm := &museradm.App{}
-		uadm.On("Verify",
+		uadm.On("Verify", ctx,
 			mock.AnythingOfType("*jwt.Token")).
 			Return(tc.uaError)
 
 		//make handler
-		factory := func(l *log.Logger) (useradm.App, error) {
-			return uadm, tc.uaVerifyError
-		}
-
-		api := makeMockApiHandler(t, factory)
+		api := makeMockApiHandler(t, uadm)
 
 		//make request
 		req := makeReq("POST",

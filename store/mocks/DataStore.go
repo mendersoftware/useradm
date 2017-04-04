@@ -13,7 +13,7 @@
 //    limitations under the License.
 package mocks
 
-import log "github.com/mendersoftware/go-lib-micro/log"
+import context "context"
 import mock "github.com/stretchr/testify/mock"
 import model "github.com/mendersoftware/useradm/model"
 import store "github.com/mendersoftware/useradm/store"
@@ -23,13 +23,13 @@ type DataStore struct {
 	mock.Mock
 }
 
-// CreateUser provides a mock function with given fields: u
-func (_m *DataStore) CreateUser(u *model.User) error {
-	ret := _m.Called(u)
+// CreateUser provides a mock function with given fields: ctx, u
+func (_m *DataStore) CreateUser(ctx context.Context, u *model.User) error {
+	ret := _m.Called(ctx, u)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*model.User) error); ok {
-		r0 = rf(u)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
+		r0 = rf(ctx, u)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -37,13 +37,13 @@ func (_m *DataStore) CreateUser(u *model.User) error {
 	return r0
 }
 
-// GetUserByEmail provides a mock function with given fields: email
-func (_m *DataStore) GetUserByEmail(email string) (*model.User, error) {
-	ret := _m.Called(email)
+// GetUserByEmail provides a mock function with given fields: ctx, email
+func (_m *DataStore) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	ret := _m.Called(ctx, email)
 
 	var r0 *model.User
-	if rf, ok := ret.Get(0).(func(string) *model.User); ok {
-		r0 = rf(email)
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.User); ok {
+		r0 = rf(ctx, email)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.User)
@@ -51,8 +51,8 @@ func (_m *DataStore) GetUserByEmail(email string) (*model.User, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(email)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, email)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -60,13 +60,13 @@ func (_m *DataStore) GetUserByEmail(email string) (*model.User, error) {
 	return r0, r1
 }
 
-// GetUserById provides a mock function with given fields: id
-func (_m *DataStore) GetUserById(id string) (*model.User, error) {
-	ret := _m.Called(id)
+// GetUserById provides a mock function with given fields: ctx, id
+func (_m *DataStore) GetUserById(ctx context.Context, id string) (*model.User, error) {
+	ret := _m.Called(ctx, id)
 
 	var r0 *model.User
-	if rf, ok := ret.Get(0).(func(string) *model.User); ok {
-		r0 = rf(id)
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.User); ok {
+		r0 = rf(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.User)
@@ -74,8 +74,8 @@ func (_m *DataStore) GetUserById(id string) (*model.User, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(id)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -83,30 +83,25 @@ func (_m *DataStore) GetUserById(id string) (*model.User, error) {
 	return r0, r1
 }
 
-// IsEmpty provides a mock function with given fields:
-func (_m *DataStore) IsEmpty() (bool, error) {
-	ret := _m.Called()
+// IsEmpty provides a mock function with given fields: ctx
+func (_m *DataStore) IsEmpty(ctx context.Context) (bool, error) {
+	ret := _m.Called(ctx)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) bool); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
 
 	return r0, r1
-}
-
-// UseLog provides a mock function with given fields: l
-func (_m *DataStore) UseLog(l *log.Logger) {
-	_m.Called(l)
 }
 
 var _ store.DataStore = (*DataStore)(nil)

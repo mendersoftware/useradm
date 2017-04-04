@@ -17,7 +17,6 @@ import (
 	"crypto/rsa"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
-	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 )
 
@@ -34,24 +33,16 @@ type JWTHandler interface {
 	// ErrTokenExpired when the token is valid but expired
 	// ErrTokenInvalid when the token is invalid (malformed, missing required claims, etc.)
 	FromJWT(string) (*Token, error)
-	WithLog(l *log.Logger) JWTHandler
-	log.ContextLogger
 }
 
 // JWTHandlerRS256 is an RS256-specific JWTHandler
 type JWTHandlerRS256 struct {
 	privKey *rsa.PrivateKey
-	log     *log.Logger
 }
 
-func NewJWTHandlerRS256(privKey *rsa.PrivateKey, l *log.Logger) *JWTHandlerRS256 {
-	if l == nil {
-		l = log.New(log.Ctx{})
-	}
-
+func NewJWTHandlerRS256(privKey *rsa.PrivateKey) *JWTHandlerRS256 {
 	return &JWTHandlerRS256{
 		privKey: privKey,
-		log:     l,
 	}
 }
 
@@ -91,15 +82,4 @@ func (j *JWTHandlerRS256) FromJWT(tokstr string) (*Token, error) {
 	} else {
 		return nil, ErrTokenInvalid
 	}
-}
-
-func (j *JWTHandlerRS256) WithLog(l *log.Logger) JWTHandler {
-	return &JWTHandlerRS256{
-		privKey: j.privKey,
-		log:     l,
-	}
-}
-
-func (j *JWTHandlerRS256) UseLog(l *log.Logger) {
-	j.log = l.F(log.Ctx{})
 }

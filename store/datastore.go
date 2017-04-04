@@ -15,9 +15,8 @@
 package store
 
 import (
+	"context"
 	"errors"
-
-	"github.com/mendersoftware/go-lib-micro/log"
 
 	"github.com/mendersoftware/useradm/model"
 )
@@ -33,12 +32,10 @@ var (
 type DataStore interface {
 	// IsEmpty returns true if database is empty (i.e. clean state of the
 	// system)
-	IsEmpty() (bool, error)
+	IsEmpty(ctx context.Context) (bool, error)
 	// CreateUser persists the user
-	CreateUser(u *model.User) error
+	CreateUser(ctx context.Context, u *model.User) error
 	//GetUserByEmail returns nil,nil if not found
-	GetUserByEmail(email string) (*model.User, error)
-	GetUserById(id string) (*model.User, error)
-
-	log.ContextLogger
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	GetUserById(ctx context.Context, id string) (*model.User, error)
 }

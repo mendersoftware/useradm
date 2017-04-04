@@ -59,7 +59,7 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 		}
 
 		// parse token, insert into env
-		token, err := mw.JWTHandler.WithLog(l).FromJWT(tokstr)
+		token, err := mw.JWTHandler.FromJWT(tokstr)
 		if err != nil {
 			rest_utils.RestErrWithLog(w, r, l, ErrAuthzTokenInvalid, http.StatusUnauthorized)
 			return
@@ -74,9 +74,10 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 			return
 		}
 
+		ctx := r.Context()
+
 		//authorize, no authz = http 403
-		a := mw.Authz.WithLog(l)
-		err = a.Authorize(token, action.Resource, action.Method)
+		err = mw.Authz.Authorize(ctx, token, action.Resource, action.Method)
 		if err != nil {
 			if err == ErrAuthzUnauthorized {
 				rest_utils.RestErrWithLog(w, r, l,

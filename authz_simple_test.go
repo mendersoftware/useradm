@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -116,7 +117,8 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 
 		authz := &SimpleAuthz{}
 
-		err := authz.Authorize(tc.inToken, tc.inResource, tc.inAction)
+		err := authz.Authorize(context.TODO(),
+			tc.inToken, tc.inResource, tc.inAction)
 
 		if tc.outErr == "" {
 			assert.NoError(t, err)

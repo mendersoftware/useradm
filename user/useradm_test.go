@@ -14,6 +14,7 @@
 package useradm
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -50,14 +51,16 @@ func TestUserAdmSignToken(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
+		ctx := context.Background()
+
 		mockJWTHandler := mjwt.JWTHandler{}
 		mockJWTHandler.On("ToJWT",
 			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)
 
-		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config, nil)
+		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
 
-		sf := useradm.SignToken()
+		sf := useradm.SignToken(ctx)
 
 		assert.NotNil(t, sf)
 
@@ -230,13 +233,15 @@ func TestUserAdmLogin(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
+		ctx := context.Background()
+
 		db := &mstore.DataStore{}
-		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
-		db.On("GetUserByEmail", tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
+		db.On("IsEmpty", ctx).Return(tc.dbEmpty, tc.dbEmptyErr)
+		db.On("GetUserByEmail", ctx, tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
-		useradm := NewUserAdm(nil, db, tc.config, nil)
+		useradm := NewUserAdm(nil, db, tc.config)
 
-		token, err := useradm.Login(tc.inEmail, tc.inPassword)
+		token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
@@ -296,14 +301,16 @@ func TestUserAdmCreateUser(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
+		ctx := context.Background()
+
 		db := &mstore.DataStore{}
-		db.On("CreateUser",
+		db.On("CreateUser", ctx,
 			mock.AnythingOfType("*model.User")).
 			Return(tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, Config{}, nil)
+		useradm := NewUserAdm(nil, db, Config{})
 
-		err := useradm.CreateUser(&tc.inUser)
+		err := useradm.CreateUser(ctx, &tc.inUser)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
@@ -369,15 +376,17 @@ func TestUserAdmCreateUserInitial(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
 
+		ctx := context.Background()
+
 		db := &mstore.DataStore{}
-		db.On("IsEmpty").Return(tc.dbEmpty, tc.dbEmptyErr)
-		db.On("CreateUser",
+		db.On("IsEmpty", ctx).Return(tc.dbEmpty, tc.dbEmptyErr)
+		db.On("CreateUser", ctx,
 			mock.AnythingOfType("*model.User")).
 			Return(tc.dbCreateErr)
 
-		useradm := NewUserAdm(nil, db, Config{}, nil)
+		useradm := NewUserAdm(nil, db, Config{})
 
-		err := useradm.CreateUserInitial(&tc.inUser)
+		err := useradm.CreateUserInitial(ctx, &tc.inUser)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
@@ -449,12 +458,15 @@ func TestUserAdmVerify(t *testing.T) {
 
 		config := Config{Issuer: "mender"}
 
+		ctx := context.Background()
+
 		db := &mstore.DataStore{}
-		db.On("GetUserById", tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+		db.On("GetUserById", ctx,
+			tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, config, nil)
+		useradm := NewUserAdm(nil, db, config)
 
-		err := useradm.Verify(tc.token)
+		err := useradm.Verify(ctx, tc.token)
 
 		if tc.err != nil {
 			assert.EqualError(t, err, tc.err.Error())

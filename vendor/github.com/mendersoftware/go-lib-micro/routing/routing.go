@@ -14,9 +14,11 @@
 package routing
 
 import (
-	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/mendersoftware/go-lib-micro/strings"
 	"net/http"
+
+	"github.com/ant0ine/go-json-rest/rest"
+
+	"github.com/mendersoftware/go-lib-micro/strings"
 )
 
 type HttpOptionsGenerator func(methods []string) rest.HandlerFunc
