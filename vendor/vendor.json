@@ -332,12 +332,6 @@
 			"revisionTime": "2016-10-28T17:07:08Z"
 		},
 		{
-			"checksumSHA1": "4hQNaJUg67lF/QcO0NKzUeqlaew=",
-			"path": "golang.org/x/net/context",
-			"revision": "4cfeeeb61ae8daa2a4b06572024786e56f23504c",
-			"revisionTime": "2016-10-30T07:22:20Z"
-		},
-		{
 			"checksumSHA1": "KqecwXo3OO+p4N+E9RhlHvl9I+w=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "b699b7032584f0953262cb2788a0ca19bb494703",
@@ -416,10 +410,10 @@
 			"revisionTime": "2016-08-18T02:01:20Z"
 		},
 		{
-			"checksumSHA1": "RDshSIhn01+axeOW8yQ9TR88cZQ=",
+			"checksumSHA1": "WiyCOMvfzRdymImAJ3ME6aoYUdM=",
 			"path": "gopkg.in/tomb.v2",
-			"revision": "9dde971544235898fc9720ed594059f79fd3273c",
-			"revisionTime": "2016-11-14T17:47:44Z"
+			"revision": "14b3d72120e8d10ea6e6b7f87f7175734b1faab8",
+			"revisionTime": "2014-06-26T14:46:23Z"
 		},
 		{
 			"checksumSHA1": "12GqsW8PiRPnezDDy0v4brZrndM=",
