@@ -59,7 +59,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "username",
-					Usage: "Name of user to create",
+					Usage: "Name of created user, must be an email address",
 				},
 				cli.StringFlag{
 					Name:  "password",
@@ -126,12 +126,8 @@ func runDeamon(args *cli.Context) error {
 }
 
 func runCreateUser(args *cli.Context) error {
-	l := log.New(log.Ctx{})
-
-	l.Info("user-create")
-
-	err := commandCreateUser(args.String("username"),
-		args.String("password"))
+	err := commandCreateUser(config.Config,
+		args.String("username"), args.String("password"))
 	if err != nil {
 		return cli.NewExitError(err.Error(), 5)
 	}

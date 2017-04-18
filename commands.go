@@ -16,10 +16,11 @@ package main
 import (
 	"errors"
 
+	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 )
 
-func commandCreateUser(username string, password string) error {
+func commandCreateUser(c config.Reader, username string, password string) error {
 	l := log.NewEmpty()
 
 	l.Debugf("create user '%s'", username)
