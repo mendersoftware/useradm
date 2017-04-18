@@ -35,6 +35,9 @@ const (
 
 	SettingDb        = "mongo"
 	SettingDbDefault = "mongo-useradm"
+
+	SettingTenantAdmAddr        = "tenantadm_addr"
+	SettingTenantAdmAddrDefault = "http://mender-tenant-adm:8080/"
 )
 
 var (
@@ -45,5 +48,6 @@ var (
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
 		{Key: SettingDb, Value: SettingDbDefault},
+		{Key: SettingTenantAdmAddr, Value: SettingTenantAdmAddrDefault},
 	}
 )
