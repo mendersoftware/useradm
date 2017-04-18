@@ -53,6 +53,21 @@ func main() {
 			Usage:  "Run as server (default)",
 			Action: runDeamon,
 		},
+		{
+			Name:  "create-user",
+			Usage: "Create user",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "username",
+					Usage: "Name of user to create",
+				},
+				cli.StringFlag{
+					Name:  "password",
+					Usage: "User's password, leave empty to have it read from stdin",
+				},
+			},
+			Action: runCreateUser,
+		},
 	}
 	app.Action = runDeamon
 	app.Before = func(args *cli.Context) error {
@@ -106,6 +121,19 @@ func runDeamon(args *cli.Context) error {
 	err = RunServer(config.Config)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 4)
+	}
+	return nil
+}
+
+func runCreateUser(args *cli.Context) error {
+	l := log.New(log.Ctx{})
+
+	l.Info("user-create")
+
+	err := commandCreateUser(args.String("username"),
+		args.String("password"))
+	if err != nil {
+		return cli.NewExitError(err.Error(), 5)
 	}
 	return nil
 }
