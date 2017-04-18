@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
+	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
@@ -101,7 +102,7 @@ func (db *DataStoreMongo) IsEmpty(ctx context.Context) (bool, error) {
 	s := db.session.Copy()
 	defer s.Close()
 
-	err := s.DB(DbName).C(DbUsersColl).Find(bson.M{}).One(nil)
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Find(bson.M{}).One(nil)
 	if err == mgo.ErrNotFound {
 		return true, nil
 	}
@@ -119,7 +120,7 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	}
 	u.Password = string(hash)
 
-	err = s.DB(DbName).C(DbUsersColl).Insert(u)
+	err = s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(u)
 	if err != nil {
 		if mgo.IsDup(err) {
 			return store.ErrDuplicateEmail
@@ -137,7 +138,7 @@ func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*mo
 
 	var user model.User
 
-	err := s.DB(DbName).C(DbUsersColl).Find(bson.M{DbUserEmail: email}).One(&user)
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Find(bson.M{DbUserEmail: email}).One(&user)
 
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -156,7 +157,7 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 
 	var user model.User
 
-	err := s.DB(DbName).C(DbUsersColl).FindId(id).One(&user)
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).FindId(id).One(&user)
 
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -172,7 +173,7 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migrations []migrate.Migration) error {
 	m := migrate.DummyMigrator{
 		Session: db.session,
-		Db:      DbName,
+		Db:      mstore.DbFromContext(ctx, DbName),
 	}
 
 	ver, err := migrate.NewVersion(version)
