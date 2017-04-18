@@ -15,20 +15,43 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store/mongo"
 	"github.com/mendersoftware/useradm/user"
 )
 
+// safePassword reads a user password in a safe way
+func safePassword() (string, error) {
+	fmt.Fprintf(os.Stderr, "Enter password: ")
+	raw, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read password")
+	}
+	fmt.Fprintf(os.Stderr, "\n")
+
+	return string(raw), nil
+}
+
 func commandCreateUser(c config.Reader, username string, password string) error {
 	l := log.NewEmpty()
 
 	l.Debugf("create user '%s'", username)
+
+	if password == "" {
+		var err error
+		if password, err = safePassword(); err != nil {
+			return err
+		}
+	}
+
 	u := model.User{
 		Email:    username,
 		Password: password,
