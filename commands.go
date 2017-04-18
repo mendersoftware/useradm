@@ -14,18 +14,40 @@
 package main
 
 import (
-	"errors"
+	"context"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/pkg/errors"
+
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/store/mongo"
+	"github.com/mendersoftware/useradm/user"
 )
 
 func commandCreateUser(c config.Reader, username string, password string) error {
 	l := log.NewEmpty()
 
 	l.Debugf("create user '%s'", username)
-	if username == "" {
-		return errors.New("username is empty")
+	u := model.User{
+		Email:    username,
+		Password: password,
 	}
+
+	if err := u.ValidateNew(); err != nil {
+		return errors.Wrap(err, "user validation failed")
+	}
+
+	db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
+	if err != nil {
+		return errors.Wrap(err, "database connection failed")
+	}
+
+	ua := useradm.NewUserAdm(nil, db, useradm.Config{})
+
+	if err := ua.CreateUser(context.Background(), &u); err != nil {
+		return errors.Wrap(err, "creating user failed")
+	}
+
 	return nil
 }
