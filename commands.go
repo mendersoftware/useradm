@@ -28,8 +28,15 @@ import (
 	"github.com/mendersoftware/useradm/user"
 )
 
-// safePassword reads a user password in a safe way
-func safePassword() (string, error) {
+// safeReadPassword reads a user password from a terminal in a safe way (without
+// echoing the characters input by the user)
+func safeReadPassword() (string, error) {
+	stdinfd := int(os.Stdin.Fd())
+
+	if !terminal.IsTerminal(stdinfd) {
+		return "", errors.New("stdin is not a terminal")
+	}
+
 	fmt.Fprintf(os.Stderr, "Enter password: ")
 	raw, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
@@ -47,7 +54,7 @@ func commandCreateUser(c config.Reader, username string, password string) error 
 
 	if password == "" {
 		var err error
-		if password, err = safePassword(); err != nil {
+		if password, err = safeReadPassword(); err != nil {
 			return err
 		}
 	}
