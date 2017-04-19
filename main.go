@@ -30,6 +30,7 @@ func main() {
 	var configPath string
 
 	app := cli.NewApp()
+	app.Usage = "user administration service"
 	app.Version = CreateVersionString()
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
