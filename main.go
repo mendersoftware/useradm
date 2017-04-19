@@ -99,8 +99,8 @@ func runDeamon(args *cli.Context) error {
 		config.Config.Set(SettingMiddleware, EnvDev)
 	}
 
-	/*l.Printf("Inventory Service, version %s starting up",
-	CreateVersionString())*/
+	l.Printf("User Administration Service, version %s starting up",
+		CreateVersionString())
 
 	ctx := context.Background()
 
