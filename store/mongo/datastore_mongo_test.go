@@ -17,7 +17,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
+	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 
@@ -30,13 +32,22 @@ func TestMongoIsEmpty(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		empty bool
+		empty  bool
+		tenant string
 	}{
 		"empty": {
 			empty: true,
 		},
+		"empty with tenant": {
+			empty:  true,
+			tenant: "foo",
+		},
 		"not empty": {
 			empty: false,
+		},
+		"not empty with tenant": {
+			empty:  false,
+			tenant: "foo",
 		},
 	}
 
@@ -50,12 +61,17 @@ func TestMongoIsEmpty(t *testing.T) {
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
 
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
 		if !tc.empty {
 			// insert anything
-			session.DB(DbName).C(DbUsersColl).Insert(tc)
+			session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(tc)
 		}
 
-		ctx := context.Background()
 		empty, err := store.IsEmpty(ctx)
 
 		assert.Equal(t, tc.empty, empty)
@@ -87,6 +103,7 @@ func TestMongoCreateUser(t *testing.T) {
 
 	testCases := map[string]struct {
 		inUser model.User
+		tenant string
 		outErr string
 	}{
 		"ok": {
@@ -97,6 +114,15 @@ func TestMongoCreateUser(t *testing.T) {
 			},
 			outErr: "",
 		},
+		"ok with tenant": {
+			inUser: model.User{
+				ID:       "1234",
+				Email:    "baz@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			tenant: "foo",
+			outErr: "",
+		},
 		"duplicate email error": {
 			inUser: model.User{
 				ID:       "1234",
@@ -105,6 +131,19 @@ func TestMongoCreateUser(t *testing.T) {
 			},
 			outErr: "user with a given email already exists",
 		},
+		// TODO: uncomment this test after deciding what to do with database
+		// indexing in multitenant setup (related issue: MEN-1179)
+		/*
+			"duplicate email error with tenant": {
+				inUser: model.User{
+					ID:       "1234",
+					Email:    "foo@bar.com",
+					Password: "correcthorsebatterystaple",
+				},
+				tenant: "foo",
+				outErr: "user with a given email already exists",
+			},
+		*/
 	}
 
 	for name, tc := range testCases {
@@ -113,12 +152,17 @@ func TestMongoCreateUser(t *testing.T) {
 		db.Wipe()
 
 		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
 
 		session := db.Session()
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
 
-		err = session.DB(DbName).C(DbUsersColl).Insert(exisitingUsers...)
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(exisitingUsers...)
 		assert.NoError(t, err)
 
 		pass := tc.inUser.Password
@@ -127,7 +171,7 @@ func TestMongoCreateUser(t *testing.T) {
 		if tc.outErr == "" {
 			//fetch user by id, verify password checks out
 			var user model.User
-			err := session.DB(DbName).C(DbUsersColl).FindId("1234").One(&user)
+			err := session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).FindId("1234").One(&user)
 			assert.NoError(t, err)
 			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
 
@@ -161,6 +205,7 @@ func TestMongoGetUserByEmail(t *testing.T) {
 
 	testCases := map[string]struct {
 		inEmail string
+		tenant  string
 		outUser *model.User
 	}{
 		"ok - found 1": {
@@ -179,8 +224,21 @@ func TestMongoGetUserByEmail(t *testing.T) {
 				Password: "passwordhashqwerty",
 			},
 		},
+		"ok - found 2 with tenant": {
+			inEmail: "bar@bar.com",
+			outUser: &model.User{
+				ID:       "2",
+				Email:    "bar@bar.com",
+				Password: "passwordhashqwerty",
+			},
+		},
 		"not found": {
 			inEmail: "baz@bar.com",
+			outUser: nil,
+		},
+		"not found with tenant": {
+			inEmail: "baz@bar.com",
+			tenant:  "foo",
 			outUser: nil,
 		},
 	}
@@ -191,12 +249,17 @@ func TestMongoGetUserByEmail(t *testing.T) {
 		db.Wipe()
 
 		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
 
 		session := db.Session()
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
 
-		err = session.DB(DbName).C(DbUsersColl).Insert(existingUsers...)
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(existingUsers...)
 		assert.NoError(t, err)
 
 		user, err := store.GetUserByEmail(ctx, tc.inEmail)
@@ -232,10 +295,20 @@ func TestMongoGetUserById(t *testing.T) {
 
 	testCases := map[string]struct {
 		inId    string
+		tenant  string
 		outUser *model.User
 	}{
 		"ok - found 1": {
 			inId: "1",
+			outUser: &model.User{
+				ID:       "1",
+				Email:    "foo@bar.com",
+				Password: "passwordhash12345",
+			},
+		},
+		"ok - found 1 with context": {
+			inId:   "1",
+			tenant: "foo",
 			outUser: &model.User{
 				ID:       "1",
 				Email:    "foo@bar.com",
@@ -254,6 +327,11 @@ func TestMongoGetUserById(t *testing.T) {
 			inId:    "3",
 			outUser: nil,
 		},
+		"not found with tenant": {
+			inId:    "3",
+			tenant:  "foo",
+			outUser: nil,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -262,12 +340,17 @@ func TestMongoGetUserById(t *testing.T) {
 		db.Wipe()
 
 		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
 
 		session := db.Session()
 		store, err := NewDataStoreMongoWithSession(session)
 		assert.NoError(t, err)
 
-		err = session.DB(DbName).C(DbUsersColl).Insert(existingUsers...)
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(existingUsers...)
 		assert.NoError(t, err)
 
 		user, err := store.GetUserById(ctx, tc.inId)
