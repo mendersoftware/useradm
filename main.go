@@ -15,64 +15,122 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
+	"os"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/useradm/store/mongo"
 )
 
 func main() {
-	var configPath string
-	var printVersion bool
-	var devSetup bool
 	var debug bool
+	var configPath string
 
-	flag.StringVar(&configPath, "config",
-		"",
-		"Configuration file path. Supports JSON, TOML, YAML and HCL formatted configs.")
-	flag.BoolVar(&printVersion, "version",
-		false, "Show version")
-	flag.BoolVar(&devSetup, "dev",
-		false, "Use development setup")
-	flag.BoolVar(&debug, "debug",
-		false, "Enable debug logging")
+	app := cli.NewApp()
+	app.Usage = "user administration service"
+	app.Version = CreateVersionString()
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "config",
+			Usage:       "Configuration `FILE`. Supports JSON, TOML, YAML and HCL formatted configs.",
+			Destination: &configPath,
+		},
+		cli.BoolFlag{
+			Name:  "dev",
+			Usage: "Use development setup",
+		},
+		cli.BoolFlag{
+			Name:        "debug",
+			Usage:       "Enable debug logging",
+			Destination: &debug,
+		},
+	}
+	app.Commands = []cli.Command{
+		{
+			Name:   "server",
+			Usage:  "Run as server (default)",
+			Action: runDeamon,
+		},
+		{
+			Name:  "create-user",
+			Usage: "Create user",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "username",
+					Usage: "Name of created user, must be an email address",
+				},
+				cli.StringFlag{
+					Name:  "password",
+					Usage: "User's password, leave empty to have it read from stdin",
+				},
+			},
+			Action: runCreateUser,
+		},
+	}
+	app.Action = runDeamon
+	app.Before = func(args *cli.Context) error {
+		log.Setup(debug)
 
-	flag.Parse()
+		err := config.FromConfigFile(configPath, configDefaults)
+		if err != nil {
+			return cli.NewExitError(
+				fmt.Sprintf("error loading configuration: %s", err),
+				1)
+		}
 
-	log.Setup(debug)
+		// Enable setting conig values by environment variables
+		config.Config.SetEnvPrefix("USERADM")
+		config.Config.AutomaticEnv()
+
+		return nil
+	}
+	app.Run(os.Args)
+}
+
+func runDeamon(args *cli.Context) error {
+	devSetup := args.GlobalBool("dev")
 
 	l := log.New(log.Ctx{})
-
-	err := config.FromConfigFile(configPath, configDefaults)
-	if err != nil {
-		l.Fatalf("error loading configuration: %s", err)
-	}
 
 	if devSetup {
 		l.Infof("setting up development configuration")
 		config.Config.Set(SettingMiddleware, EnvDev)
 	}
 
-	// Enable setting conig values by environment variables
-	config.Config.SetEnvPrefix("USERADM")
-	config.Config.AutomaticEnv()
-
-	/*l.Printf("Inventory Service, version %s starting up",
-	CreateVersionString())*/
+	l.Printf("User Administration Service, version %s starting up",
+		CreateVersionString())
 
 	ctx := context.Background()
 
 	db, err := mongo.NewDataStoreMongo(config.Config.GetString(SettingDb))
 	if err != nil {
-		l.Fatal("failed to connect to db")
+		return cli.NewExitError(
+			fmt.Sprintf("failed to connect to db: %v", err),
+			2)
 	}
 
 	err = db.Migrate(ctx, mongo.DbVersion, nil)
 	if err != nil {
-		l.Fatalf("failed to run migrations: %v", err)
+		return cli.NewExitError(
+			fmt.Sprintf("failed to run migrations: %v", err),
+			3)
 	}
 
-	l.Fatal(RunServer(config.Config))
+	err = RunServer(config.Config)
+	if err != nil {
+		return cli.NewExitError(err.Error(), 4)
+	}
+	return nil
+}
+
+func runCreateUser(args *cli.Context) error {
+	err := commandCreateUser(config.Config,
+		args.String("username"), args.String("password"))
+	if err != nil {
+		return cli.NewExitError(err.Error(), 5)
+	}
+	return nil
 }

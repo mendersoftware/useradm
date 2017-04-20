@@ -7,7 +7,7 @@ COPY ./config.yaml /etc/useradm/
 
 RUN mkdir /etc/useradm/rsa
 
-ENTRYPOINT ["/usr/bin/useradm", "-config", "/etc/useradm/config.yaml"]
+ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
 
 COPY ./useradm /usr/bin/
 
