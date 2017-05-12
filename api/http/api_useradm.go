@@ -14,7 +14,6 @@
 package http
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
@@ -25,16 +24,14 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/useradm/authz"
-	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/user"
 )
 
 const (
-	uriBase         = "/api/0.1.0/"
-	uriAuthLogin    = uriBase + "auth/login"
-	uriAuthVerify   = uriBase + "auth/verify"
-	uriUsersInitial = uriBase + "users/initial"
-	uriUser         = uriBase + "users/:id"
+	uriBase       = "/api/0.1.0/"
+	uriAuthLogin  = uriBase + "auth/login"
+	uriAuthVerify = uriBase + "auth/verify"
+	uriUser       = uriBase + "users/:id"
 )
 
 var (
@@ -56,7 +53,6 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
 		rest.Post(uriAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriAuthVerify, i.AuthVerifyHandler),
-		rest.Post(uriUsersInitial, i.PostUsersInitialHandler),
 	}
 
 	routes = append(routes)
@@ -125,43 +121,6 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (u *UserAdmApiHandlers) PostUsersInitialHandler(w rest.ResponseWriter, r *rest.Request) {
-	ctx := r.Context()
-
-	l := log.FromContext(ctx)
-
-	// get and validate user from body
-	var user model.User
-	body, err := readBodyRaw(r)
-	if err != nil {
-		err = errors.Wrap(err, "failed to decode user info")
-		rest_utils.RestErrWithLogInternal(w, r, l, err)
-		return
-	}
-
-	err = json.Unmarshal(body, &user)
-	if err != nil {
-		err = errors.Wrap(err, "failed to decode user info")
-		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
-		return
-	}
-
-	if err := user.ValidateNew(); err != nil {
-		err = errors.Wrap(err, "invalid user info")
-		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
-		return
-	}
-
-	err = u.userAdm.CreateUserInitial(ctx, &user)
-	if err != nil {
-		rest_utils.RestErrWithLogInternal(w, r, l, err)
-		return
-	}
-
-	w.Header().Set("Location", user.ID)
-	w.WriteHeader(http.StatusCreated)
 }
 
 func readBodyRaw(r *rest.Request) ([]byte, error) {
