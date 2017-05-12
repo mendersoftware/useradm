@@ -58,52 +58,6 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 
-  /users/inital:
-    post:
-      summary: Create the initial Mender user
-      description: |
-        Creates the initial Mender user, provided that:
-        * the users database is empty
-        * a valid JWT token is presented (scope: 'mender.users.create.initial')
-      parameters:
-        - name: Authorization
-          in: header
-          required: true
-          type: string
-          format: Bearer [token]
-          description: Contains the JWT token issued upon login.
-        - name: user
-          in: body
-          description: New user descriptor.
-          required: true
-          schema:
-            $ref: "#/definitions/User"
-      produces:
-        - application/json
-      responses:
-        201:
-          description: Successful response.
-          headers:
-            Location:
-              description: URL of the newly created user.
-              type: string
-        400:
-          description: Bad request, see error message for details.
-          schema:
-            $ref: '#/definitions/Error'
-        401:
-          description: Unauthorized.
-          schema:
-            $ref: '#/definitions/Error'
-        403:
-          description: Forbidden.
-          schema:
-            $ref: '#/definitions/Error'
-        500:
-          description: Internal server error.
-          schema:
-            $ref: '#/definitions/Error'
-
 definitions:
   User:
     description: New user descriptor.
