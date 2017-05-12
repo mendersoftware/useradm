@@ -79,7 +79,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 
 	//parse auth header
 	email, pass, ok := r.BasicAuth()
-	if !ok && r.Header.Get("Authorization") != "" {
+	if !ok {
 		rest_utils.RestErrWithLog(w, r, l,
 			ErrAuthHeader, http.StatusUnauthorized)
 		return

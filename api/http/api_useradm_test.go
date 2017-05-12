@@ -64,7 +64,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 
 		checker mt.ResponseChecker
 	}{
-		"ok: regular flow": {
+		"ok": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			uaToken:      &jwt.Token{},
@@ -75,16 +75,6 @@ func TestUserAdmApiLogin(t *testing.T) {
 				Status:      http.StatusOK,
 				ContentType: "application/jwt",
 				Body:        "dummytoken",
-			},
-		},
-		"ok: initial flow": {
-			inAuthHeader: "",
-			signed:       "initial",
-
-			checker: &mt.BaseResponse{
-				Status:      http.StatusOK,
-				ContentType: "application/jwt",
-				Body:        "initial",
 			},
 		},
 		"error: unauthorized": {
