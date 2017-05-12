@@ -38,20 +38,6 @@ func (_m *App) CreateUser(ctx context.Context, u *model.User) error {
 	return r0
 }
 
-// CreateUserInitial provides a mock function with given fields: ctx, u
-func (_m *App) CreateUserInitial(ctx context.Context, u *model.User) error {
-	ret := _m.Called(ctx, u)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
-		r0 = rf(ctx, u)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // Login provides a mock function with given fields: ctx, email, pass
 func (_m *App) Login(ctx context.Context, email string, pass string) (*jwt.Token, error) {
 	ret := _m.Called(ctx, email, pass)

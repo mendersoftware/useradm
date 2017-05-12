@@ -28,17 +28,15 @@ import (
 )
 
 var (
-	ErrUnauthorized   = errors.New("unauthorized")
-	ErrAuthExpired    = errors.New("token expired")
-	ErrAuthInvalid    = errors.New("token is invalid")
-	ErrUserNotInitial = errors.New("user database not empty")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrAuthExpired  = errors.New("token expired")
+	ErrAuthInvalid  = errors.New("token is invalid")
 )
 
 type App interface {
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
 	CreateUser(ctx context.Context, u *model.User) error
-	CreateUserInitial(ctx context.Context, u *model.User) error
 	Verify(ctx context.Context, token *jwt.Token) error
 
 	// SignToken returns a function that can be used for generating a signed
@@ -120,19 +118,6 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 	}
 
 	return nil
-}
-
-func (ua *UserAdm) CreateUserInitial(ctx context.Context, u *model.User) error {
-	empty, err := ua.db.IsEmpty(ctx)
-	if err != nil {
-		return errors.Wrap(err, "useradm: failed to check if db is empty")
-	}
-
-	if empty {
-		return ua.CreateUser(ctx, u)
-	} else {
-		return ErrUserNotInitial
-	}
 }
 
 func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
