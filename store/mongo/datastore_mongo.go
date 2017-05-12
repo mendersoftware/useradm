@@ -98,17 +98,6 @@ func NewDataStoreMongo(host string) (*DataStoreMongo, error) {
 	return db, nil
 }
 
-func (db *DataStoreMongo) IsEmpty(ctx context.Context) (bool, error) {
-	s := db.session.Copy()
-	defer s.Close()
-
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Find(bson.M{}).One(nil)
-	if err == mgo.ErrNotFound {
-		return true, nil
-	}
-	return false, err
-}
-
 func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	s := db.session.Copy()
 	defer s.Close()

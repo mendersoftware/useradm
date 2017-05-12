@@ -26,63 +26,6 @@ import (
 	"github.com/mendersoftware/useradm/model"
 )
 
-func TestMongoIsEmpty(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode.")
-	}
-
-	testCases := map[string]struct {
-		empty  bool
-		tenant string
-	}{
-		"empty": {
-			empty: true,
-		},
-		"empty with tenant": {
-			empty:  true,
-			tenant: "foo",
-		},
-		"not empty": {
-			empty: false,
-		},
-		"not empty with tenant": {
-			empty:  false,
-			tenant: "foo",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
-
-		// Make sure we start test with empty database
-		db.Wipe()
-
-		session := db.Session()
-		store, err := NewDataStoreMongoWithSession(session)
-		assert.NoError(t, err)
-
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
-		if !tc.empty {
-			// insert anything
-			session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(tc)
-		}
-
-		empty, err := store.IsEmpty(ctx)
-
-		assert.Equal(t, tc.empty, empty)
-		assert.NoError(t, err)
-
-		// Need to close all sessions to be able to call wipe at next
-		// test case
-		session.Close()
-	}
-}
-
 func TestMongoCreateUser(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode.")
