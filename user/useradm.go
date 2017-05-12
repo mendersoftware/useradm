@@ -69,32 +69,6 @@ func NewUserAdm(jwtHandler jwt.JWTHandler, db store.DataStore, config Config) *U
 }
 
 func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {
-	if email == "" && pass == "" {
-		return u.doInitialLogin(ctx)
-	}
-
-	return u.doRegularLogin(ctx, email, pass)
-}
-
-// implements the initial/first-time login flow
-// issues a token for user creation if no users defined yet
-func (u *UserAdm) doInitialLogin(ctx context.Context) (*jwt.Token, error) {
-	empty, err := u.db.IsEmpty(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "useradm: failed to query database")
-	}
-	if !empty {
-		return nil, ErrUnauthorized
-	}
-
-	t := u.generateToken("initial", scope.InitialUserCreate)
-
-	return t, nil
-}
-
-// implements the regular login flow
-// needs real creds, issues a general-purpose token
-func (u *UserAdm) doRegularLogin(ctx context.Context, email, password string) (*jwt.Token, error) {
 	//get user
 	user, err := u.db.GetUserByEmail(ctx, email)
 	if user == nil && err == nil {
@@ -106,7 +80,7 @@ func (u *UserAdm) doRegularLogin(ctx context.Context, email, password string) (*
 	}
 
 	//verify password
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
 	if err != nil {
 		return nil, ErrUnauthorized
 	}

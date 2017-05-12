@@ -81,9 +81,6 @@ func TestUserAdmLogin(t *testing.T) {
 		inEmail    string
 		inPassword string
 
-		dbEmpty    bool
-		dbEmptyErr error
-
 		dbUser    *model.User
 		dbUserErr error
 
@@ -92,36 +89,9 @@ func TestUserAdmLogin(t *testing.T) {
 
 		config Config
 	}{
-		"ok: initial login": {
-			inEmail:    "",
-			inPassword: "",
-
-			dbEmpty:    true,
-			dbEmptyErr: nil,
-
-			dbUser:    nil,
-			dbUserErr: nil,
-
-			outErr: nil,
-			outToken: &jwt.Token{
-				Claims: jwt.Claims{
-					Subject: "initial",
-					Scope:   scope.InitialUserCreate,
-				},
-			},
-
-			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
-			},
-		},
-
-		"ok: regular login": {
+		"ok": {
 			inEmail:    "foo@bar.com",
 			inPassword: "correcthorsebatterystaple",
-
-			dbEmpty:    false,
-			dbEmptyErr: nil,
 
 			dbUser: &model.User{
 				ID:       "1234",
@@ -143,40 +113,10 @@ func TestUserAdmLogin(t *testing.T) {
 				ExpirationTime: 10,
 			},
 		},
-		"error: initial login, db IsEmpty() error": {
-			dbEmptyErr: errors.New("db failed"),
-
-			outErr: errors.New("useradm: failed to query database: db failed"),
-		},
-		"error: initial login, db not empty": {
-			outToken: nil,
-			outErr:   ErrUnauthorized,
-		},
-		"error: trying initial login, db not empty": {
-			inEmail:    "",
-			inPassword: "",
-
-			dbEmpty:    false,
-			dbEmptyErr: nil,
-
-			dbUser:    nil,
-			dbUserErr: nil,
-
-			outErr:   ErrUnauthorized,
-			outToken: nil,
-
-			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
-			},
-		},
-		"error: regular login, no user": {
+		"error: no user": {
 			inEmail:    "foo@bar.com",
 			inPassword: "correcthorsebatterystaple",
 
-			dbEmpty:    false,
-			dbEmptyErr: nil,
-
 			dbUser:    nil,
 			dbUserErr: nil,
 
@@ -188,12 +128,9 @@ func TestUserAdmLogin(t *testing.T) {
 				ExpirationTime: 10,
 			},
 		},
-		"error: regular login, wrong password": {
+		"error: wrong password": {
 			inEmail:    "foo@bar.com",
 			inPassword: "notcorrecthorsebatterystaple",
-
-			dbEmpty:    false,
-			dbEmptyErr: nil,
 
 			dbUser: &model.User{
 				ID:       "1234",
@@ -214,9 +151,6 @@ func TestUserAdmLogin(t *testing.T) {
 			inEmail:    "foo@bar.com",
 			inPassword: "correcthorsebatterystaple",
 
-			dbEmpty:    false,
-			dbEmptyErr: nil,
-
 			dbUser:    nil,
 			dbUserErr: errors.New("db: internal error"),
 
@@ -236,7 +170,6 @@ func TestUserAdmLogin(t *testing.T) {
 		ctx := context.Background()
 
 		db := &mstore.DataStore{}
-		db.On("IsEmpty", ctx).Return(tc.dbEmpty, tc.dbEmptyErr)
 		db.On("GetUserByEmail", ctx, tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
 		useradm := NewUserAdm(nil, db, tc.config)
