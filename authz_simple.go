@@ -42,15 +42,6 @@ func (sa *SimpleAuthz) Authorize(_ context.Context, token *jwt.Token, resource, 
 
 	tokenScope := token.Claims.Scope
 
-	// restrict the 'initial token' to a single action
-	if action == "POST" && resource == ResourceInitialUser {
-		if tokenScope == scope.InitialUserCreate {
-			return nil
-		} else {
-			return authz.ErrAuthzUnauthorized
-		}
-	}
-
 	// allow all actions on all services for 'mender.*'
 	if tokenScope == scope.All {
 		return nil

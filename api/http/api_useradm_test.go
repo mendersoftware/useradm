@@ -33,7 +33,6 @@ import (
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/keys"
-	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/user"
 	museradm "github.com/mendersoftware/useradm/user/mocks"
 )
@@ -64,7 +63,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 
 		checker mt.ResponseChecker
 	}{
-		"ok: regular flow": {
+		"ok": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			uaToken:      &jwt.Token{},
@@ -75,16 +74,6 @@ func TestUserAdmApiLogin(t *testing.T) {
 				Status:      http.StatusOK,
 				ContentType: "application/jwt",
 				Body:        "dummytoken",
-			},
-		},
-		"ok: initial flow": {
-			inAuthHeader: "",
-			signed:       "initial",
-
-			checker: &mt.BaseResponse{
-				Status:      http.StatusOK,
-				ContentType: "application/jwt",
-				Body:        "initial",
 			},
 		},
 		"error: unauthorized": {
@@ -216,135 +205,6 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App) http.Handler {
 	rest.ErrorFieldName = "error"
 
 	return api.MakeHandler()
-}
-
-func TestUserAdmApiPostUsersInitial(t *testing.T) {
-	t.Parallel()
-
-	testCases := map[string]struct {
-		inBody interface{}
-
-		uaError error
-
-		checker mt.ResponseChecker
-	}{
-		"ok": {
-			inBody: model.User{
-				Email:    "email@foo.com",
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusCreated,
-				nil,
-				nil,
-			),
-		},
-		"error: invalid body": {
-			inBody: "asdf",
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusBadRequest,
-				nil,
-				restError("failed to decode user info: json: cannot unmarshal string into Go value of type model.User"),
-			),
-		},
-		"error: valid body, no email": {
-			inBody: model.User{
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusBadRequest,
-				nil,
-				restError("invalid user info: email can't be empty"),
-			),
-		},
-		"error: valid body, invalid email": {
-			inBody: model.User{
-				Email:    "username",
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusBadRequest,
-				nil,
-				restError("invalid user info: Email: username does not validate as email;"),
-			),
-		},
-		"error: valid body, missing password": {
-			inBody: model.User{
-				Email: "foo@bar.com",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusBadRequest,
-				nil,
-				restError("invalid user info: password can't be empty"),
-			),
-		},
-		"error: valid body, password too short": {
-			inBody: model.User{
-				Email:    "foo@bar.com",
-				Password: "asdf123",
-			},
-
-			uaError: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusBadRequest,
-				nil,
-				restError("invalid user info: password too short"),
-			),
-		},
-		"error: useradm error": {
-			inBody: model.User{
-				Email:    "email@foo.com",
-				Password: "correcthorsebatterystaple",
-			},
-
-			uaError: errors.New("some internal useardm error"),
-
-			checker: mt.NewJSONResponse(
-				http.StatusInternalServerError,
-				nil,
-				restError("internal error"),
-			),
-		},
-	}
-	for name, tc := range testCases {
-		t.Logf("test case: %v", name)
-
-		ctx := context.TODO()
-
-		//make mock useradm
-		uadm := &museradm.App{}
-		uadm.On("CreateUserInitial", ctx,
-			mock.AnythingOfType("*model.User")).
-			Return(tc.uaError)
-
-		//make handler
-		api := makeMockApiHandler(t, uadm)
-
-		req := makeReq("POST",
-			"http://1.2.3.4/api/0.1.0/users/initial",
-			"",
-			tc.inBody)
-
-		//test
-		recorded := test.RunRequest(t, api, req)
-		mt.CheckResponse(t, tc.checker, recorded)
-	}
 }
 
 func TestUserAdmApiPostVerify(t *testing.T) {

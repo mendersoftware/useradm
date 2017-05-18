@@ -30,9 +30,6 @@ var (
 )
 
 type DataStore interface {
-	// IsEmpty returns true if database is empty (i.e. clean state of the
-	// system)
-	IsEmpty(ctx context.Context) (bool, error)
 	// CreateUser persists the user
 	CreateUser(ctx context.Context, u *model.User) error
 	//GetUserByEmail returns nil,nil if not found

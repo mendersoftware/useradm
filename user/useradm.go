@@ -28,17 +28,15 @@ import (
 )
 
 var (
-	ErrUnauthorized   = errors.New("unauthorized")
-	ErrAuthExpired    = errors.New("token expired")
-	ErrAuthInvalid    = errors.New("token is invalid")
-	ErrUserNotInitial = errors.New("user database not empty")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrAuthExpired  = errors.New("token expired")
+	ErrAuthInvalid  = errors.New("token is invalid")
 )
 
 type App interface {
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
 	CreateUser(ctx context.Context, u *model.User) error
-	CreateUserInitial(ctx context.Context, u *model.User) error
 	Verify(ctx context.Context, token *jwt.Token) error
 
 	// SignToken returns a function that can be used for generating a signed
@@ -69,32 +67,6 @@ func NewUserAdm(jwtHandler jwt.JWTHandler, db store.DataStore, config Config) *U
 }
 
 func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {
-	if email == "" && pass == "" {
-		return u.doInitialLogin(ctx)
-	}
-
-	return u.doRegularLogin(ctx, email, pass)
-}
-
-// implements the initial/first-time login flow
-// issues a token for user creation if no users defined yet
-func (u *UserAdm) doInitialLogin(ctx context.Context) (*jwt.Token, error) {
-	empty, err := u.db.IsEmpty(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "useradm: failed to query database")
-	}
-	if !empty {
-		return nil, ErrUnauthorized
-	}
-
-	t := u.generateToken("initial", scope.InitialUserCreate)
-
-	return t, nil
-}
-
-// implements the regular login flow
-// needs real creds, issues a general-purpose token
-func (u *UserAdm) doRegularLogin(ctx context.Context, email, password string) (*jwt.Token, error) {
 	//get user
 	user, err := u.db.GetUserByEmail(ctx, email)
 	if user == nil && err == nil {
@@ -106,7 +78,7 @@ func (u *UserAdm) doRegularLogin(ctx context.Context, email, password string) (*
 	}
 
 	//verify password
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
 	if err != nil {
 		return nil, ErrUnauthorized
 	}
@@ -148,19 +120,6 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 	return nil
 }
 
-func (ua *UserAdm) CreateUserInitial(ctx context.Context, u *model.User) error {
-	empty, err := ua.db.IsEmpty(ctx)
-	if err != nil {
-		return errors.Wrap(err, "useradm: failed to check if db is empty")
-	}
-
-	if empty {
-		return ua.CreateUser(ctx, u)
-	} else {
-		return ErrUserNotInitial
-	}
-}
-
 func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	if token == nil {
 		return ErrUnauthorized
@@ -169,12 +128,6 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	//check service-specific claims - iss
 	if token.Claims.Issuer != ua.config.Issuer {
 		return ErrUnauthorized
-	}
-
-	// don't check the db if it's the initial user creation request
-	if token.Claims.Scope == scope.InitialUserCreate &&
-		token.Claims.Subject == "initial" {
-		return nil
 	}
 
 	user, err := ua.db.GetUserById(ctx, token.Claims.Subject)

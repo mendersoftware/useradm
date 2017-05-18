@@ -14,8 +14,6 @@ go:
 env:
     matrix:
         - JOB_TYPE=compile_and_basic_tests
-        - JOB_TYPE=compile_and_integration_tests_fast
-        - JOB_TYPE=compile_and_integration_tests_slow
 
     global:
         # Should be encrypted or set as private travis variables (in travis settings):
@@ -57,7 +55,7 @@ before_install:
     - sudo apt-get -qq install -y e2tools
     - npm install -g swagger-cli
 
-    - pip2.7 install -U --user paramiko fabric PyYAML pytest requests pytest-xdist
+    - pip2.7 install -U --user paramiko fabric PyYAML pytest requests pytest-xdist filelock
 
     # Get our own Swagger verifier
     - wget https://raw.githubusercontent.com/mendersoftware/autodocs/master/verify_docs.py
@@ -109,24 +107,8 @@ script:
 
     # Insert build information into compiled binary using ldflags
     - CGO_ENABLED=0 go build -ldflags "-X main.Commit=`echo $TRAVIS_COMMIT` -X main.Tag=`echo $TRAVIS_TAG` -X main.Branch=`echo $TRAVIS_BRANCH` -X main.BuildNumber=`echo $TRAVIS_BUILD_NUMBER`"
-
     # Build docker image from docker file
     - sudo docker build -t $DOCKER_REPOSITORY:pr .
-
-    # Clone integration repo. for api testing (purposely after license checking..)
-    # Exexutes acceptance/integration tasts with branch: master
-    - git clone -b master https://github.com/mendersoftware/integration.git
-
-    # Move script to testing directory
-    - mv integration/extra/travis-testing/run-test-environment tests
-
-    - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then
-        ( cd $PWD/integration/tests && bash run.sh --runfast --docker-compose-file=../../tests/docker-compose-integration.yml );
-      fi
-
-    - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then
-        ( cd $PWD/integration/tests && bash run.sh --runslow --docker-compose-file=../../tests/docker-compose-integration.yml );
-      fi
 
 after_success:
     # Integrate with https://codecov.io
@@ -137,6 +119,8 @@ before_deploy:
     - docker tag $DOCKER_REPOSITORY:pr $DOCKER_REPOSITORY:$IMAGE_TAG
 
     # Upload image to docker registry only on PUSH
+    # TODO: we have one job for now, so the image will be pushed just once
+    #       when adding jobs, add a condition on job type to push the image only once
     - docker login --email=$DOCKER_HUB_EMAIL --username=$DOCKER_HUB_USERNAME --password=$DOCKER_HUB_PASSWORD
     - docker push $DOCKER_REPOSITORY:$IMAGE_TAG
 
