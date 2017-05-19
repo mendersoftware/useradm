@@ -18,10 +18,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	ct "github.com/mendersoftware/useradm/client/tenant"
+	mct "github.com/mendersoftware/useradm/client/tenant/mocks"
 	"github.com/mendersoftware/useradm/jwt"
 	mjwt "github.com/mendersoftware/useradm/jwt/mocks"
 	"github.com/mendersoftware/useradm/model"
@@ -81,6 +84,10 @@ func TestUserAdmLogin(t *testing.T) {
 		inEmail    string
 		inPassword string
 
+		verifyTenant bool
+		tenant       *ct.Tenant
+		tenantErr    error
+
 		dbUser    *model.User
 		dbUserErr error
 
@@ -112,6 +119,60 @@ func TestUserAdmLogin(t *testing.T) {
 				Issuer:         "foobar",
 				ExpirationTime: 10,
 			},
+		},
+		"ok, multitenant": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			verifyTenant: true,
+			tenant: &ct.Tenant{
+				ID:   "tenant1id",
+				Name: "tenant1",
+			},
+			tenantErr: nil,
+
+			dbUser: &model.User{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			outErr: nil,
+			outToken: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Scope:   scope.All,
+					Tenant:  "tenant1id",
+				},
+			},
+
+			config: Config{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"error, multitenant: tenant not found": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			verifyTenant: true,
+			tenant:       nil,
+			tenantErr:    nil,
+
+			outErr:   ErrUnauthorized,
+			outToken: nil,
+		},
+		"error, multitenant: tenant verification error": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			verifyTenant: true,
+			tenant:       nil,
+			tenantErr:    errors.New("some error"),
+
+			outErr:   errors.New("failed to check user's tenant: some error"),
+			outToken: nil,
 		},
 		"error: no user": {
 			inEmail:    "foo@bar.com",
@@ -173,6 +234,12 @@ func TestUserAdmLogin(t *testing.T) {
 		db.On("GetUserByEmail", ctx, tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
 		useradm := NewUserAdm(nil, db, tc.config)
+		if tc.verifyTenant {
+			cTenant := &mct.ClientRunner{}
+			cTenant.On("GetTenant", ctx, tc.inEmail, &apiclient.HttpApi{}).
+				Return(tc.tenant, tc.tenantErr)
+			useradm = useradm.WithTenantVerification(cTenant)
+		}
 
 		token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword)
 

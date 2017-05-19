@@ -17,10 +17,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/mendersoftware/useradm/client/tenant"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/scope"
@@ -51,22 +53,48 @@ type Config struct {
 	ExpirationTime int64
 }
 
+type ApiClientGetter func() apiclient.HttpRunner
+
+func simpleApiClientGetter() apiclient.HttpRunner {
+	return &apiclient.HttpApi{}
+}
+
 type UserAdm struct {
 	// JWT serialized/deserializer
-	jwtHandler jwt.JWTHandler
-	db         store.DataStore
-	config     Config
+	jwtHandler   jwt.JWTHandler
+	db           store.DataStore
+	config       Config
+	verifyTenant bool
+	cTenant      tenant.ClientRunner
+	clientGetter ApiClientGetter
 }
 
 func NewUserAdm(jwtHandler jwt.JWTHandler, db store.DataStore, config Config) *UserAdm {
 	return &UserAdm{
-		jwtHandler: jwtHandler,
-		db:         db,
-		config:     config,
+		jwtHandler:   jwtHandler,
+		db:           db,
+		config:       config,
+		clientGetter: simpleApiClientGetter,
 	}
 }
 
 func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {
+	var tenantClaim string
+	if u.verifyTenant {
+		// check the user's tenant
+		tenant, err := u.cTenant.GetTenant(ctx, email, u.clientGetter())
+
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to check user's tenant")
+		}
+
+		if tenant == nil {
+			return nil, ErrUnauthorized
+		}
+
+		tenantClaim = tenant.ID
+	}
+
 	//get user
 	user, err := u.db.GetUserByEmail(ctx, email)
 	if user == nil && err == nil {
@@ -84,12 +112,12 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	}
 
 	//generate token
-	t := u.generateToken(user.ID, scope.All)
+	t := u.generateToken(user.ID, scope.All, tenantClaim)
 
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope string) *jwt.Token {
+func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
 	return &jwt.Token{
 		Claims: jwt.Claims{
 			ID:        uuid.NewV4().String(),
@@ -97,6 +125,7 @@ func (u *UserAdm) generateToken(subject, scope string) *jwt.Token {
 			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
 			Subject:   subject,
 			Scope:     scope,
+			Tenant:    tenant,
 		},
 	}
 }
@@ -140,4 +169,12 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	}
 
 	return nil
+}
+
+// WithTenantVerification produces a UserAdm instance which enforces
+// tenant verification vs the tenantadm service upon /login.
+func (u *UserAdm) WithTenantVerification(c tenant.ClientRunner) *UserAdm {
+	u.verifyTenant = true
+	u.cTenant = c
+	return u
 }
