@@ -34,7 +34,7 @@ const (
 type AuthzMiddleware struct {
 	Authz      Authorizer
 	ResFunc    ResourceActionExtractor
-	JWTHandler jwt.JWTHandler
+	JWTHandler jwt.Handler
 }
 
 // Action combines info about the requested resourd + http method.

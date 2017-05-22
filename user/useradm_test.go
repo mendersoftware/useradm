@@ -56,7 +56,7 @@ func TestUserAdmSignToken(t *testing.T) {
 
 		ctx := context.Background()
 
-		mockJWTHandler := mjwt.JWTHandler{}
+		mockJWTHandler := mjwt.Handler{}
 		mockJWTHandler.On("ToJWT",
 			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)

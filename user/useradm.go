@@ -61,7 +61,7 @@ func simpleApiClientGetter() apiclient.HttpRunner {
 
 type UserAdm struct {
 	// JWT serialized/deserializer
-	jwtHandler   jwt.JWTHandler
+	jwtHandler   jwt.Handler
 	db           store.DataStore
 	config       Config
 	verifyTenant bool
@@ -69,7 +69,7 @@ type UserAdm struct {
 	clientGetter ApiClientGetter
 }
 
-func NewUserAdm(jwtHandler jwt.JWTHandler, db store.DataStore, config Config) *UserAdm {
+func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore, config Config) *UserAdm {
 	return &UserAdm{
 		jwtHandler:   jwtHandler,
 		db:           db,

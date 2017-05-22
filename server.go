@@ -30,7 +30,7 @@ import (
 	"github.com/mendersoftware/useradm/user"
 )
 
-func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.JWTHandler) (*rest.Api, error) {
+func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler) (*rest.Api, error) {
 	api := rest.NewApi()
 	if err := SetupMiddleware(api, stacktype, authz, jwth); err != nil {
 		return nil, errors.Wrap(err, "failed to setup middleware")
