@@ -13,32 +13,7 @@
 //    limitations under the License.
 package jwt
 
-import (
-	"github.com/pkg/errors"
-)
-
-// SignFunc will sign and encode token.
-type SignFunc func(token *Token) (string, error)
-
 // Token wrapper
 type Token struct {
 	Claims Claims
-}
-
-// MarshalJWT marshals Token into JWT comaptible format. `sign` provides means
-// for generating a signed JWT token.
-func (t *Token) MarshalJWT(sign SignFunc) ([]byte, error) {
-	if sign == nil {
-		panic("no signature helper")
-	}
-
-	signed, err := sign(t)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to sign token")
-	}
-	return []byte(signed), nil
-}
-
-func (t *Token) UnmarshalJWT([]byte) error {
-	return nil
 }
