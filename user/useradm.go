@@ -41,9 +41,9 @@ type App interface {
 	CreateUser(ctx context.Context, u *model.User) error
 	Verify(ctx context.Context, token *jwt.Token) error
 
-	// SignToken returns a function that can be used for generating a signed
+	// SignToken generates a signed
 	// token using configuration & method set up in UserAdmApp
-	SignToken(ctx context.Context) jwt.SignFunc
+	SignToken(ctx context.Context, t *jwt.Token) (string, error)
 }
 
 type Config struct {
@@ -130,10 +130,8 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
 	}
 }
 
-func (u *UserAdm) SignToken(ctx context.Context) jwt.SignFunc {
-	return func(t *jwt.Token) (string, error) {
-		return u.jwtHandler.ToJWT(t)
-	}
+func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
+	return u.jwtHandler.ToJWT(t)
 }
 
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {

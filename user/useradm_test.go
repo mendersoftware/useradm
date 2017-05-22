@@ -62,12 +62,7 @@ func TestUserAdmSignToken(t *testing.T) {
 		).Return(tc.signed, tc.signErr)
 
 		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
-
-		sf := useradm.SignToken(ctx)
-
-		assert.NotNil(t, sf)
-
-		signed, err := sf(&jwt.Token{})
+		signed, err := useradm.SignToken(ctx, &jwt.Token{})
 
 		if tc.signErr != nil {
 			assert.EqualError(t, err, tc.signErr.Error())
