@@ -37,7 +37,7 @@ const (
 	SettingDbDefault = "mongo-useradm"
 
 	SettingTenantAdmAddr        = "tenantadm_addr"
-	SettingTenantAdmAddrDefault = "http://mender-tenant-adm:8080/"
+	SettingTenantAdmAddrDefault = ""
 )
 
 var (

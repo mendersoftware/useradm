@@ -136,12 +136,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 			mock.AnythingOfType("string")).
 			Return(tc.uaToken, tc.uaError)
 
-		var sf jwt.SignFunc = func(_ *jwt.Token) (string, error) {
-			return tc.signed, tc.signErr
-		}
-		// sf is explicitly of type jwt.SignFunc, this avoids silly type
-		// assertions in mocks
-		uadm.On("SignToken", ctx).Return(sf)
+		uadm.On("SignToken", ctx, tc.uaToken).Return(tc.signed, tc.signErr)
 
 		//make mock request
 		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)

@@ -11,9 +11,12 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package jwt
+package apiclient
 
-// Token wrapper
-type Token struct {
-	Claims Claims
+import (
+	"net/http"
+)
+
+type HttpRunner interface {
+	Do(r *http.Request) (*http.Response, error)
 }

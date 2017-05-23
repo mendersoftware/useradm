@@ -23,13 +23,14 @@ import (
 
 	api_http "github.com/mendersoftware/useradm/api/http"
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/client/tenant"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/store/mongo"
 	"github.com/mendersoftware/useradm/user"
 )
 
-func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.JWTHandler) (*rest.Api, error) {
+func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler) (*rest.Api, error) {
 	api := rest.NewApi()
 	if err := SetupMiddleware(api, stacktype, authz, jwth); err != nil {
 		return nil, errors.Wrap(err, "failed to setup middleware")
@@ -65,6 +66,16 @@ func RunServer(c config.Reader) error {
 		Issuer:         c.GetString(SettingJWTIssuer),
 		ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
 	})
+
+	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {
+		l.Infof("settting up tenant verification")
+
+		tc := tenant.NewClient(tenant.Config{
+			TenantAdmAddr: tadmAddr,
+		})
+
+		ua = ua.WithTenantVerification(tc)
+	}
 
 	useradmapi := api_http.NewUserAdmApiHandlers(ua)
 

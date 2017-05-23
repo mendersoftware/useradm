@@ -126,6 +126,35 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				},
 			},
 		},
+		"ok (some claims w. tenant_token)": {
+			privKey: loadPrivKey("../crypto/private.pem", t),
+			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJleHAiOjIxNDc0ODM2NDcsImp0aSI6InNvb" +
+				"WVpZCIsImlhdCI6MTIzNDU2NzgsImlzcyI6Ik" +
+				"1lbmRlciIsInN1YiI6ImZvbyIsInNjcCI6Im1" +
+				"lbmRlci4qIiwibWVuZGVyLnRlbmFudCI6InRl" +
+				"bmFudDEyMyJ9.We9uVvO-JMfo8ac9xoWux8Jc" +
+				"nDMfJoBQslZzEW1K6GkMe23qvdIaimKfDGKAq" +
+				"H-bHyyts4cvEWYirbPcKzoxIFOeBn4kN14juL" +
+				"2Rv06CjsWZtCFHlJHkeB2XvSnTxaaZcCs0-E2" +
+				"hJk9F9domBX4dxQsrzcZHNfb8ZBDsbvQgWqKA" +
+				"j5vSV25pfC5QtLcUyRvOZvtnBvXq6Y9erY56u" +
+				"GHKoxj6_77CnBNezWXGpTrV40TNBQqvW39vpQ" +
+				"n6TMqRG686vlFGu60h1tpAls0Un8hfgWTdzMg" +
+				"Z7l70MKsRWaJjEqqY8sBiSY7ifjXpLgI8Wtbr" +
+				"kA58uboGav-yVCCMa-_CIw",
+			outToken: Token{
+				Claims: Claims{
+					ExpiresAt: 2147483647,
+					ID:        "someid",
+					IssuedAt:  12345678,
+					Issuer:    "Mender",
+					Subject:   "foo",
+					Scope:     "mender.*",
+					Tenant:    "tenant123",
+				},
+			},
+		},
 		"error - token invalid": {
 			privKey: loadPrivKey("../crypto/private.pem", t),
 

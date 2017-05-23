@@ -92,13 +92,13 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	raw, err := token.MarshalJWT(u.userAdm.SignToken(ctx))
+	raw, err := u.userAdm.SignToken(ctx, token)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
 
-	w.(http.ResponseWriter).Write(raw)
+	w.(http.ResponseWriter).Write([]byte(raw))
 	w.Header().Set("Content-Type", "application/jwt")
 }
 
