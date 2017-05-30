@@ -15,6 +15,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -33,8 +34,11 @@ import (
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/keys"
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/store"
 	"github.com/mendersoftware/useradm/user"
 	museradm "github.com/mendersoftware/useradm/user/mocks"
+	mtesting "github.com/mendersoftware/useradm/utils/testing"
 )
 
 func makeApi(router rest.App) *rest.Api {
@@ -146,6 +150,93 @@ func TestUserAdmApiLogin(t *testing.T) {
 		//test
 		recorded := test.RunRequest(t, api, req)
 		mt.CheckResponse(t, tc.checker, recorded)
+	}
+}
+
+func TestCreateUser(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		inReq *http.Request
+
+		createUserErr error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/0.1.0/users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+		},
+		"password too short": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/0.1.0/users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError(model.ErrPasswordTooShort.Error()),
+			),
+		},
+		"duplicated email": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/0.1.0/users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+			createUserErr: store.ErrDuplicateEmail,
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError(store.ErrDuplicateEmail.Error()),
+			),
+		},
+		"no body": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/0.1.0/users", nil),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("failed to decode request body: JSON payload is empty"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("CreateUser", mtesting.ContextMatcher(),
+				mock.AnythingOfType("*model.User")).
+				Return(tc.createUserErr)
+
+			api := makeMockApiHandler(t, uadm)
+
+			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
+			recorded := test.RunRequest(t, api, tc.inReq)
+
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
 	}
 }
 
