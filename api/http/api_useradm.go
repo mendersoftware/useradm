@@ -24,6 +24,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/store"
 	"github.com/mendersoftware/useradm/user"
 )
 
@@ -32,6 +34,7 @@ const (
 	uriAuthLogin  = uriBase + "auth/login"
 	uriAuthVerify = uriBase + "auth/verify"
 	uriUser       = uriBase + "users/:id"
+	uriUsers      = uriBase + "users"
 )
 
 var (
@@ -53,6 +56,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
 		rest.Post(uriAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriAuthVerify, i.AuthVerifyHandler),
+		rest.Post(uriUsers, i.AddUserHandler),
 	}
 
 	routes = append(routes)
@@ -121,6 +125,47 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	user, err := parseUser(r)
+	if err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	err = u.userAdm.CreateUser(ctx, user)
+	if err != nil {
+		if err == store.ErrDuplicateEmail {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
+		} else {
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+		}
+		return
+	}
+
+	w.Header().Add("Location", "users/"+string(user.ID))
+	w.WriteHeader(http.StatusCreated)
+}
+
+func parseUser(r *rest.Request) (*model.User, error) {
+	user := model.User{}
+
+	//decode body
+	err := r.DecodeJsonPayload(&user)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode request body")
+	}
+
+	if err := user.ValidateNew(); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
 
 func readBodyRaw(r *rest.Request) ([]byte, error) {
