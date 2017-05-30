@@ -40,6 +40,7 @@ type App interface {
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
 	CreateUser(ctx context.Context, u *model.User) error
 	Verify(ctx context.Context, token *jwt.Token) error
+	GetUsers(ctx context.Context) ([]model.User, error)
 
 	// SignToken generates a signed
 	// token using configuration & method set up in UserAdmApp
@@ -167,6 +168,15 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	}
 
 	return nil
+}
+
+func (ua *UserAdm) GetUsers(ctx context.Context) ([]model.User, error) {
+	users, err := ua.db.GetUsers(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to get users")
+	}
+
+	return users, nil
 }
 
 // WithTenantVerification produces a UserAdm instance which enforces

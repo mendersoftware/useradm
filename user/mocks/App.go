@@ -39,6 +39,29 @@ func (_m *App) CreateUser(ctx context.Context, u *model.User) error {
 	return r0
 }
 
+// GetUsers provides a mock function with given fields: ctx
+func (_m *App) GetUsers(ctx context.Context) ([]model.User, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []model.User
+	if rf, ok := ret.Get(0).(func(context.Context) []model.User); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Login provides a mock function with given fields: ctx, email, pass
 func (_m *App) Login(ctx context.Context, email string, pass string) (*jwt.Token, error) {
 	ret := _m.Called(ctx, email, pass)
