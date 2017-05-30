@@ -15,7 +15,9 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
@@ -306,6 +308,108 @@ func TestMongoGetUserById(t *testing.T) {
 		}
 
 		session.Close()
+	}
+}
+
+func TestMongoGetUsers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	ts, err := time.Parse(time.RFC3339, "2017-01-31T16:32:05Z")
+	assert.NoError(t, err)
+
+	testCases := map[string]struct {
+		inUsers  []interface{}
+		outUsers []model.User
+		tenant   string
+	}{
+		"ok: list": {
+			inUsers: []interface{}{
+				model.User{
+					ID:       "1",
+					Email:    "foo@bar.com",
+					Password: "passwordhash12345",
+				},
+				model.User{
+					ID:        "2",
+					Email:     "bar@bar.com",
+					Password:  "passwordhashqwerty",
+					CreatedTs: &ts,
+				},
+				model.User{
+					ID:        "3",
+					Email:     "baz@bar.com",
+					Password:  "passwordhash1sdf2345",
+					UpdatedTs: &ts,
+				},
+			},
+			outUsers: []model.User{
+				{
+					ID:    "1",
+					Email: "foo@bar.com",
+				},
+				{
+					ID:        "2",
+					Email:     "bar@bar.com",
+					CreatedTs: &ts,
+				},
+				{
+					ID:        "3",
+					Email:     "baz@bar.com",
+					UpdatedTs: &ts,
+				},
+			},
+			tenant: "foo",
+		},
+		"ok: empty": {
+			inUsers:  []interface{}{},
+			outUsers: []model.User{},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+			t.Logf("test case: %s", name)
+
+			db.Wipe()
+
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			session := db.Session()
+			store, err := NewDataStoreMongoWithSession(session)
+			assert.NoError(t, err)
+
+			if len(tc.inUsers) > 0 {
+				err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(tc.inUsers...)
+			}
+
+			users, err := store.GetUsers(ctx)
+			assert.NoError(t, err)
+
+			// transform times to utc
+			// bson encoder uses time.Local before writing to mongo, which can be e.g. 'CET'
+			// this won't match with assert.Equal
+			for i, _ := range users {
+				if users[i].CreatedTs != nil {
+					t := users[i].CreatedTs.UTC()
+					users[i].CreatedTs = &t
+				}
+				if users[i].UpdatedTs != nil {
+					t := users[i].UpdatedTs.UTC()
+					users[i].UpdatedTs = &t
+				}
+			}
+
+			assert.Equal(t, tc.outUsers, users)
+
+			session.Close()
+		})
 	}
 }
 
