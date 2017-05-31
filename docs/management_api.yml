@@ -4,6 +4,7 @@ info:
   title: User administration and authentication
   description: |
     An API for user administration and user authentication handling. Intended for use by the web GUI.
+    All responses from the API will contain 'X-MEN-RequestID' header with server-side generated request ID.
 
 basePath: '/api/management/v1/useradm'
 host: 'docker.mender.io'
@@ -58,9 +59,204 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 
+  /users:
+    get:
+      summary: List users
+      description: |
+          Returns a non-paged collection of users information.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        200:
+          description: Successful response.
+          schema:
+            title: ListOfUsers
+            type: array
+            items:
+              $ref: '#/definitions/User'
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      summary: Create user
+      parameters:
+        - name: user
+          in: body
+          description: New user data.
+          required: true
+          schema:
+            $ref: "#/definitions/UserNew"
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        201:
+          description: The user was successfully created.
+          headers:
+            Location:
+              type: string
+              description: URI for the newly created 'User' resource.
+        400:
+          description: |
+              The request body is malformed.
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        422:
+          description: |
+                The email address is duplicated or password is too short.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+  /users/{id}:
+    get:
+      summary: Get user information
+      description: |
+        Returns user information.
+      parameters:
+        - name: id
+          in: path
+          type: string
+          description: User id.
+          required: true
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        200:
+          description: Successful response - a user information is returned.
+          schema:
+            $ref: "#/definitions/User"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        404:
+          description: The user was not found.
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+    put:
+      summary: Update user information
+      description: |
+        Update user email or change user password.
+      parameters:
+        - name: id
+          in: path
+          type: string
+          description: User id.
+          required: true
+        - name: user_update
+          in: body
+          description: Updated user data.
+          required: true
+          schema:
+            $ref: "#/definitions/UserUpdate"
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        204:
+          description: User information updated.
+        400:
+          description: |
+              The request body is malformed.
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        422:
+          description: |
+                The email address is duplicated or password is too short.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+    delete:
+      summary: Remove user from the system
+      description: |
+        Remove user information from the system.
+      parameters:
+        - name: id
+          in: path
+          type: string
+          description: User id.
+          required: true
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        204:
+          description: User removed.
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
 definitions:
-  User:
+  UserNew:
     description: New user descriptor.
+    type: object
+    properties:
+      email:
+        description: A unique email address.
+        type: string
+      password:
+        description: Password.
+        type: string
+    required:
+      - email
+      - password
+    example:
+      application/json:
+        email: 'user@acme.com'
+        password: 'mypass1234'
+  UserUpdate:
+    description: Update user information.
     type: object
     properties:
       email:
@@ -71,8 +267,36 @@ definitions:
         type: string
     example:
       application/json:
-        email: 'user@acme.com'
-        password: 'mypass1234'
+        email: 'new_email@acme.com'
+  User:
+    description: User descriptor.
+    type: object
+    properties:
+      email:
+        description: A unique email address.
+        type: string
+      id:
+        description: User Id.
+        type: string
+      created_ts:
+        description: |
+            Server-side timestamp of the user creation.
+        type: string
+        format: date-time
+      updated_ts:
+        description: |
+            Server-side timestamp of the last user information update.
+        type: string
+        format: date-time
+    required:
+      - email
+      - id
+    example:
+      application/json:
+        email: "user@acme.com"
+        id: "806603def19d417d004a4b67e"
+        created_ts: "2016-10-03T16:58:51.639Z"
+        updated_ts: "2016-10-04T11:33:66.611Z"
 
   Error:
     description: Error descriptor.
@@ -81,6 +305,10 @@ definitions:
       error:
         description: Description of the error.
         type: string
+      request_id:
+        description: Request ID (same as in X-MEN-RequestID header).
+        type: string
     example:
       application/json:
         error: "missing Authorization header"
+        request_id: "f7881e82-0492-49fb-b459-795654e7188a"
