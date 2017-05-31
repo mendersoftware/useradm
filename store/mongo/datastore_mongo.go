@@ -17,6 +17,7 @@ package mongo
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
@@ -102,12 +103,17 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	s := db.session.Copy()
 	defer s.Close()
 
+	now := time.Now().UTC()
+
 	//compute/set password hash
 	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate password hash")
 	}
 	u.Password = string(hash)
+
+	u.CreatedTs = &now
+	u.UpdatedTs = &now
 
 	err = s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(u)
 	if err != nil {

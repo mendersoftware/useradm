@@ -15,6 +15,8 @@
 package model
 
 import (
+	"time"
+
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
 )
@@ -23,10 +25,23 @@ const (
 	MinPasswordLength = 8
 )
 
+var ErrPasswordTooShort = errors.New("password too short")
+
 type User struct {
-	ID       string `json:"id" bson:"_id"`
-	Email    string `json:"email" bson:",omitempty" valid:"email"`
+	// system-generated user ID
+	ID string `json:"id" bson:"_id"`
+
+	// user email address
+	Email string `json:"email" bson:",omitempty" valid:"email"`
+
+	// user password
 	Password string `json:"password" bson:"password"`
+
+	// timestamp of the user creation
+	CreatedTs *time.Time `json:"created_ts,omitempty" bson:"created_ts,omitempty"`
+
+	// timestamp of the last user information update
+	UpdatedTs *time.Time `json:"updated_ts,omitempty" bson:"updated_ts,omitempty"`
 }
 
 func (u User) ValidateNew() error {
@@ -52,7 +67,7 @@ func (u User) ValidateNew() error {
 // check password strength
 func checkPwd(password string) error {
 	if len(password) < MinPasswordLength {
-		return errors.New("password too short")
+		return ErrPasswordTooShort
 	}
 
 	return nil
