@@ -25,6 +25,8 @@ const (
 	MinPasswordLength = 8
 )
 
+var ErrPasswordTooShort = errors.New("password too short")
+
 type User struct {
 	// system-generated user ID
 	ID string `json:"id" bson:"_id"`
@@ -65,7 +67,7 @@ func (u User) ValidateNew() error {
 // check password strength
 func checkPwd(password string) error {
 	if len(password) < MinPasswordLength {
-		return errors.New("password too short")
+		return ErrPasswordTooShort
 	}
 
 	return nil

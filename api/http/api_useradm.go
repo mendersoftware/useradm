@@ -134,7 +134,11 @@ func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Reque
 
 	user, err := parseUser(r)
 	if err != nil {
-		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		if err == model.ErrPasswordTooShort {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
+		} else {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		}
 		return
 	}
 
