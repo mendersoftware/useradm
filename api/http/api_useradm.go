@@ -57,6 +57,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriUsers, i.AddUserHandler),
+		rest.Get(uriUsers, i.GetUsersHandler),
 	}
 
 	routes = append(routes)
@@ -154,6 +155,21 @@ func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Reque
 
 	w.Header().Add("Location", "users/"+string(user.ID))
 	w.WriteHeader(http.StatusCreated)
+
+}
+
+func (u *UserAdmApiHandlers) GetUsersHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	users, err := u.userAdm.GetUsers(ctx)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.WriteJson(users)
 }
 
 func parseUser(r *rest.Request) (*model.User, error) {
