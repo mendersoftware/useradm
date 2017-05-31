@@ -88,7 +88,7 @@ func NewDataStoreMongo(host string) (*DataStoreMongo, error) {
 		}
 	})
 	if err != nil {
-		return nil, errors.New("failed to open mgo session")
+		return nil, errors.Wrap(err, "failed to open mgo session")
 	}
 
 	db, err := NewDataStoreMongoWithSession(masterSession)
