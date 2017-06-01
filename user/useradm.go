@@ -39,6 +39,7 @@ type App interface {
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
 	CreateUser(ctx context.Context, u *model.User) error
+	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
 	Verify(ctx context.Context, token *jwt.Token) error
 	GetUsers(ctx context.Context) ([]model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
@@ -144,6 +145,17 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 			return err
 		}
 		return errors.Wrap(err, "useradm: failed to create user in the db")
+	}
+
+	return nil
+}
+
+func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
+	if err := ua.db.UpdateUser(ctx, id, u); err != nil {
+		if err == store.ErrDuplicateEmail || err == store.ErrUserNotFound {
+			return err
+		}
+		return errors.Wrap(err, "useradm: failed to update user information")
 	}
 
 	return nil
