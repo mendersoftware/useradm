@@ -25,7 +25,10 @@ const (
 	MinPasswordLength = 8
 )
 
-var ErrPasswordTooShort = errors.New("password too short")
+var (
+	ErrPasswordTooShort = errors.New("password too short")
+	ErrEmptyUpdate      = errors.New("no update information provided")
+)
 
 type User struct {
 	// system-generated user ID
@@ -44,6 +47,18 @@ type User struct {
 	UpdatedTs *time.Time `json:"updated_ts,omitempty" bson:"updated_ts,omitempty"`
 }
 
+type UserUpdate struct {
+
+	// user email address
+	Email string `json:"email,omitempty" bson:",omitempty" valid:"email"`
+
+	// user password
+	Password string `json:"password,omitempty" bson:"password,omitempty"`
+
+	// timestamp of the last user information update
+	UpdatedTs *time.Time `json:"-" bson:"updated_ts,omitempty"`
+}
+
 func (u User) ValidateNew() error {
 	if u.Email == "" {
 		return errors.New("email can't be empty")
@@ -59,6 +74,20 @@ func (u User) ValidateNew() error {
 
 	if err := checkPwd(u.Password); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (u UserUpdate) Validate() error {
+	if u.Email == "" && u.Password == "" {
+		return ErrEmptyUpdate
+	}
+
+	if u.Password != "" {
+		if err := checkPwd(u.Password); err != nil {
+			return err
+		}
 	}
 
 	return nil
