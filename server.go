@@ -57,7 +57,7 @@ func RunServer(c config.Reader) error {
 	authz := &SimpleAuthz{}
 	jwth := jwt.NewJWTHandlerRS256(privKey)
 
-	db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
+	db, err := mongo.GetDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
 	if err != nil {
 		return errors.Wrap(err, "database connection failed")
 	}

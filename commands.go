@@ -68,7 +68,7 @@ func commandCreateUser(c config.Reader, username string, password string) error 
 		return errors.Wrap(err, "user validation failed")
 	}
 
-	db, err := mongo.GetDataStoreMongo(c.GetString(SettingDb))
+	db, err := mongo.GetDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
 	if err != nil {
 		return errors.Wrap(err, "database connection failed")
 	}

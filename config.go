@@ -38,6 +38,15 @@ const (
 
 	SettingTenantAdmAddr        = "tenantadm_addr"
 	SettingTenantAdmAddrDefault = ""
+
+	SettingDbSSL        = "mongo_ssl"
+	SettingDbSSLDefault = false
+
+	SettingDbSSLSkipVerify        = "mongo_ssl_skipverify"
+	SettingDbSSLSkipVerifyDefault = false
+
+	SettingDbUsername = "mongo_username"
+	SettingDbPassword = "mongo_password"
 )
 
 var (
@@ -49,5 +58,7 @@ var (
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
 		{Key: SettingDb, Value: SettingDbDefault},
 		{Key: SettingTenantAdmAddr, Value: SettingTenantAdmAddrDefault},
+		{Key: SettingDbSSL, Value: SettingDbSSLDefault},
+		{Key: SettingDbSSLSkipVerify, Value: SettingDbSSLSkipVerifyDefault},
 	}
 )

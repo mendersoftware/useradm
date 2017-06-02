@@ -23,6 +23,10 @@ import (
 func TestCommandCreateUser(t *testing.T) {
 	conf := &cmocks.Reader{}
 	conf.On("GetString", SettingDb).Return("foo")
+	conf.On("GetBool", SettingDbSSL).Return(false)
+	conf.On("GetBool", SettingDbSSLSkipVerify).Return(false)
+	conf.On("GetString", SettingDbUsername).Return("siala")
+	conf.On("GetString", SettingDbPassword).Return("haha")
 
 	// not an email, password too short
 	err := commandCreateUser(conf, "foo", "bar")

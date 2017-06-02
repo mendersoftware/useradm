@@ -105,7 +105,7 @@ func runDeamon(args *cli.Context) error {
 
 	ctx := context.Background()
 
-	db, err := mongo.NewDataStoreMongo(config.Config.GetString(SettingDb))
+	db, err := mongo.NewDataStoreMongo(dataStoreMongoConfigFromAppConfig(config.Config))
 	if err != nil {
 		return cli.NewExitError(
 			fmt.Sprintf("failed to connect to db: %v", err),
