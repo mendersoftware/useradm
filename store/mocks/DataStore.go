@@ -106,3 +106,17 @@ func (_m *DataStore) GetUsers(ctx context.Context) ([]model.User, error) {
 
 	return r0, r1
 }
+
+// UpdateUser provides a mock function with given fields: ctx, id, u
+func (_m *DataStore) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
+	ret := _m.Called(ctx, id, u)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *model.UserUpdate) error); ok {
+		r0 = rf(ctx, id, u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
