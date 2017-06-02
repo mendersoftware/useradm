@@ -241,6 +241,105 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
+func TestUpdateUser(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		inReq *http.Request
+
+		updateUserErr error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			inReq: test.MakeSimpleRequest("PUT",
+				"http://1.2.3.4/api/0.1.0/users/123",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"password too short": {
+			inReq: test.MakeSimpleRequest("PUT",
+				"http://1.2.3.4/api/0.1.0/users/123",
+				map[string]interface{}{
+					"password": "foobar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError(model.ErrPasswordTooShort.Error()),
+			),
+		},
+		"duplicated email": {
+			inReq: test.MakeSimpleRequest("PUT",
+				"http://1.2.3.4/api/0.1.0/users/123",
+				map[string]interface{}{
+					"email": "foo@foo.com",
+				},
+			),
+			updateUserErr: store.ErrDuplicateEmail,
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError(store.ErrDuplicateEmail.Error()),
+			),
+		},
+		"no body": {
+			inReq: test.MakeSimpleRequest("PUT",
+				"http://1.2.3.4/api/0.1.0/users/123", nil),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("failed to decode request body: JSON payload is empty"),
+			),
+		},
+		"incorrect body": {
+			inReq: test.MakeSimpleRequest("PUT",
+				"http://1.2.3.4/api/0.1.0/users/123",
+				map[string]interface{}{
+					"id": "1234",
+				}),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError(model.ErrEmptyUpdate.Error()),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("UpdateUser", mtesting.ContextMatcher(),
+				mock.AnythingOfType("string"),
+				mock.AnythingOfType("*model.UserUpdate")).
+				Return(tc.updateUserErr)
+
+			api := makeMockApiHandler(t, uadm)
+
+			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
+			recorded := test.RunRequest(t, api, tc.inReq)
+
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
 func makeMockApiHandler(t *testing.T, uadm useradm.App) http.Handler {
 	handlers := NewUserAdmApiHandlers(uadm)
 	assert.NotNil(t, handlers)

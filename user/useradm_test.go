@@ -317,6 +317,64 @@ func TestUserAdmCreateUser(t *testing.T) {
 
 }
 
+func TestUserAdmUpdateUser(t *testing.T) {
+	testCases := map[string]struct {
+		inUserUpdate model.UserUpdate
+
+		dbErr error
+
+		outErr error
+	}{
+		"ok": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"db error: duplicate email": {
+			inUserUpdate: model.UserUpdate{
+				Email: "foo@bar.com",
+			},
+			dbErr:  store.ErrDuplicateEmail,
+			outErr: store.ErrDuplicateEmail,
+		},
+		"db error: general": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbErr: errors.New("no reachable servers"),
+
+			outErr: errors.New("useradm: failed to update user information: no reachable servers"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
+
+			ctx := context.Background()
+
+			db := &mstore.DataStore{}
+			db.On("UpdateUser", ctx,
+				mock.AnythingOfType("string"),
+				mock.AnythingOfType("*model.UserUpdate")).
+				Return(tc.dbErr)
+
+			useradm := NewUserAdm(nil, db, Config{})
+
+			err := useradm.UpdateUser(ctx, "123", &tc.inUserUpdate)
+
+			if tc.outErr != nil {
+				assert.EqualError(t, err, tc.outErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestUserAdmVerify(t *testing.T) {
 	testCases := map[string]struct {
 		token *jwt.Token
