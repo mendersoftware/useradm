@@ -457,3 +457,60 @@ func TestUserAdmGetUsers(t *testing.T) {
 		})
 	}
 }
+
+func TestUserAdmGetUser(t *testing.T) {
+	t.Parallel()
+
+	ts := time.Now()
+
+	testCases := map[string]struct {
+		dbUser *model.User
+		dbErr  error
+
+		err error
+	}{
+		"ok 1": {
+			dbUser: &model.User{
+				ID:        "1",
+				Email:     "foo",
+				UpdatedTs: &ts,
+				CreatedTs: &ts,
+			},
+			dbErr: nil,
+			err:   nil,
+		},
+		"ok: no user": {
+			dbUser: nil,
+			dbErr:  nil,
+			err:    nil,
+		},
+		"error: generic db error": {
+			dbUser: nil,
+			dbErr:  errors.New("db connection failed"),
+			err:    errors.New("useradm: failed to get user: db connection failed"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			db := &mstore.DataStore{}
+			db.On("GetUserById", ctx, "foo").Return(tc.dbUser, tc.dbErr)
+
+			useradm := NewUserAdm(nil, db, Config{})
+
+			user, err := useradm.GetUser(ctx, "foo")
+
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.dbUser, user)
+			}
+		})
+	}
+}
