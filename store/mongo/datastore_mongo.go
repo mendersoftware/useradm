@@ -36,6 +36,7 @@ const (
 	DbUsersColl = "users"
 
 	DbUserEmail = "email"
+	DbUserPass  = "password"
 )
 
 var (
@@ -163,6 +164,24 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 	}
 
 	return &user, nil
+}
+
+func (db *DataStoreMongo) GetUsers(ctx context.Context) ([]model.User, error) {
+	s := db.session.Copy()
+	defer s.Close()
+
+	users := []model.User{}
+
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).
+		Find(nil).
+		Select(bson.M{DbUserPass: 0}).
+		All(&users)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch users")
+	}
+
+	return users, nil
 }
 
 func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migrations []migrate.Migration) error {

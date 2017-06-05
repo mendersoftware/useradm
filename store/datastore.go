@@ -35,4 +35,5 @@ type DataStore interface {
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
+	GetUsers(ctx context.Context) ([]model.User, error)
 }

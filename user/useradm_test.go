@@ -15,6 +15,7 @@ package useradm
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -393,5 +394,66 @@ func TestUserAdmVerify(t *testing.T) {
 		} else {
 			assert.NoError(t, err)
 		}
+	}
+}
+
+func TestUserAdmGetUsers(t *testing.T) {
+	t.Parallel()
+	ts := time.Now()
+	testCases := map[string]struct {
+		dbUsers []model.User
+		dbErr   error
+
+		err error
+	}{
+		"ok: some users": {
+			dbUsers: []model.User{
+				{
+					ID:        "1",
+					Email:     "foo",
+					CreatedTs: &ts,
+				},
+				{
+					ID:        "2",
+					Email:     "bar",
+					UpdatedTs: &ts,
+				},
+			},
+			dbErr: nil,
+			err:   nil,
+		},
+		"ok: no users": {
+			dbUsers: []model.User{},
+			dbErr:   nil,
+			err:     nil,
+		},
+		"error: db": {
+			dbUsers: nil,
+			dbErr:   errors.New("db connection failed"),
+			err:     errors.New("useradm: failed to get users: db connection failed"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			db := &mstore.DataStore{}
+			db.On("GetUsers", ctx).Return(tc.dbUsers, tc.dbErr)
+
+			useradm := NewUserAdm(nil, db, Config{})
+
+			users, err := useradm.GetUsers(ctx)
+
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.dbUsers, users)
+			}
+		})
 	}
 }
