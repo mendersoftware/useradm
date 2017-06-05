@@ -153,7 +153,10 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 
 	var user model.User
 
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).FindId(id).One(&user)
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).
+		FindId(id).
+		Select(bson.M{DbUserPass: 0}).
+		One(&user)
 
 	if err != nil {
 		if err == mgo.ErrNotFound {

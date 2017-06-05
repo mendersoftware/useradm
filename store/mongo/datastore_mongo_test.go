@@ -246,26 +246,23 @@ func TestMongoGetUserById(t *testing.T) {
 		"ok - found 1": {
 			inId: "1",
 			outUser: &model.User{
-				ID:       "1",
-				Email:    "foo@bar.com",
-				Password: "passwordhash12345",
+				ID:    "1",
+				Email: "foo@bar.com",
 			},
 		},
 		"ok - found 1 with context": {
 			inId:   "1",
 			tenant: "foo",
 			outUser: &model.User{
-				ID:       "1",
-				Email:    "foo@bar.com",
-				Password: "passwordhash12345",
+				ID:    "1",
+				Email: "foo@bar.com",
 			},
 		},
 		"ok - found 2": {
 			inId: "2",
 			outUser: &model.User{
-				ID:       "2",
-				Email:    "bar@bar.com",
-				Password: "passwordhashqwerty",
+				ID:    "2",
+				Email: "bar@bar.com",
 			},
 		},
 		"not found": {
