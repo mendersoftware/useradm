@@ -38,7 +38,8 @@ const (
 )
 
 var (
-	ErrAuthHeader = errors.New("invalid or missing auth header")
+	ErrAuthHeader   = errors.New("invalid or missing auth header")
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type UserAdmApiHandlers struct {
@@ -58,6 +59,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriUsers, i.AddUserHandler),
 		rest.Get(uriUsers, i.GetUsersHandler),
+		rest.Get(uriUser, i.GetUserHandler),
 	}
 
 	routes = append(routes)
@@ -170,6 +172,25 @@ func (u *UserAdmApiHandlers) GetUsersHandler(w rest.ResponseWriter, r *rest.Requ
 	}
 
 	w.WriteJson(users)
+}
+
+func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	user, err := u.userAdm.GetUser(ctx, r.PathParam("id"))
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	if user == nil {
+		rest_utils.RestErrWithLog(w, r, l, ErrUserNotFound, 404)
+		return
+	}
+
+	w.WriteJson(user)
 }
 
 func parseUser(r *rest.Request) (*model.User, error) {
