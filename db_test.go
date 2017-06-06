@@ -20,20 +20,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCommandCreateUser(t *testing.T) {
-	conf := &cmocks.Reader{}
-	conf.On("GetString", SettingDb).Return("foo")
-	conf.On("GetBool", SettingDbSSL).Return(false)
-	conf.On("GetBool", SettingDbSSLSkipVerify).Return(false)
-	conf.On("GetString", SettingDbUsername).Return("siala")
-	conf.On("GetString", SettingDbPassword).Return("haha")
+func TestDataStoreMongoConfigFromAppConfig(t *testing.T) {
+	appConf := &cmocks.Reader{}
+	appConf.On("GetString", SettingDb).Return("192.123.123.123")
+	appConf.On("GetBool", SettingDbSSL).Return(true)
+	appConf.On("GetBool", SettingDbSSLSkipVerify).Return(false)
+	appConf.On("GetString", SettingDbUsername).Return("Steven")
+	appConf.On("GetString", SettingDbPassword).Return("Shamballa")
 
-	// not an email, password too short
-	err := commandCreateUser(conf, "foo", "bar")
-	assert.Error(t, err)
-
-	if !testing.Short() {
-		err = commandCreateUser(conf, "foo@bar.com", "foobarbarbar")
-		assert.Error(t, err)
-	}
+	dbConf := dataStoreMongoConfigFromAppConfig(appConf)
+	assert.Equal(t, "192.123.123.123", dbConf.ConnectionString)
+	assert.Equal(t, true, dbConf.SSL)
+	assert.Equal(t, false, dbConf.SSLSkipVerify)
+	assert.Equal(t, "Steven", dbConf.Username)
+	assert.Equal(t, "Shamballa", dbConf.Password)
 }
