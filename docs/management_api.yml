@@ -199,6 +199,11 @@ paths:
                 The user cannot be granted authentication.
           schema:
             $ref: '#/definitions/Error'
+        404:
+          description: |
+                The user does not exist.
+          schema:
+            $ref: '#/definitions/Error'
         422:
           description: |
                 The email address is duplicated or password is too short.

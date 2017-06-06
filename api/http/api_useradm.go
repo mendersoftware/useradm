@@ -60,6 +60,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriUsers, i.AddUserHandler),
 		rest.Get(uriUsers, i.GetUsersHandler),
 		rest.Get(uriUser, i.GetUserHandler),
+		rest.Put(uriUser, i.UpdateUserHandler),
 	}
 
 	routes = append(routes)
@@ -193,6 +194,39 @@ func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Reque
 	w.WriteJson(user)
 }
 
+func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	id := r.PathParam("id")
+
+	userUpdate, err := parseUserUpdate(r)
+	if err != nil {
+		if err == model.ErrPasswordTooShort {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
+		} else {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		}
+		return
+	}
+
+	err = u.userAdm.UpdateUser(ctx, id, userUpdate)
+	if err != nil {
+		switch err {
+		case store.ErrDuplicateEmail:
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
+		case store.ErrUserNotFound:
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusNotFound)
+		default:
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func parseUser(r *rest.Request) (*model.User, error) {
 	user := model.User{}
 
@@ -207,6 +241,22 @@ func parseUser(r *rest.Request) (*model.User, error) {
 	}
 
 	return &user, nil
+}
+
+func parseUserUpdate(r *rest.Request) (*model.UserUpdate, error) {
+	userUpdate := model.UserUpdate{}
+
+	//decode body
+	err := r.DecodeJsonPayload(&userUpdate)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode request body")
+	}
+
+	if err := userUpdate.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &userUpdate, nil
 }
 
 func readBodyRaw(r *rest.Request) ([]byte, error) {

@@ -128,6 +128,38 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	return nil
 }
 
+func (db *DataStoreMongo) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
+	s := db.session.Copy()
+	defer s.Close()
+
+	//compute/set password hash
+	if u.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return errors.Wrap(err, "failed to generate password hash")
+		}
+		u.Password = string(hash)
+	}
+
+	now := time.Now().UTC()
+	u.UpdatedTs = &now
+
+	c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl)
+	err := c.UpdateId(id, bson.M{"$set": u})
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return store.ErrUserNotFound
+		}
+		if mgo.IsDup(err) {
+			return store.ErrDuplicateEmail
+		}
+
+		return errors.Wrap(err, "failed to insert user")
+	}
+
+	return nil
+}
+
 func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	s := db.session.Copy()
 	defer s.Close()

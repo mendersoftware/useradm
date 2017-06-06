@@ -130,6 +130,113 @@ func TestMongoCreateUser(t *testing.T) {
 	}
 }
 
+func TestMongoUpdateUser(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	exisitingUsers := []interface{}{
+		model.User{
+			ID:       "1",
+			Email:    "foo@bar.com",
+			Password: "pretenditsahash",
+		},
+		model.User{
+			ID:       "2",
+			Email:    "bar@bar.com",
+			Password: "pretenditsahash",
+		},
+	}
+
+	testCases := map[string]struct {
+		inUserUpdate model.UserUpdate
+		inUserId     string
+		tenant       string
+		outErr       string
+	}{
+		"update email and password: ok": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "baz@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			inUserId: "1",
+			outErr:   "",
+		},
+		"update email: ok": {
+			inUserUpdate: model.UserUpdate{
+				Email: "baz@bar.com",
+			},
+			inUserId: "1",
+			outErr:   "",
+		},
+		"update password: ok": {
+			inUserUpdate: model.UserUpdate{
+				Password: "correcthorsebatterystaple",
+			},
+			inUserId: "1",
+			outErr:   "",
+		},
+		"ok with tenant": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "baz@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			inUserId: "1",
+			tenant:   "foo",
+			outErr:   "",
+		},
+		"duplicate email error": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			inUserId: "2",
+			outErr:   "user with a given email already exists",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
+
+			db.Wipe()
+
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			session := db.Session()
+			store, err := NewDataStoreMongoWithSession(session)
+			assert.NoError(t, err)
+
+			err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(exisitingUsers...)
+			assert.NoError(t, err)
+
+			pass := tc.inUserUpdate.Password
+			err = store.UpdateUser(ctx, tc.inUserId, &tc.inUserUpdate)
+
+			if tc.outErr == "" {
+				var user model.User
+				err := session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).FindId(tc.inUserId).One(&user)
+				assert.NoError(t, err)
+				if tc.inUserUpdate.Password != "" {
+					err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
+					assert.NoError(t, err)
+				}
+				if tc.inUserUpdate.Email != "" {
+					assert.Equal(t, user.Email, tc.inUserUpdate.Email)
+				}
+			} else {
+				assert.EqualError(t, err, tc.outErr)
+			}
+
+			session.Close()
+		})
+	}
+}
+
 func TestMongoGetUserByEmail(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode.")

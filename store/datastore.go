@@ -22,16 +22,19 @@ import (
 )
 
 var (
-	// device not found
-	ErrDevNotFound = errors.New("device not found")
-	// device not found
-	ErrTokenNotFound  = errors.New("token not found")
+	// user not found
+	ErrUserNotFound = errors.New("user not found")
+	// token not found
+	ErrTokenNotFound = errors.New("token not found")
+	// duplicated email address
 	ErrDuplicateEmail = errors.New("user with a given email already exists")
 )
 
 type DataStore interface {
 	// CreateUser persists the user
 	CreateUser(ctx context.Context, u *model.User) error
+	// Update user information - password or/and email address
+	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
