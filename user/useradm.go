@@ -43,6 +43,7 @@ type App interface {
 	Verify(ctx context.Context, token *jwt.Token) error
 	GetUsers(ctx context.Context) ([]model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
+	DeleteUser(ctx context.Context, id string) error
 
 	// SignToken generates a signed
 	// token using configuration & method set up in UserAdmApp
@@ -199,6 +200,15 @@ func (ua *UserAdm) GetUser(ctx context.Context, id string) (*model.User, error) 
 	}
 
 	return user, nil
+}
+
+func (ua *UserAdm) DeleteUser(ctx context.Context, id string) error {
+	err := ua.db.DeleteUser(ctx, id)
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to delete user")
+	}
+
+	return nil
 }
 
 // WithTenantVerification produces a UserAdm instance which enforces
