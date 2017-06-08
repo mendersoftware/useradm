@@ -517,6 +517,99 @@ func TestMongoGetUsers(t *testing.T) {
 	}
 }
 
+func TestMongoDeleteUser(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	existingUsers := []interface{}{
+		model.User{
+			ID:       "1",
+			Email:    "foo@bar.com",
+			Password: "passwordhash12345",
+		},
+		model.User{
+			ID:       "2",
+			Email:    "bar@bar.com",
+			Password: "passwordhashqwerty",
+		},
+	}
+
+	testCases := map[string]struct {
+		inId     string
+		tenant   string
+		outUsers []model.User
+	}{
+		"ok": {
+			inId: "1",
+			outUsers: []model.User{
+				{
+					ID:       "2",
+					Email:    "bar@bar.com",
+					Password: "passwordhashqwerty",
+				},
+			},
+		},
+		"ok - with tenant": {
+			inId:   "1",
+			tenant: "foo",
+			outUsers: []model.User{
+				{
+					ID:       "2",
+					Email:    "bar@bar.com",
+					Password: "passwordhashqwerty",
+				},
+			},
+		},
+		"ok - not found": {
+			inId: "3",
+			outUsers: []model.User{
+				{
+					ID:       "1",
+					Email:    "foo@bar.com",
+					Password: "passwordhash12345",
+				},
+				{
+					ID:       "2",
+					Email:    "bar@bar.com",
+					Password: "passwordhashqwerty",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(existingUsers...)
+		assert.NoError(t, err)
+
+		err = store.DeleteUser(ctx, tc.inId)
+		assert.NoError(t, err)
+
+		var users []model.User
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Find(nil).All(&users)
+		assert.NoError(t, err)
+
+		assert.Equal(t, tc.outUsers, users)
+
+		session.Close()
+	}
+}
+
 func TestMigrate(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping TestMigrate in short mode.")
