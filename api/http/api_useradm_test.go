@@ -673,6 +673,72 @@ func TestUserAdmApiGetUser(t *testing.T) {
 	}
 }
 
+func TestUserAdmApiDeleteUser(t *testing.T) {
+	t.Parallel()
+
+	// we setup authz, so a real token is needed
+	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJleHAiOjQ0ODE4OTM5MDAsImlzcyI6Im1lb" +
+		"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
+		"NwIjoibWVuZGVyLioifQ.NzXNhh_59_03mal_" +
+		"-KImArI8sfvnNFyCW0dEqmnW1gYojmTjWBBEJK" +
+		"xCnh8hbHhY2mfv6Jk9wk1dEnT8_8mCACrBrw97" +
+		"7oRUzlogu8yV2z1m65jpvDBGK_IsJz_GfZA2w" +
+		"SBz55hkqiMEzFqswIEC46xW5RMY0vfMMSVIO7f" +
+		"ncOlmTgJTdCVtr9RVDREBJIoWoC-OLGYat9ivx" +
+		"yA_N_mRvu5iFPZI3FniYaBjY9k_jR62I-QPIVk" +
+		"j3zWev8zKVH0Sef0lB6SAapVs1GS3rK3-oy6wk" +
+		"ACNbKY1tB7Ox6CKiJ9F8Hhvh_icOtfvjCuiY-HkJL55T4wziFQNv2xU_2W7Lw"
+
+	testCases := map[string]struct {
+		uaError error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"error: useradm internal": {
+			uaError: errors.New("some internal error"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			ctx := context.TODO()
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("DeleteUser", ctx, "foo").Return(tc.uaError)
+
+			//make handler
+			api := makeMockApiHandler(t, uadm)
+
+			//make request
+			req := makeReq("DELETE",
+				"http://1.2.3.4/api/0.1.0/users/foo",
+				"Bearer "+token,
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
 func makeReq(method, url, auth string, body interface{}) *http.Request {
 	req := test.MakeSimpleRequest(method, url, body)
 

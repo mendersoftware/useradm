@@ -61,6 +61,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Get(uriUsers, i.GetUsersHandler),
 		rest.Get(uriUser, i.GetUserHandler),
 		rest.Put(uriUser, i.UpdateUserHandler),
+		rest.Delete(uriUser, i.DeleteUserHandler),
 	}
 
 	routes = append(routes)
@@ -221,6 +222,19 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 		default:
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (u *UserAdmApiHandlers) DeleteUserHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	err := u.userAdm.DeleteUser(ctx, r.PathParam("id"))
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
 

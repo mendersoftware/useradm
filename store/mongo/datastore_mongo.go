@@ -271,6 +271,20 @@ func (db *DataStoreMongo) GetUsers(ctx context.Context) ([]model.User, error) {
 	return users, nil
 }
 
+func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
+	s := db.session.Copy()
+	defer s.Close()
+
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).RemoveId(id)
+
+	switch err {
+	case nil, mgo.ErrNotFound:
+		return nil
+	default:
+		return err
+	}
+}
+
 func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migrations []migrate.Migration) error {
 	m := migrate.DummyMigrator{
 		Session: db.session,

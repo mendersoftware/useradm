@@ -572,3 +572,43 @@ func TestUserAdmGetUser(t *testing.T) {
 		})
 	}
 }
+
+func TestUserAdmDeleteUser(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		dbErr error
+		err   error
+	}{
+		"ok": {
+			dbErr: nil,
+			err:   nil,
+		},
+		"error": {
+			dbErr: errors.New("db connection failed"),
+			err:   errors.New("useradm: failed to delete user: db connection failed"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			db := &mstore.DataStore{}
+			db.On("DeleteUser", ctx, "foo").Return(tc.dbErr)
+
+			useradm := NewUserAdm(nil, db, Config{})
+
+			err := useradm.DeleteUser(ctx, "foo")
+
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
