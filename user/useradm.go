@@ -139,7 +139,9 @@ func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 }
 
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
-	u.ID = uuid.NewV4().String()
+	if u.ID == "" {
+		u.ID = uuid.NewV4().String()
+	}
 
 	if err := ua.db.CreateUser(ctx, u); err != nil {
 		if err == store.ErrDuplicateEmail {
