@@ -29,11 +29,11 @@ func TestCommandCreateUser(t *testing.T) {
 	conf.On("GetString", SettingDbPassword).Return("haha")
 
 	// not an email, password too short
-	err := commandCreateUser(conf, "foo", "bar")
+	err := commandCreateUser(conf, "foo", "bar", "")
 	assert.Error(t, err)
 
 	if !testing.Short() {
-		err = commandCreateUser(conf, "foo@bar.com", "foobarbarbar")
+		err = commandCreateUser(conf, "foo@bar.com", "foobarbarbar", "")
 		assert.Error(t, err)
 	}
 }

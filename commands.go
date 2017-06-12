@@ -47,7 +47,7 @@ func safeReadPassword() (string, error) {
 	return string(raw), nil
 }
 
-func commandCreateUser(c config.Reader, username string, password string) error {
+func commandCreateUser(c config.Reader, username string, password string, userId string) error {
 	l := log.NewEmpty()
 
 	l.Debugf("create user '%s'", username)
@@ -62,6 +62,10 @@ func commandCreateUser(c config.Reader, username string, password string) error 
 	u := model.User{
 		Email:    username,
 		Password: password,
+	}
+
+	if userId != "" {
+		u.ID = userId
 	}
 
 	if err := u.ValidateNew(); err != nil {
