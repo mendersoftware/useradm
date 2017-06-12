@@ -1,0 +1,18 @@
+version: '2'
+services:
+    acceptance:
+        image: testing
+        networks:
+            - mender
+        volumes:
+            - "${TESTS_DIR}:/testing"
+        depends_on:
+            - mender-useradm
+    mender-useradm:
+        image: mendersoftware/useradm:prtest
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo-useradm
+        volumes:
+            - "${TESTS_DIR}:/testing"
