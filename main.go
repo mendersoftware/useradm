@@ -70,6 +70,14 @@ func doMain(args []string) {
 					Name:  "password",
 					Usage: "User's password, leave empty to have it read from stdin",
 				},
+				cli.StringFlag{
+					Name:  "user-id",
+					Usage: "User ID, if already generated/available (optional).",
+				},
+				cli.StringFlag{
+					Name:  "tenant-id",
+					Usage: "Tenant ID, if running a multitenant setup (optional).",
+				},
 			},
 			Action: runCreateUser,
 		},
@@ -132,7 +140,7 @@ func runDeamon(args *cli.Context) error {
 
 func runCreateUser(args *cli.Context) error {
 	err := commandCreateUser(config.Config,
-		args.String("username"), args.String("password"))
+		args.String("username"), args.String("password"), args.String("user-id"), args.String("tenant-id"))
 	if err != nil {
 		return cli.NewExitError(err.Error(), 5)
 	}

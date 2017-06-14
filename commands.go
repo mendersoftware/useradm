@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
@@ -47,7 +48,7 @@ func safeReadPassword() (string, error) {
 	return string(raw), nil
 }
 
-func commandCreateUser(c config.Reader, username string, password string) error {
+func commandCreateUser(c config.Reader, username, password, userId, tenantId string) error {
 	l := log.NewEmpty()
 
 	l.Debugf("create user '%s'", username)
@@ -64,6 +65,10 @@ func commandCreateUser(c config.Reader, username string, password string) error 
 		Password: password,
 	}
 
+	if userId != "" {
+		u.ID = userId
+	}
+
 	if err := u.ValidateNew(); err != nil {
 		return errors.Wrap(err, "user validation failed")
 	}
@@ -75,9 +80,23 @@ func commandCreateUser(c config.Reader, username string, password string) error 
 
 	ua := useradm.NewUserAdm(nil, db, useradm.Config{})
 
-	if err := ua.CreateUser(context.Background(), &u); err != nil {
+	ctx := getTenantContext(tenantId)
+	if err := ua.CreateUser(ctx, &u); err != nil {
 		return errors.Wrap(err, "creating user failed")
 	}
 
 	return nil
+}
+
+func getTenantContext(tenantId string) context.Context {
+	ctx := context.Background()
+	if tenantId != "" {
+		id := &identity.Identity{
+			Tenant: tenantId,
+		}
+
+		ctx = identity.WithContext(ctx, id)
+	}
+
+	return ctx
 }
