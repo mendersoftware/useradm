@@ -14,6 +14,7 @@
 package tenant
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -26,9 +27,15 @@ import (
 
 const (
 	// devices endpoint
-	GetTenantsUri = "/api/internal/v1/tenantadm/tenants"
+	UriBase       = "/api/internal/v1/tenantadm"
+	GetTenantsUri = UriBase + "/tenants"
+	UsersUri      = UriBase + "/users"
 	// default request timeout, 10s
 	defaultReqTimeout = time.Duration(10) * time.Second
+)
+
+var (
+	ErrDuplicateUser = errors.New("user with the same name already exists")
 )
 
 // ClientConfig conveys client configuration
@@ -42,6 +49,7 @@ type Config struct {
 // ClientRunner is an interface of tenantadm api client
 type ClientRunner interface {
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)
+	CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error
 }
 
 // Client is an opaque implementation of tenantadm api client.
@@ -54,6 +62,13 @@ type Client struct {
 type Tenant struct {
 	ID   string
 	Name string
+}
+
+// User is the tenantadm's api struct
+type User struct {
+	ID       string
+	Name     string
+	TenantID string `json:"tenant_id"`
 }
 
 func NewClient(conf Config) *Client {
@@ -99,6 +114,42 @@ func (c *Client) GetTenant(ctx context.Context, username string, client apiclien
 		return nil, nil
 	default:
 		return nil, errors.Errorf("got unexpected number of tenants: %v", len(tenants))
+	}
+}
+
+func (c *Client) CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error {
+	// prepare request body
+	userJson, err := json.Marshal(user)
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare body for POST /users")
+	}
+
+	reader := bytes.NewReader(userJson)
+
+	req, err := http.NewRequest(http.MethodPost,
+		JoinURL(c.conf.TenantAdmAddr, UsersUri),
+		reader)
+	if err != nil {
+		return errors.Wrap(err, "failed to create request for POST /users")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
+	defer cancel()
+
+	// send
+	rsp, err := client.Do(req.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "POST /users request failed")
+	}
+	defer rsp.Body.Close()
+
+	switch rsp.StatusCode {
+	case http.StatusCreated:
+		return nil
+	case http.StatusUnprocessableEntity:
+		return ErrDuplicateUser
+	default:
+		return errors.Errorf("POST /users request failed with unexpected status %v", rsp.StatusCode)
 	}
 }
 
