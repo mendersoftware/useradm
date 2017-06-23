@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
+	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -263,6 +264,9 @@ func TestUserAdmCreateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUser model.User
 
+		verifyTenant bool
+		tenantErr    error
+
 		dbErr error
 
 		outErr error
@@ -274,6 +278,42 @@ func TestUserAdmCreateUser(t *testing.T) {
 			},
 			dbErr:  nil,
 			outErr: nil,
+		},
+		"ok, multitenant": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    nil,
+
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"error, multitenant: duplicate user": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    ct.ErrDuplicateUser,
+
+			dbErr:  nil,
+			outErr: errors.New("user with a given email already exists"),
+		},
+		"error, multitenant: generic": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    errors.New("http 500"),
+
+			dbErr:  nil,
+			outErr: errors.New("useradm: failed to create user in tenantadm: http 500"),
 		},
 		"db error: duplicate email": {
 			inUser: model.User{
@@ -300,11 +340,26 @@ func TestUserAdmCreateUser(t *testing.T) {
 		ctx := context.Background()
 
 		db := &mstore.DataStore{}
-		db.On("CreateUser", ctx,
+		db.On("CreateUser",
+			ContextMatcher(),
 			mock.AnythingOfType("*model.User")).
 			Return(tc.dbErr)
 
 		useradm := NewUserAdm(nil, db, Config{})
+		if tc.verifyTenant {
+			id := &identity.Identity{
+				Tenant: "foo",
+			}
+			ctx = identity.WithContext(ctx, id)
+
+			cTenant := &mct.ClientRunner{}
+			cTenant.On("CreateUser",
+				ContextMatcher(),
+				mock.AnythingOfType("*tenant.User"),
+				&apiclient.HttpApi{}).
+				Return(tc.tenantErr)
+			useradm = useradm.WithTenantVerification(cTenant)
+		}
 
 		err := useradm.CreateUser(ctx, &tc.inUser)
 
@@ -611,4 +666,10 @@ func TestUserAdmDeleteUser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ContextMatcher() interface{} {
+	return mock.MatchedBy(func(c context.Context) bool {
+		return true
+	})
 }
