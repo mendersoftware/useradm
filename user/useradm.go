@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
+	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -141,6 +142,26 @@ func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 	if u.ID == "" {
 		u.ID = uuid.NewV4().String()
+	}
+
+	if ua.verifyTenant {
+		id := identity.FromContext(ctx)
+		err := ua.cTenant.CreateUser(ctx,
+			&tenant.User{
+				ID:       u.ID,
+				Name:     u.Email,
+				TenantID: id.Tenant,
+			},
+			ua.clientGetter())
+
+		switch err {
+		case nil:
+			return nil
+		case tenant.ErrDuplicateUser:
+			return store.ErrDuplicateEmail
+		default:
+			return errors.Wrap(err, "useradm: failed to create user in tenantadm")
+		}
 	}
 
 	if err := ua.db.CreateUser(ctx, u); err != nil {
