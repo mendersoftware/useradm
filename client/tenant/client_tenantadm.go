@@ -1,4 +1,5 @@
-// Copyright 2016 Mender Software AS //
+// Copyright 2016 Mender Software AS
+//
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
@@ -52,6 +53,7 @@ type ClientRunner interface {
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)
 	CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error
 	UpdateUser(ctx context.Context, tenantId, userId string, u *UserUpdate, client apiclient.HttpRunner) error
+	DeleteUser(ctx context.Context, tenantId, clientId string, client apiclient.HttpRunner) error
 }
 
 // Client is an opaque implementation of tenantadm api client.
@@ -199,6 +201,33 @@ func (c *Client) UpdateUser(ctx context.Context, tenantId, userId string, u *Use
 	default:
 		return errors.Errorf("PUT /tenants/:id/users/:id request failed with unexpected status %v", rsp.StatusCode)
 	}
+}
+
+func (c *Client) DeleteUser(ctx context.Context, tenantId, userId string, client apiclient.HttpRunner) error {
+
+	repl := strings.NewReplacer(":tid", tenantId, ":uid", userId)
+	uri := repl.Replace(TenantsUsersUri)
+
+	req, err := http.NewRequest(http.MethodDelete,
+		JoinURL(c.conf.TenantAdmAddr, uri), nil)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create request for DELETE %s", uri)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
+	defer cancel()
+
+	// send
+	rsp, err := client.Do(req.WithContext(ctx))
+	if err != nil {
+		return errors.Wrapf(err, "DELETE %s request failed", uri)
+	}
+	defer rsp.Body.Close()
+
+	if rsp.StatusCode != http.StatusNoContent {
+		return errors.Errorf("DELETE %s request failed with unexpected status %v", uri, rsp.StatusCode)
+	}
+	return nil
 }
 
 func JoinURL(base, url string) string {

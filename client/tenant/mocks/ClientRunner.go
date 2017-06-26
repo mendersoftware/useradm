@@ -38,6 +38,20 @@ func (_m *ClientRunner) CreateUser(ctx context.Context, user *tenant.User, clien
 	return r0
 }
 
+// DeleteUser provides a mock function with given fields: ctx, tenantId, clientId, client
+func (_m *ClientRunner) DeleteUser(ctx context.Context, tenantId string, clientId string, client apiclient.HttpRunner) error {
+	ret := _m.Called(ctx, tenantId, clientId, client)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, apiclient.HttpRunner) error); ok {
+		r0 = rf(ctx, tenantId, clientId, client)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetTenant provides a mock function with given fields: ctx, username, client
 func (_m *ClientRunner) GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*tenant.Tenant, error) {
 	ret := _m.Called(ctx, username, client)
@@ -74,3 +88,5 @@ func (_m *ClientRunner) UpdateUser(ctx context.Context, tenantId string, userId 
 
 	return r0
 }
+
+var _ tenant.ClientRunner = (*ClientRunner)(nil)
