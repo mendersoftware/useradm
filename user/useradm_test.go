@@ -376,6 +376,9 @@ func TestUserAdmUpdateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUserUpdate model.UserUpdate
 
+		verifyTenant bool
+		tenantErr    error
+
 		dbErr error
 
 		outErr error
@@ -387,6 +390,54 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			},
 			dbErr:  nil,
 			outErr: nil,
+		},
+		"ok, multitenant": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    nil,
+
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"error, multitenant: duplicate user": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    ct.ErrDuplicateUser,
+
+			dbErr:  nil,
+			outErr: errors.New("user with a given email already exists"),
+		},
+		"error, multitenant: not found": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    ct.ErrUserNotFound,
+
+			dbErr:  nil,
+			outErr: errors.New("user not found"),
+		},
+		"error, multitenant: generic": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			verifyTenant: true,
+			tenantErr:    errors.New("http 500"),
+
+			dbErr:  nil,
+			outErr: errors.New("useradm: failed to update user in tenantadm: http 500"),
 		},
 		"db error: duplicate email": {
 			inUserUpdate: model.UserUpdate{
@@ -412,12 +463,30 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("UpdateUser", ctx,
+			db.On("UpdateUser",
+				ContextMatcher(),
 				mock.AnythingOfType("string"),
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.dbErr)
 
 			useradm := NewUserAdm(nil, db, Config{})
+
+			if tc.verifyTenant {
+				id := &identity.Identity{
+					Tenant: "foo",
+				}
+				ctx = identity.WithContext(ctx, id)
+
+				cTenant := &mct.ClientRunner{}
+				cTenant.On("UpdateUser",
+					ContextMatcher(),
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("*tenant.UserUpdate"),
+					&apiclient.HttpApi{}).
+					Return(tc.tenantErr)
+				useradm = useradm.WithTenantVerification(cTenant)
+			}
 
 			err := useradm.UpdateUser(ctx, "123", &tc.inUserUpdate)
 
