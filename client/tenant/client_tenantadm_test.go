@@ -72,7 +72,8 @@ func TestGetTenant(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases {
+	for name := range testCases {
+		tc := testCases[name]
 		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
 			t.Parallel()
 
@@ -117,7 +118,8 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases {
+	for name := range testCases {
+		tc := testCases[name]
 		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
 			t.Parallel()
 
