@@ -1,5 +1,4 @@
-// Copyright 2016 Mender Software AS
-//
+// Copyright 2016 Mender Software AS //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
@@ -27,15 +26,17 @@ import (
 
 const (
 	// devices endpoint
-	UriBase       = "/api/internal/v1/tenantadm"
-	GetTenantsUri = UriBase + "/tenants"
-	UsersUri      = UriBase + "/users"
+	UriBase         = "/api/internal/v1/tenantadm"
+	GetTenantsUri   = UriBase + "/tenants"
+	UsersUri        = UriBase + "/users"
+	TenantsUsersUri = UriBase + "/tenants/:tid/users/:uid"
 	// default request timeout, 10s
 	defaultReqTimeout = time.Duration(10) * time.Second
 )
 
 var (
 	ErrDuplicateUser = errors.New("user with the same name already exists")
+	ErrUserNotFound  = errors.New("user not found")
 )
 
 // ClientConfig conveys client configuration
@@ -50,6 +51,7 @@ type Config struct {
 type ClientRunner interface {
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)
 	CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error
+	UpdateUser(ctx context.Context, tenantId, userId string, u *UserUpdate, client apiclient.HttpRunner) error
 }
 
 // Client is an opaque implementation of tenantadm api client.
@@ -69,6 +71,11 @@ type User struct {
 	ID       string
 	Name     string
 	TenantID string `json:"tenant_id"`
+}
+
+// UserUpdate is the tenantadm's api struct
+type UserUpdate struct {
+	Name string
 }
 
 func NewClient(conf Config) *Client {
@@ -150,6 +157,47 @@ func (c *Client) CreateUser(ctx context.Context, user *User, client apiclient.Ht
 		return ErrDuplicateUser
 	default:
 		return errors.Errorf("POST /users request failed with unexpected status %v", rsp.StatusCode)
+	}
+}
+
+func (c *Client) UpdateUser(ctx context.Context, tenantId, userId string, u *UserUpdate, client apiclient.HttpRunner) error {
+	// prepare request body
+	json, err := json.Marshal(u)
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare body for PUT /tenants/:id/users/:id")
+	}
+
+	reader := bytes.NewReader(json)
+
+	repl := strings.NewReplacer(":tid", tenantId, ":uid", userId)
+	uri := repl.Replace(TenantsUsersUri)
+
+	req, err := http.NewRequest(http.MethodPut,
+		JoinURL(c.conf.TenantAdmAddr, uri),
+		reader)
+	if err != nil {
+		return errors.Wrap(err, "failed to create request for PUT /tenants/:id/users/:id")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
+	defer cancel()
+
+	// send
+	rsp, err := client.Do(req.WithContext(ctx))
+	if err != nil {
+		return errors.Wrap(err, "PUT /tenants/:id/users/:id request failed")
+	}
+	defer rsp.Body.Close()
+
+	switch rsp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusUnprocessableEntity:
+		return ErrDuplicateUser
+	case http.StatusNotFound:
+		return ErrUserNotFound
+	default:
+		return errors.Errorf("PUT /tenants/:id/users/:id request failed with unexpected status %v", rsp.StatusCode)
 	}
 }
 

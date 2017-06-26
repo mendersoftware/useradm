@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
@@ -139,6 +140,73 @@ func TestCreateUser(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, UsersUri, rd.Url.Path)
 				assert.Equal(t, "POST", rd.Method)
+			}
+			s.Close()
+		})
+	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		tid    string
+		uid    string
+		status int
+		err    error
+	}{
+		"ok": {
+			tid:    "foo",
+			uid:    "bar",
+			status: http.StatusNoContent,
+			err:    nil,
+		},
+		"error: duplicate user": {
+			tid:    "1",
+			uid:    "2",
+			status: http.StatusUnprocessableEntity,
+			err:    ErrDuplicateUser,
+		},
+		"error: not found": {
+			tid:    "bar",
+			uid:    "baz",
+			status: http.StatusNotFound,
+			err:    ErrUserNotFound,
+		},
+		"error: generic": {
+			tid:    "3",
+			uid:    "4",
+			status: http.StatusInternalServerError,
+			err:    errors.New("PUT /tenants/:id/users/:id request failed with unexpected status 500"),
+		},
+	}
+
+	for name := range testCases {
+		tc := testCases[name]
+		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
+			t.Parallel()
+
+			s, rd := ct.NewMockServer(tc.status, nil)
+
+			c := NewClient(Config{
+				TenantAdmAddr: s.URL,
+			})
+
+			up := &UserUpdate{
+				Name: "foo@bar.com",
+			}
+
+			err := c.UpdateUser(context.Background(), tc.tid, tc.uid, up, &apiclient.HttpApi{})
+
+			assert.Equal(t, "PUT", rd.Method)
+			uri := strings.Replace(TenantsUsersUri, ":tid", tc.tid, 1)
+			uri = strings.Replace(uri, ":uid", tc.uid, 1)
+			assert.Equal(t, uri, rd.Url.Path)
+
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 			s.Close()
 		})
