@@ -60,3 +60,17 @@ func (_m *ClientRunner) GetTenant(ctx context.Context, username string, client a
 
 	return r0, r1
 }
+
+// UpdateUser provides a mock function with given fields: ctx, tenantId, userId, u, client
+func (_m *ClientRunner) UpdateUser(ctx context.Context, tenantId string, userId string, u *tenant.UserUpdate, client apiclient.HttpRunner) error {
+	ret := _m.Called(ctx, tenantId, userId, u, client)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, *tenant.UserUpdate, apiclient.HttpRunner) error); ok {
+		r0 = rf(ctx, tenantId, userId, u, client)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
