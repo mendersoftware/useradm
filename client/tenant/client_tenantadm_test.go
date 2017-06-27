@@ -148,6 +148,49 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
+func TestDeleteUser(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		status int
+		err    error
+	}{
+		"ok": {
+			status: http.StatusNoContent,
+			err:    nil,
+		},
+		"error: generic": {
+			status: http.StatusInternalServerError,
+			err:    errors.New("DELETE /api/internal/v1/tenantadm/tenants/foo/users/bar request failed with unexpected status 500"),
+		},
+	}
+
+	for name := range testCases {
+		tc := testCases[name]
+		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
+			t.Parallel()
+
+			s, rd := ct.NewMockServer(tc.status, nil)
+
+			c := NewClient(Config{
+				TenantAdmAddr: s.URL,
+			})
+
+			err := c.DeleteUser(context.Background(), "foo", "bar", &apiclient.HttpApi{})
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+				uri := strings.Replace(TenantsUsersUri, ":tid", "foo", 1)
+				uri = strings.Replace(uri, ":uid", "bar", 1)
+				assert.Equal(t, uri, rd.Url.Path)
+				assert.Equal(t, "DELETE", rd.Method)
+			}
+			s.Close()
+		})
+	}
+}
+
 func TestUpdateUser(t *testing.T) {
 	t.Parallel()
 

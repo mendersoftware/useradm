@@ -701,12 +701,25 @@ func TestUserAdmDeleteUser(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		dbErr error
-		err   error
+		verifyTenant bool
+		tenantErr    error
+		dbErr        error
+		err          error
 	}{
 		"ok": {
 			dbErr: nil,
 			err:   nil,
+		},
+		"ok, multitenant": {
+			verifyTenant: true,
+			dbErr:        nil,
+			err:          nil,
+		},
+		"multitenant, tenantadm error": {
+			verifyTenant: true,
+			tenantErr:    errors.New("http 500"),
+			dbErr:        nil,
+			err:          errors.New("useradm: failed to delete user in tenantadm: http 500"),
 		},
 		"error": {
 			dbErr: errors.New("db connection failed"),
@@ -714,7 +727,8 @@ func TestUserAdmDeleteUser(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases {
+	for name := range testCases {
+		tc := testCases[name]
 		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
 
 			t.Logf("test case: %s", name)
@@ -722,9 +736,23 @@ func TestUserAdmDeleteUser(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("DeleteUser", ctx, "foo").Return(tc.dbErr)
+			db.On("DeleteUser", ContextMatcher(), "foo").Return(tc.dbErr)
 
 			useradm := NewUserAdm(nil, db, Config{})
+			if tc.verifyTenant {
+				id := &identity.Identity{
+					Tenant: "bar",
+				}
+				ctx = identity.WithContext(ctx, id)
+
+				cTenant := &mct.ClientRunner{}
+				cTenant.On("DeleteUser",
+					ContextMatcher(),
+					"bar", "foo",
+					&apiclient.HttpApi{}).
+					Return(tc.tenantErr)
+				useradm = useradm.WithTenantVerification(cTenant)
+			}
 
 			err := useradm.DeleteUser(ctx, "foo")
 

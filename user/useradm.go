@@ -247,6 +247,15 @@ func (ua *UserAdm) GetUser(ctx context.Context, id string) (*model.User, error) 
 }
 
 func (ua *UserAdm) DeleteUser(ctx context.Context, id string) error {
+	if ua.verifyTenant {
+		identity := identity.FromContext(ctx)
+		err := ua.cTenant.DeleteUser(ctx, identity.Tenant, id, ua.clientGetter())
+
+		if err != nil {
+			return errors.Wrap(err, "useradm: failed to delete user in tenantadm")
+		}
+	}
+
 	err := ua.db.DeleteUser(ctx, id)
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to delete user")
