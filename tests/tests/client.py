@@ -51,3 +51,11 @@ class ApiClient:
 
     def __init__(self):
         self.setup_swagger()
+
+
+class InternalApiClient(ApiClient):
+    log = logging.getLogger('client.InternalClient')
+    spec_option = 'internal_spec'
+
+    def __init__(self):
+        super().__init__()
