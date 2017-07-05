@@ -15,6 +15,7 @@
 import os.path
 import logging
 import pytest
+import common
 from bravado.swagger_model import load_file
 from bravado.client import SwaggerClient, RequestsClient
 import subprocess
@@ -59,3 +60,26 @@ class InternalApiClient(ApiClient):
 
     def __init__(self):
         super().__init__()
+
+
+class ManagementApiClient(ApiClient):
+    log = logging.getLogger('client.ManagementClient')
+    spec_option = 'management_spec'
+
+    # default user auth - single user, single tenant
+    auth = {"Authorization": "Bearer foobarbaz"}
+
+    def __init__(self):
+        super().__init__()
+
+    def get_users(self, auth=None):
+        if auth is None:
+            auth=self.auth
+
+        return self.client.users.get_users(_request_options={"headers": auth}).result()[0]
+
+    def create_user(self, user, auth=None):
+        if auth is None:
+            auth=self.auth
+
+        return self.client.users.post_users(user=user, _request_options={"headers": auth}).result()
