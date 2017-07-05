@@ -83,3 +83,21 @@ class ManagementApiClient(ApiClient):
             auth=self.auth
 
         return self.client.users.post_users(user=user, _request_options={"headers": auth}).result()
+
+
+class CliClient:
+    cmd = '/testing/useradm'
+
+    def create_user(self, name, pwd, user_id=None, tenant_id=None):
+        args = [self.cmd,
+                'create-user',
+                '--username', name,
+                '--password', pwd]
+
+        if user_id is not None:
+            args.extend(['--user-id', user_id])
+
+        if tenant_id is not None:
+            args.extend(['--tenant-id', tenant_id])
+
+        subprocess.run(args, check=True)
