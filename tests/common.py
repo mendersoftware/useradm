@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import json
+from pymongo import MongoClient
 from base64 import b64encode
 
 def make_auth(sub, tenant=None):
@@ -35,3 +36,13 @@ def make_auth(sub, tenant=None):
     jwt = "bogus_header." + payloadb64.decode() + ".bogus_sign"
 
     return {"Authorization": "Bearer " + jwt}
+
+@pytest.fixture(scope="session")
+def mongo():
+    return MongoClient('mender-mongo-useradm:27017')
+
+def mongo_cleanup(mongo):
+    dbs = mongo.database_names()
+    dbs = [d for d in dbs if d not in ['local', 'admin']]
+    for d in dbs:
+        mongo.drop_database(d)
