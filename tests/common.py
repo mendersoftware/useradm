@@ -13,8 +13,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import json
+import pytest
 from pymongo import MongoClient
 from base64 import b64encode
+from client import CliClient, ManagementApiClient
 
 def make_auth(sub, tenant=None):
     """
@@ -46,3 +48,29 @@ def mongo_cleanup(mongo):
     dbs = [d for d in dbs if d not in ['local', 'admin']]
     for d in dbs:
         mongo.drop_database(d)
+
+@pytest.fixture(scope="session")
+def cli():
+    return CliClient()
+
+@pytest.fixture(scope="session")
+def api_client_mgmt():
+    return ManagementApiClient()
+
+@pytest.yield_fixture(scope="class")
+def init_users(cli, api_client_mgmt, mongo):
+    for i in range(5):
+        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
+
+    yield api_client_mgmt.get_users()
+    mongo_cleanup(mongo)
+
+@pytest.yield_fixture(scope="class")
+def init_users_mt(cli, api_client_mgmt, mongo):
+    tenant_users = {'tenant1id':[], 'tenant2id':[]}
+    for t in tenant_users:
+        for i in range(5):
+            cli.create_user("user-{}-{}@foo.com".format(i,t), "correcthorsebatterystaple", None, t)
+            tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
+    yield tenant_users
+    mongo_cleanup(mongo)
