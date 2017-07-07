@@ -12,8 +12,9 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import init_users,cli,api_client_mgmt, mongo, make_auth
+from common import init_users, init_users_mt, cli,api_client_mgmt, mongo, make_auth
 import bravado
+import pytest
 
 class TestManagementApiPostUsersBase:
     def _do_test_ok(self, api_client_mgmt, init_users, tenant_id=None):
@@ -86,3 +87,13 @@ class TestManagementApiPostUsers(TestManagementApiPostUsersBase):
 
     def test_fail_duplicate_email(self, api_client_mgmt, init_users):
         self._do_test_fail_duplicate_email(api_client_mgmt, init_users)
+
+
+class TestManagementApiPostUsersMultitenant(TestManagementApiPostUsers):
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
+        self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_fail_duplicate_email(self, tenant_id, api_client_mgmt, init_users_mt):
+        self._do_test_fail_duplicate_email(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
