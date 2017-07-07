@@ -12,21 +12,42 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import init_users,cli,api_client_mgmt, mongo
+from common import init_users,cli,api_client_mgmt, mongo, make_auth
 import bravado
 
-class TestManagementApiPostUsers:
-    def test_ok(self, api_client_mgmt, init_users):
+class TestManagementApiPostUsersBase:
+    def _do_test_ok(self, api_client_mgmt, init_users, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
         new_user = {"email":"foo@bar.com", "password": "asdf1234zxcv"}
-        _, r = api_client_mgmt.create_user(new_user)
+
+        _, r = api_client_mgmt.create_user(new_user, auth)
         assert r.status_code == 201
 
-        users = api_client_mgmt.get_users()
+        users = api_client_mgmt.get_users(auth)
         assert len(users) == len(init_users) + 1
 
         found_user = [u for u in users if u.email == new_user["email"]]
         assert len(found_user) == 1
         found_user = found_user[0]
+
+    def _do_test_fail_duplicate_email(self, api_client_mgmt, init_users, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        new_user = {"email":init_users[0].email, "password": "asdf1234zxcv"}
+        try:
+            api_client_mgmt.create_user(new_user, auth)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 422
+
+
+class TestManagementApiPostUsers(TestManagementApiPostUsersBase):
+    def test_ok(self, api_client_mgmt, init_users):
+        self._do_test_ok(api_client_mgmt, init_users)
 
     def test_fail_malformed_body(self, api_client_mgmt):
         new_user = {"foo":"bar"}
@@ -64,8 +85,4 @@ class TestManagementApiPostUsers:
             assert e.response.status_code == 422
 
     def test_fail_duplicate_email(self, api_client_mgmt, init_users):
-        new_user = {"email":init_users[0].email, "password": "asdf1234zxcv"}
-        try:
-            api_client_mgmt.create_user(new_user)
-        except bravado.exception.HTTPError as e:
-            assert e.response.status_code == 422
+        self._do_test_fail_duplicate_email(api_client_mgmt, init_users)
