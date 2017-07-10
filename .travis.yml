@@ -120,7 +120,7 @@ script:
         git clone -b master https://github.com/mendersoftware/integration.git;
         mv integration/extra/travis-testing/* tests/ ;
 
-        CGO_ENABLED=0 go test -c -o useradm -coverpkg $(go list ./... | grep -v vendor | grep -v mocks | grep -v test | tr  '\n' ,);
+        CGO_ENABLED=0 go test -c -o useradm-test -coverpkg $(go list ./... | grep -v vendor | grep -v mocks | grep -v test | tr  '\n' ,);
 
         sudo docker build -f Dockerfile.acceptance-testing -t mendersoftware/useradm:prtest .;
 
