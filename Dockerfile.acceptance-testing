@@ -2,8 +2,8 @@ FROM alpine:3.4
 
 EXPOSE 8080
 
-COPY ./useradm /usr/bin/
+COPY ./useradm-test /usr/bin/
 COPY ./config.yaml /usr/bin/
 STOPSIGNAL SIGINT
 
-ENTRYPOINT ["/usr/bin/useradm", "-test.coverprofile=/testing/coverage-acceptance.txt", "-acceptance-tests", "-test.run=TestRunMain", "-cli-args=\"--config=/usr/bin/config.yaml\""]
+ENTRYPOINT ["/usr/bin/useradm-test", "-test.coverprofile=/testing/coverage-acceptance.txt", "-acceptance-tests", "-test.run=TestRunMain", "-cli-args=--config=/usr/bin/config.yaml"]
