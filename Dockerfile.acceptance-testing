@@ -6,4 +6,4 @@ COPY ./useradm-test /usr/bin/
 COPY ./config.yaml /usr/bin/
 STOPSIGNAL SIGINT
 
-ENTRYPOINT ["/usr/bin/useradm-test", "-test.coverprofile=/testing/coverage-acceptance.txt", "-acceptance-tests", "-test.run=TestRunMain", "-cli-args=\"--config=/usr/bin/config.yaml\""]
+ENTRYPOINT ["/usr/bin/useradm-test", "-test.coverprofile=/testing/coverage-acceptance.txt", "-acceptance-tests", "-test.run=TestRunMain", "-cli-args=--config=/usr/bin/config.yaml"]
