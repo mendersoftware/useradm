@@ -84,7 +84,8 @@ func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore, config Config) *User
 }
 
 func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {
-	var tenantClaim string
+	var ident identity.Identity
+
 	if u.verifyTenant {
 		// check the user's tenant
 		tenant, err := u.cTenant.GetTenant(ctx, email, u.clientGetter())
@@ -97,7 +98,8 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 			return nil, ErrUnauthorized
 		}
 
-		tenantClaim = tenant.ID
+		ident.Tenant = tenant.ID
+		ctx = identity.WithContext(ctx, &ident)
 	}
 
 	//get user
@@ -117,7 +119,7 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	}
 
 	//generate token
-	t := u.generateToken(user.ID, scope.All, tenantClaim)
+	t := u.generateToken(user.ID, scope.All, ident.Tenant)
 
 	return t, nil
 }
