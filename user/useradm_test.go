@@ -228,12 +228,12 @@ func TestUserAdmLogin(t *testing.T) {
 		ctx := context.Background()
 
 		db := &mstore.DataStore{}
-		db.On("GetUserByEmail", ctx, tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
+		db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
 		useradm := NewUserAdm(nil, db, tc.config)
 		if tc.verifyTenant {
 			cTenant := &mct.ClientRunner{}
-			cTenant.On("GetTenant", ctx, tc.inEmail, &apiclient.HttpApi{}).
+			cTenant.On("GetTenant", ContextMatcher(), tc.inEmail, &apiclient.HttpApi{}).
 				Return(tc.tenant, tc.tenantErr)
 			useradm = useradm.WithTenantVerification(cTenant)
 		}
