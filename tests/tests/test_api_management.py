@@ -102,3 +102,27 @@ class TestManagementApiPostUsersMultitenant(TestManagementApiPostUsersBase):
         new_user = {"email":"foo@bar.com", "password": "asdf1234zxcv"}
         with tenantadm.run_fake_create_user(new_user, 422):
             self._do_test_fail_duplicate_email(api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id)
+
+
+class TestManagementApiGetUserBase:
+    def _do_test_ok(self, api_client_mgmt, init_users, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        for u in init_users:
+            found = api_client_mgmt.get_user(u.id, auth)
+            assert found.id == u.id
+            assert found.email == u.email
+            assert found.created_ts == u.created_ts
+            assert found.updated_ts == u.updated_ts
+
+    def _do_test_fail_not_found(self, api_client_mgmt, init_users, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        try:
+            not_found = api_client_mgmt.get_user("madeupid", auth)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 404
