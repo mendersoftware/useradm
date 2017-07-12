@@ -126,3 +126,11 @@ class TestManagementApiGetUserBase:
             not_found = api_client_mgmt.get_user("madeupid", auth)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 404
+
+
+class TestManagementApiGetUser(TestManagementApiGetUserBase):
+    def test_ok(self, api_client_mgmt, init_users):
+        self._do_test_ok(api_client_mgmt, init_users)
+
+    def test_fail_not_found(self, api_client_mgmt, init_users):
+        self._do_test_fail_not_found(api_client_mgmt, init_users)
