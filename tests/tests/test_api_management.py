@@ -89,7 +89,7 @@ class TestManagementApiPostUsers(TestManagementApiPostUsersBase):
         self._do_test_fail_duplicate_email(api_client_mgmt, init_users)
 
 
-class TestManagementApiPostUsersMultitenant(TestManagementApiPostUsers):
+class TestManagementApiPostUsersMultitenant(TestManagementApiPostUsersBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
