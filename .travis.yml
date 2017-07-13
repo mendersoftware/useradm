@@ -106,7 +106,7 @@ script:
     # Test packages pararell (xargs -P)
     # Also build the docker container (with embedded build info), that will be pushed to dockerhub later on.
     - if [ "$JOB_TYPE" = compile_and_basic_tests ]; then
-        go list ./... | grep -v vendor | xargs -n1 -I {} -P 4 go test -v -covermode=atomic -coverprofile=../../../{}/coverage.txt {} ;
+        go list ./... | grep -v vendor | xargs -n1 -I {} -P 4 go test -v -covermode=atomic -coverprofile=../../../{}/coverage.txt {} || exit $? ;
 
         CGO_ENABLED=0 go build -ldflags "-X main.Commit=`echo $TRAVIS_COMMIT` -X main.Tag=`echo $TRAVIS_TAG` -X main.Branch=`echo $TRAVIS_BRANCH` -X main.BuildNumber=`echo $TRAVIS_BUILD_NUMBER`" ;
         sudo docker build -t $DOCKER_REPOSITORY:pr . ;
