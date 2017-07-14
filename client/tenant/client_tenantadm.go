@@ -64,14 +64,14 @@ type Client struct {
 
 // Tenant is the tenantadm's api struct
 type Tenant struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // User is the tenantadm's api struct
 type User struct {
-	ID       string
-	Name     string
+	ID       string `json:"id"`
+	Name     string `json:"name"`
 	TenantID string `json:"tenant_id"`
 }
 
