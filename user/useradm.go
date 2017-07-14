@@ -156,13 +156,13 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 			},
 			ua.clientGetter())
 
-		switch err {
-		case nil:
-			return nil
-		case tenant.ErrDuplicateUser:
-			return store.ErrDuplicateEmail
-		default:
-			return errors.Wrap(err, "useradm: failed to create user in tenantadm")
+		if err != nil {
+			switch err {
+			case tenant.ErrDuplicateUser:
+				return store.ErrDuplicateEmail
+			default:
+				return errors.Wrap(err, "useradm: failed to create user in tenantadm")
+			}
 		}
 	}
 
