@@ -22,3 +22,21 @@ import mockserver
 
 def get_fake_tenantadm_addr():
     return os.environ.get('FAKE_TENANTADM_ADDR', '0.0.0.0:9997')
+
+def fake_create_user(user, status):
+    def create_user(request):
+        req_user = json.loads(request.body.decode())
+        assert req_user["name"] == user["email"]
+        return (status, {}, '')
+
+    return create_user
+
+@contextmanager
+def run_fake_create_user(user, status=201):
+    handlers = [
+            ('POST', '/api/internal/v1/tenantadm/users', fake_create_user(user, status))
+        ]
+
+    with mockserver.run_fake(get_fake_tenantadm_addr(),
+                             handlers=handlers) as server:
+        yield server
