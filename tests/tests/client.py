@@ -106,6 +106,10 @@ class ManagementApiClient(ApiClient):
 
         return self.client.users.put_users_id(id=uid, user_update=update, _request_options={"headers": auth}).result()
 
+    def login(self, username, password):
+        auth = common.make_basic_auth(username, password)
+        return self.client.auth.post_auth_login(Authorization=auth).result()
+
 
 class CliClient:
     cmd = '/testing/useradm'

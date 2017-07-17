@@ -39,6 +39,15 @@ def make_auth(sub, tenant=None):
 
     return {"Authorization": "Bearer " + jwt}
 
+def make_basic_auth(username, password):
+    """
+    Creates an auth header suitable for user /login.
+    """
+    hdr = "{}:{}".format(username, password)
+    hdr = b64encode(hdr.encode("utf-8"))
+    return "Basic " + hdr.decode()
+
+
 @pytest.fixture(scope="session")
 def mongo():
     return MongoClient('mender-mongo-useradm:27017')
