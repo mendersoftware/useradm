@@ -8,7 +8,10 @@ services:
             - "${TESTS_DIR}:/testing"
         depends_on:
             - mender-useradm
-        command: -k 'not Multitenant'
+        # run multi tenant tests only
+        command: -k Multitenant
+        environment:
+            FAKE_TENANTADM_ADDR: "0.0.0.0:9997"
     mender-useradm:
         image: mendersoftware/useradm:prtest
         networks:
@@ -17,3 +20,7 @@ services:
             - mender-mongo-useradm
         volumes:
             - "${TESTS_DIR}:/testing"
+        environment:
+            # acceptance container will be running mocks for a couple of
+            # services, direct deviceauth there
+            USERADM_TENANTADM_ADDR: "http://acceptance:9997"
