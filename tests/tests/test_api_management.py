@@ -134,3 +134,13 @@ class TestManagementApiGetUser(TestManagementApiGetUserBase):
 
     def test_fail_not_found(self, api_client_mgmt, init_users):
         self._do_test_fail_not_found(api_client_mgmt, init_users)
+
+
+class TestManagementApiGetUserMultitenant(TestManagementApiGetUserBase):
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
+        self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_fail_not_found(self, tenant_id, api_client_mgmt, init_users_mt):
+        self._do_test_fail_not_found(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
