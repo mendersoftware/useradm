@@ -103,7 +103,6 @@ class TestManagementApiPostUsersMultitenant(TestManagementApiPostUsersBase):
         with tenantadm.run_fake_create_user(new_user, 422):
             self._do_test_fail_duplicate_email(api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id)
 
-
 class TestManagementApiGetUserBase:
     def _do_test_ok(self, api_client_mgmt, init_users, tenant_id=None):
         auth=None
@@ -144,3 +143,21 @@ class TestManagementApiGetUserMultitenant(TestManagementApiGetUserBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_fail_not_found(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_fail_not_found(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
+
+
+class TestManagementApiGetUsersBase:
+    def _do_test_ok(self, api_client_mgmt, init_users, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == len(init_users)
+
+    def _do_test_no_users(self, api_client_mgmt, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == 0
