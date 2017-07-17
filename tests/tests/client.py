@@ -78,6 +78,12 @@ class ManagementApiClient(ApiClient):
 
         return self.client.users.get_users(_request_options={"headers": auth}).result()[0]
 
+    def get_user(self, uid, auth=None):
+        if auth is None:
+            auth=self.auth
+
+        return self.client.users.get_users_id(id=uid, _request_options={"headers": auth}).result()[0]
+
     def create_user(self, user, auth=None):
         if auth is None:
             auth=self.auth
