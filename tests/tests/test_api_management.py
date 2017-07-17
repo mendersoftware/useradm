@@ -12,7 +12,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import init_users, init_users_mt, cli,api_client_mgmt, mongo, make_auth
+from common import init_users, init_users_f, init_users_mt, cli,api_client_mgmt, mongo, make_auth
 import bravado
 import pytest
 import tenantadm
@@ -222,3 +222,82 @@ class TestManagementApiDeleteUserMultitenant(TestManagementApiDeleteUserBase):
     def test_not_found(self, tenant_id, api_client_mgmt):
         with tenantadm.run_fake_delete_user():
             self._do_test_not_found(api_client_mgmt, tenant_id)
+
+
+class TestManagementApiPutUser:
+    def test_ok_email(self, api_client_mgmt, init_users_f):
+        # test update
+        email = "unique1@foo.com"
+        update = {"email": email}
+        _, r = api_client_mgmt.update_user(init_users_f[0].id, update)
+        assert r.status_code == 204
+
+        # get/verify users
+        users = api_client_mgmt.get_users()
+        assert len(users) == len(init_users_f)
+
+        found = [u for u in users if u.email == email]
+        assert len(found) == 1
+
+    def test_ok_pass(self, api_client_mgmt, init_users_f):
+        password = "secretpassword123"
+
+        # test update
+        update = {"password": password}
+        _, r = api_client_mgmt.update_user(init_users_f[1].id, update)
+        assert r.status_code == 204
+
+        # get/verify users
+        users = api_client_mgmt.get_users()
+        assert len(users) == len(init_users_f)
+
+        found = [u for u in users if u.email == init_users_f[1].email]
+        assert len(found) == 1
+
+        # try if login still works
+        _, r = api_client_mgmt.login(init_users_f[1].email, password)
+        assert r.status_code == 200
+
+    def test_ok_email_and_pass(self, api_client_mgmt, init_users_f):
+        email = "definitelyunique@foo.com"
+        password = "secretpassword123"
+
+        # test update
+        update = {"email": email, "password": password}
+        _, r = api_client_mgmt.update_user(init_users_f[2].id, update)
+        assert r.status_code == 204
+
+        # get/verify users
+        users = api_client_mgmt.get_users()
+        assert len(users) == len(init_users_f)
+
+        found = [u for u in users if u.email == email]
+        assert len(found) == 1
+
+        # try if login still works
+        _, r = api_client_mgmt.login(email, password)
+        assert r.status_code == 200
+
+    def test_fail_not_found(self, api_client_mgmt, init_users_f):
+        update = {"email": "foo@bar.com", "password": "secretpassword123"}
+
+        try:
+            _, r = api_client_mgmt.update_user("notfound", update)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 404
+
+    def test_fail_bad_update(self, api_client_mgmt, init_users_f):
+        update = {"foo": "bar"}
+
+        try:
+            _, r = api_client_mgmt.update_user(init_users_f[3].id, update)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+
+    def test_fail_duplicate_email(self, api_client_mgmt, init_users_f):
+        update = {"email": init_users_f[3].email, "password": "secretpassword123"}
+
+        try:
+            _, r = api_client_mgmt.update_user(init_users_f[4].id, update)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 422
