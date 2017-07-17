@@ -161,3 +161,11 @@ class TestManagementApiGetUsersBase:
 
         users = api_client_mgmt.get_users(auth)
         assert len(users) == 0
+
+class TestManagementApiGetUsersOk(TestManagementApiGetUsersBase):
+    def test_ok(self, api_client_mgmt, init_users):
+        self._do_test_ok(api_client_mgmt, init_users)
+
+class TestManagementApiGetUsersNoUsers(TestManagementApiGetUsersBase):
+    def test_no_users(self, api_client_mgmt):
+        self._do_test_no_users(api_client_mgmt)
