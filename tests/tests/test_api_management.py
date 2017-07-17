@@ -169,3 +169,12 @@ class TestManagementApiGetUsersOk(TestManagementApiGetUsersBase):
 class TestManagementApiGetUsersNoUsers(TestManagementApiGetUsersBase):
     def test_no_users(self, api_client_mgmt):
         self._do_test_no_users(api_client_mgmt)
+
+class TestManagementApiGetUsersMultitenant(TestManagementApiGetUsersBase):
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
+        self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_no_users(self, tenant_id, api_client_mgmt, init_users_mt):
+        self._do_test_no_users(api_client_mgmt, "non_existing_tenant_id")
