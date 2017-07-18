@@ -31,6 +31,21 @@ def fake_create_user(user, status):
 
     return create_user
 
+def fake_update_user(update, status):
+    def update_user(request):
+        req_update = json.loads(request.body.decode())
+        assert req_update["name"] == update["email"]
+        return (status, {}, '')
+
+    return update_user
+
+def fake_get_tenants(tenant_id, status):
+    def get_tenants(request):
+        tenant = [{"id": tenant_id, "name": "foo"}]
+        return (status, {}, json.dumps(tenant))
+
+    return get_tenants
+
 @contextmanager
 def run_fake_create_user(user, status=201):
     handlers = [
@@ -56,6 +71,34 @@ def run_fake_delete_user(expected_tenant_id=None, expected_user_id=None):
     handlers = [
             ('DELETE', '/api/internal/v1/tenantadm/tenants/(.*)/users/(.*)',
              fake_delete_user(expected_tenant_id, expected_user_id))
+        ]
+
+    with mockserver.run_fake(get_fake_tenantadm_addr(),
+                             handlers=handlers) as server:
+        yield server
+
+@contextmanager
+def run_fake_update_user(tenant_id, id, update, status=204):
+    """
+    Runs the update endpoint *and* the GET /tenants endpoint - it's packaged
+    together because some tests will verify login after an update.
+    """
+    handlers = [
+            ('PUT', '/api/internal/v1/tenantadm/tenants/'+tenant_id+'/users/'+id, fake_update_user(update, status)),
+            ('GET', '/api/internal/v1/tenantadm/tenants', fake_get_tenants(tenant_id, 200))
+        ]
+
+    with mockserver.run_fake(get_fake_tenantadm_addr(),
+                             handlers=handlers) as server:
+        yield server
+
+@contextmanager
+def run_fake_get_tenants(tenant_id, status=200):
+    """
+    Runs just the GET /tenants endpoint for tests that don't need anything more.
+    """
+    handlers = [
+            ('GET', '/api/internal/v1/tenantadm/tenants', fake_get_tenants(tenant_id, 200))
         ]
 
     with mockserver.run_fake(get_fake_tenantadm_addr(),
