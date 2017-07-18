@@ -74,6 +74,17 @@ def init_users(cli, api_client_mgmt, mongo):
     yield api_client_mgmt.get_users()
     mongo_cleanup(mongo)
 
+@pytest.yield_fixture(scope="function")
+def init_users_f(cli, api_client_mgmt, mongo):
+    """
+    Function-scoped version of 'init_users'.
+    """
+    for i in range(5):
+        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
+
+    yield api_client_mgmt.get_users()
+    mongo_cleanup(mongo)
+
 @pytest.yield_fixture(scope="class")
 def init_users_mt(cli, api_client_mgmt, mongo):
     tenant_users = {'tenant1id':[], 'tenant2id':[]}
