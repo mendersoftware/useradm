@@ -77,7 +77,7 @@ type User struct {
 
 // UserUpdate is the tenantadm's api struct
 type UserUpdate struct {
-	Name string
+	Name string `json:"name"`
 }
 
 func NewClient(conf Config) *Client {
