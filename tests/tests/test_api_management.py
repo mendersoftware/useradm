@@ -224,80 +224,97 @@ class TestManagementApiDeleteUserMultitenant(TestManagementApiDeleteUserBase):
             self._do_test_not_found(api_client_mgmt, tenant_id)
 
 
-class TestManagementApiPutUser:
-    def test_ok_email(self, api_client_mgmt, init_users_f):
+class TestManagementApiPutUserBase:
+    def _do_test_ok_email(self, api_client_mgmt, init_users, user, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
         # test update
-        email = "unique1@foo.com"
-        update = {"email": email}
-        _, r = api_client_mgmt.update_user(init_users_f[0].id, update)
+        _, r = api_client_mgmt.update_user(user.id, update, auth)
         assert r.status_code == 204
 
         # get/verify users
-        users = api_client_mgmt.get_users()
-        assert len(users) == len(init_users_f)
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == len(init_users)
 
-        found = [u for u in users if u.email == email]
+        found = [u for u in users if u.email == update["email"]]
         assert len(found) == 1
 
-    def test_ok_pass(self, api_client_mgmt, init_users_f):
-        password = "secretpassword123"
+    def _do_test_ok_email_or_pass(self, api_client_mgmt, init_users, user, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
 
         # test update
-        update = {"password": password}
-        _, r = api_client_mgmt.update_user(init_users_f[1].id, update)
+        _, r = api_client_mgmt.update_user(user.id, update, auth)
         assert r.status_code == 204
 
         # get/verify users
-        users = api_client_mgmt.get_users()
-        assert len(users) == len(init_users_f)
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == len(init_users)
 
-        found = [u for u in users if u.email == init_users_f[1].email]
-        assert len(found) == 1
-
-        # try if login still works
-        _, r = api_client_mgmt.login(init_users_f[1].email, password)
-        assert r.status_code == 200
-
-    def test_ok_email_and_pass(self, api_client_mgmt, init_users_f):
-        email = "definitelyunique@foo.com"
-        password = "secretpassword123"
-
-        # test update
-        update = {"email": email, "password": password}
-        _, r = api_client_mgmt.update_user(init_users_f[2].id, update)
-        assert r.status_code == 204
-
-        # get/verify users
-        users = api_client_mgmt.get_users()
-        assert len(users) == len(init_users_f)
+        # find the user via (new?) email
+        email = user.email
+        new_email = update.get("email", None)
+        if new_email != None and new_email != user.email:
+            email = new_email
 
         found = [u for u in users if u.email == email]
         assert len(found) == 1
 
         # try if login still works
-        _, r = api_client_mgmt.login(email, password)
+        _, r = api_client_mgmt.login(email, update["password"])
+
         assert r.status_code == 200
 
-    def test_fail_not_found(self, api_client_mgmt, init_users_f):
-        update = {"email": "foo@bar.com", "password": "secretpassword123"}
+    def _do_test_fail_not_found(self, api_client_mgmt, init_users, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
 
         try:
-            _, r = api_client_mgmt.update_user("notfound", update)
+            _, r = api_client_mgmt.update_user("madeupid", update, auth)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 404
 
-    def test_fail_bad_update(self, api_client_mgmt, init_users_f):
-        update = {"foo": "bar"}
-
+    def _do_test_fail_bad_update(self, api_client_mgmt, init_users, tenant_id=None):
         try:
-            _, r = api_client_mgmt.update_user(init_users_f[3].id, update)
+            _, r = api_client_mgmt.update_user(init_users[0].id, {"foo":"bar"})
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
 
-    def test_fail_duplicate_email(self, api_client_mgmt, init_users_f):
-        update = {"email": init_users_f[3].email, "password": "secretpassword123"}
+    def _do_test_fail_duplicate_email(self, api_client_mgmt, init_users, user, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
 
         try:
-            _, r = api_client_mgmt.update_user(init_users_f[4].id, update)
+            _, r = api_client_mgmt.update_user(user.id, update, auth)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 422
+
+
+class TestManagementApiPutUser(TestManagementApiPutUserBase):
+    def test_ok_email(self, api_client_mgmt, init_users_f):
+        update = {"email": "unique1@foo.com"}
+        self._do_test_ok_email(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+    def test_ok_pass(self, api_client_mgmt, init_users_f):
+        update = {"password": "secretpassword123"}
+        self._do_test_ok_email_or_pass(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+    def test_ok_email_and_pass(self, api_client_mgmt, init_users_f):
+        update = {"email": "definitelyunique@foo.com", "password": "secretpassword123"}
+        self._do_test_ok_email_or_pass(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+    def test_fail_not_found(self, api_client_mgmt, init_users_f):
+        update = {"email": "foo@bar.com", "password": "secretpassword123"}
+        self._do_test_fail_not_found(api_client_mgmt, init_users_f, update)
+
+    def test_fail_bad_update(self, api_client_mgmt, init_users_f):
+        self._do_test_fail_bad_update(api_client_mgmt, init_users_f)
+
+    def test_fail_duplicate_email(self, api_client_mgmt, init_users_f):
+        update = {"email": init_users_f[1].email, "password": "secretpassword123"}
+        self._do_test_fail_duplicate_email(api_client_mgmt, init_users_f, init_users_f[0], update)
