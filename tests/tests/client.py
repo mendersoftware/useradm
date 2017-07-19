@@ -19,6 +19,7 @@ import common
 from bravado.swagger_model import load_file
 from bravado.client import SwaggerClient, RequestsClient
 import subprocess
+import requests
 
 
 class ApiClient:
@@ -89,6 +90,15 @@ class ManagementApiClient(ApiClient):
             auth=self.auth
 
         return self.client.users.post_users(user=user, _request_options={"headers": auth}).result()
+
+    def delete_user(self, user_id, auth=None, headers={}):
+        if auth is None:
+            auth=self.auth
+
+        headers['Authorization'] = auth['Authorization']
+        # bravado for some reason doesn't issue DELETEs properly (silent failure)
+        rsp = requests.delete(self.make_api_url('/users/{}'.format(user_id)), headers=headers)
+        return rsp
 
 
 class CliClient:
