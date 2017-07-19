@@ -202,3 +202,11 @@ class TestManagementApiDeleteUserBase:
 
         rsp = api_client_mgmt.delete_user('nonexistent_id', auth)
         assert rsp.status_code == 204
+
+
+class TestManagementApiDeleteUser(TestManagementApiDeleteUserBase):
+    def test_ok(self, api_client_mgmt, init_users):
+        self._do_test_ok(api_client_mgmt, init_users)
+
+    def test_not_found(self, api_client_mgmt, init_users):
+        self._do_test_not_found(api_client_mgmt)
