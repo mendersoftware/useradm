@@ -178,3 +178,27 @@ class TestManagementApiGetUsersMultitenant(TestManagementApiGetUsersBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_no_users(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_no_users(api_client_mgmt, "non_existing_tenant_id")
+
+
+class TestManagementApiDeleteUserBase:
+    def _do_test_ok(self, api_client_mgmt, init_users, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        rsp = api_client_mgmt.delete_user(init_users[0]['id'], auth)
+        assert rsp.status_code == 204
+
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == len(init_users) - 1
+
+        found = [u for u in users if u.id == init_users[0]['id']]
+        assert len(found) == 0
+
+    def _do_test_not_found(self, api_client_mgmt, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        rsp = api_client_mgmt.delete_user('nonexistent_id', auth)
+        assert rsp.status_code == 204
