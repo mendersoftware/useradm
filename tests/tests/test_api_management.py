@@ -210,3 +210,15 @@ class TestManagementApiDeleteUser(TestManagementApiDeleteUserBase):
 
     def test_not_found(self, api_client_mgmt, init_users):
         self._do_test_not_found(api_client_mgmt)
+
+
+class TestManagementApiDeleteUserMultitenant(TestManagementApiDeleteUserBase):
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
+        with tenantadm.run_fake_delete_user(tenant_id, init_users_mt[tenant_id][0]['id']):
+            self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_not_found(self, tenant_id, api_client_mgmt):
+        with tenantadm.run_fake_delete_user():
+            self._do_test_not_found(api_client_mgmt, tenant_id)
