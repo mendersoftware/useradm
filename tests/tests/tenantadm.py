@@ -40,3 +40,24 @@ def run_fake_create_user(user, status=201):
     with mockserver.run_fake(get_fake_tenantadm_addr(),
                              handlers=handlers) as server:
         yield server
+
+def fake_delete_user(expected_tenant_id, expected_user_id):
+    def delete_user(_request, tenant_id, user_id):
+        if expected_tenant_id is not None:
+            assert tenant_id == expected_tenant_id
+        if expected_user_id is not None:
+            assert user_id == expected_user_id
+        return (204, {}, '')
+
+    return delete_user
+
+@contextmanager
+def run_fake_delete_user(expected_tenant_id=None, expected_user_id=None):
+    handlers = [
+            ('DELETE', '/api/internal/v1/tenantadm/tenants/(.*)/users/(.*)',
+             fake_delete_user(expected_tenant_id, expected_user_id))
+        ]
+
+    with mockserver.run_fake(get_fake_tenantadm_addr(),
+                             handlers=handlers) as server:
+        yield server
