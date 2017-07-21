@@ -100,6 +100,16 @@ class ManagementApiClient(ApiClient):
         rsp = requests.delete(self.make_api_url('/users/{}'.format(user_id)), headers=headers)
         return rsp
 
+    def update_user(self, uid, update, auth=None):
+        if auth is None:
+            auth=self.auth
+
+        return self.client.users.put_users_id(id=uid, user_update=update, _request_options={"headers": auth}).result()
+
+    def login(self, username, password):
+        auth = common.make_basic_auth(username, password)
+        return self.client.auth.post_auth_login(Authorization=auth).result()
+
 
 class CliClient:
     cmd = '/testing/useradm'

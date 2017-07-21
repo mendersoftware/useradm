@@ -39,6 +39,15 @@ def make_auth(sub, tenant=None):
 
     return {"Authorization": "Bearer " + jwt}
 
+def make_basic_auth(username, password):
+    """
+    Creates an auth header suitable for user /login.
+    """
+    hdr = "{}:{}".format(username, password)
+    hdr = b64encode(hdr.encode("utf-8"))
+    return "Basic " + hdr.decode()
+
+
 @pytest.fixture(scope="session")
 def mongo():
     return MongoClient('mender-mongo-useradm:27017')
@@ -65,8 +74,32 @@ def init_users(cli, api_client_mgmt, mongo):
     yield api_client_mgmt.get_users()
     mongo_cleanup(mongo)
 
+@pytest.yield_fixture(scope="function")
+def init_users_f(cli, api_client_mgmt, mongo):
+    """
+    Function-scoped version of 'init_users'.
+    """
+    for i in range(5):
+        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
+
+    yield api_client_mgmt.get_users()
+    mongo_cleanup(mongo)
+
 @pytest.yield_fixture(scope="class")
 def init_users_mt(cli, api_client_mgmt, mongo):
+    tenant_users = {'tenant1id':[], 'tenant2id':[]}
+    for t in tenant_users:
+        for i in range(5):
+            cli.create_user("user-{}-{}@foo.com".format(i,t), "correcthorsebatterystaple", None, t)
+            tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
+    yield tenant_users
+    mongo_cleanup(mongo)
+
+@pytest.yield_fixture(scope="function")
+def init_users_mt_f(cli, api_client_mgmt, mongo):
+    """
+    Function-scoped version of 'init_users_mt'.
+    """
     tenant_users = {'tenant1id':[], 'tenant2id':[]}
     for t in tenant_users:
         for i in range(5):

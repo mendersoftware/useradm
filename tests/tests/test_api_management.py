@@ -12,7 +12,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import init_users, init_users_mt, cli,api_client_mgmt, mongo, make_auth
+from common import init_users, init_users_f, init_users_mt, init_users_mt_f, cli,api_client_mgmt, mongo, make_auth
 import bravado
 import pytest
 import tenantadm
@@ -222,3 +222,140 @@ class TestManagementApiDeleteUserMultitenant(TestManagementApiDeleteUserBase):
     def test_not_found(self, tenant_id, api_client_mgmt):
         with tenantadm.run_fake_delete_user():
             self._do_test_not_found(api_client_mgmt, tenant_id)
+
+
+class TestManagementApiPutUserBase:
+    def _do_test_ok_email(self, api_client_mgmt, init_users, user, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        # test update
+        _, r = api_client_mgmt.update_user(user.id, update, auth)
+        assert r.status_code == 204
+
+        # get/verify users
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == len(init_users)
+
+        found = [u for u in users if u.email == update["email"]]
+        assert len(found) == 1
+
+    def _do_test_ok_email_or_pass(self, api_client_mgmt, init_users, user, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        # test update
+        _, r = api_client_mgmt.update_user(user.id, update, auth)
+        assert r.status_code == 204
+
+        # get/verify users
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == len(init_users)
+
+        # find the user via (new?) email
+        email = user.email
+        new_email = update.get("email", None)
+        if new_email != None and new_email != user.email:
+            email = new_email
+
+        found = [u for u in users if u.email == email]
+        assert len(found) == 1
+
+        # try if login still works
+        _, r = api_client_mgmt.login(email, update["password"])
+
+        assert r.status_code == 200
+
+    def _do_test_fail_not_found(self, api_client_mgmt, init_users, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        try:
+            _, r = api_client_mgmt.update_user("madeupid", update, auth)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 404
+
+    def _do_test_fail_bad_update(self, api_client_mgmt, init_users, tenant_id=None):
+        try:
+            _, r = api_client_mgmt.update_user(init_users[0].id, {"foo":"bar"})
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+
+    def _do_test_fail_duplicate_email(self, api_client_mgmt, init_users, user, update, tenant_id=None):
+        auth = None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        try:
+            _, r = api_client_mgmt.update_user(user.id, update, auth)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 422
+
+
+class TestManagementApiPutUser(TestManagementApiPutUserBase):
+    def test_ok_email(self, api_client_mgmt, init_users_f):
+        update = {"email": "unique1@foo.com"}
+        self._do_test_ok_email(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+    def test_ok_pass(self, api_client_mgmt, init_users_f):
+        update = {"password": "secretpassword123"}
+        self._do_test_ok_email_or_pass(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+    def test_ok_email_and_pass(self, api_client_mgmt, init_users_f):
+        update = {"email": "definitelyunique@foo.com", "password": "secretpassword123"}
+        self._do_test_ok_email_or_pass(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+    def test_fail_not_found(self, api_client_mgmt, init_users_f):
+        update = {"email": "foo@bar.com", "password": "secretpassword123"}
+        self._do_test_fail_not_found(api_client_mgmt, init_users_f, update)
+
+    def test_fail_bad_update(self, api_client_mgmt, init_users_f):
+        self._do_test_fail_bad_update(api_client_mgmt, init_users_f)
+
+    def test_fail_duplicate_email(self, api_client_mgmt, init_users_f):
+        update = {"email": init_users_f[1].email, "password": "secretpassword123"}
+        self._do_test_fail_duplicate_email(api_client_mgmt, init_users_f, init_users_f[0], update)
+
+
+class TestManagementApiPutUserMultitenant(TestManagementApiPutUserBase):
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok_email(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        user = init_users_mt_f[tenant_id][0]
+        update = {"email": "unique1@foo.com"}
+        with tenantadm.run_fake_update_user(tenant_id, user.id, update):
+            self._do_test_ok_email(api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        user = init_users_mt_f[tenant_id][1]
+        with tenantadm.run_fake_get_tenants(tenant_id):
+            update = {"password": "secretpassword123"}
+            self._do_test_ok_email_or_pass(api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok_email_and_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        user = init_users_mt_f[tenant_id][2]
+        update = {"email": "definitelyunique@foo.com", "password": "secretpassword123"}
+        with tenantadm.run_fake_update_user(tenant_id, user.id, update):
+            self._do_test_ok_email_or_pass(api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_fail_not_found(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        user = init_users_mt_f[tenant_id][3]
+        update = {"email": "foo@bar.com", "password": "secretpassword123"}
+        with tenantadm.run_fake_update_user(tenant_id, user.id, update, 404):
+            self._do_test_fail_not_found(api_client_mgmt, init_users_mt_f[tenant_id], update, tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_fail_bad_update(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        self._do_test_fail_bad_update(api_client_mgmt, init_users_mt_f[tenant_id])
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_fail_duplicate_email(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        user = init_users_mt_f[tenant_id][0]
+        update = {"email": init_users_mt_f[tenant_id][1].email, "password": "secretpassword123"}
+        with tenantadm.run_fake_update_user(tenant_id, user.id, update, 422):
+            self._do_test_fail_duplicate_email(api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id)

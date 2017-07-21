@@ -177,7 +177,7 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 }
 
 func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
-	if ua.verifyTenant {
+	if ua.verifyTenant && u.Email != "" {
 		ident := identity.FromContext(ctx)
 		err := ua.cTenant.UpdateUser(ctx,
 			ident.Tenant,
@@ -187,15 +187,15 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 			},
 			ua.clientGetter())
 
-		switch err {
-		case nil:
-			return nil
-		case tenant.ErrDuplicateUser:
-			return store.ErrDuplicateEmail
-		case tenant.ErrUserNotFound:
-			return store.ErrUserNotFound
-		default:
-			return errors.Wrap(err, "useradm: failed to update user in tenantadm")
+		if err != nil {
+			switch err {
+			case tenant.ErrDuplicateUser:
+				return store.ErrDuplicateEmail
+			case tenant.ErrUserNotFound:
+				return store.ErrUserNotFound
+			default:
+				return errors.Wrap(err, "useradm: failed to update user in tenantadm")
+			}
 		}
 	}
 	if err := ua.db.UpdateUser(ctx, id, u); err != nil {
