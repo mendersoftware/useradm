@@ -142,6 +142,8 @@ func (c *Client) CreateUser(ctx context.Context, user *User, client apiclient.Ht
 		return errors.Wrap(err, "failed to create request for POST /users")
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
 	defer cancel()
 
@@ -180,6 +182,8 @@ func (c *Client) UpdateUser(ctx context.Context, tenantId, userId string, u *Use
 	if err != nil {
 		return errors.Wrap(err, "failed to create request for PUT /tenants/:id/users/:id")
 	}
+
+	req.Header.Set("Content-Type", "application/json")
 
 	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
 	defer cancel()
