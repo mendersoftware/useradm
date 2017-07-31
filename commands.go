@@ -85,6 +85,8 @@ func commandCreateUser(c config.Reader, username, password, userId, tenantId str
 		return errors.Wrap(err, "creating user failed")
 	}
 
+	fmt.Printf("%s\n", u.ID)
+
 	return nil
 }
 
