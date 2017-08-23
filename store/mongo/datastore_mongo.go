@@ -81,11 +81,6 @@ func NewDataStoreMongoWithSession(session *mgo.Session) (*DataStoreMongo, error)
 		session: session,
 	}
 
-	err := db.Index()
-	if err != nil {
-		return nil, err
-	}
-
 	return db, nil
 }
 
@@ -155,6 +150,10 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
 func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	s := db.session.Copy()
 	defer s.Close()
+
+	if err := db.EnsureIndexes(ctx, s); err != nil {
+		return err
+	}
 
 	now := time.Now().UTC()
 
@@ -304,9 +303,7 @@ func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migration
 	return nil
 }
 
-func (db *DataStoreMongo) Index() error {
-	session := db.session.Copy()
-	defer session.Close()
+func (db *DataStoreMongo) EnsureIndexes(ctx context.Context, s *mgo.Session) error {
 
 	uniqueEmailIndex := mgo.Index{
 		Key:        []string{"email"},
@@ -315,5 +312,6 @@ func (db *DataStoreMongo) Index() error {
 		Background: false,
 	}
 
-	return session.DB(DbName).C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
+	return s.DB(mstore.DbFromContext(ctx, DbName)).
+		C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
 }
