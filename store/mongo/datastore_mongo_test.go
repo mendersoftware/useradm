@@ -76,19 +76,15 @@ func TestMongoCreateUser(t *testing.T) {
 			},
 			outErr: "user with a given email already exists",
 		},
-		// TODO: uncomment this test after deciding what to do with database
-		// indexing in multitenant setup (related issue: MEN-1179)
-		/*
-			"duplicate email error with tenant": {
-				inUser: model.User{
-					ID:       "1234",
-					Email:    "foo@bar.com",
-					Password: "correcthorsebatterystaple",
-				},
-				tenant: "foo",
-				outErr: "user with a given email already exists",
+		"duplicate email error with tenant": {
+			inUser: model.User{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
 			},
-		*/
+			tenant: "foo",
+			outErr: "user with a given email already exists",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -211,6 +207,7 @@ func TestMongoUpdateUser(t *testing.T) {
 			store, err := NewDataStoreMongoWithSession(session)
 			assert.NoError(t, err)
 
+			store.EnsureIndexes(ctx, session)
 			err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(exisitingUsers...)
 			assert.NoError(t, err)
 
