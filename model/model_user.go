@@ -38,7 +38,7 @@ type User struct {
 	Email string `json:"email" bson:",omitempty" valid:"email"`
 
 	// user password
-	Password string `json:"password" bson:"password"`
+	Password string `json:"password,omitempty" bson:"password"`
 
 	// timestamp of the user creation
 	CreatedTs *time.Time `json:"created_ts,omitempty" bson:"created_ts,omitempty"`
