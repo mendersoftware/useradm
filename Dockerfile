@@ -11,3 +11,4 @@ ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
 
 COPY ./useradm /usr/bin/
 
+RUN apk add --update ca-certificates && update-ca-certificates
