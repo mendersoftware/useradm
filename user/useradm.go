@@ -19,6 +19,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/mendersoftware/go-lib-micro/identity"
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -209,8 +210,21 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 }
 
 func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
+
 	if token == nil {
 		return ErrUnauthorized
+	}
+
+	l := log.FromContext(ctx)
+
+	if ua.verifyTenant {
+		if token.Claims.Tenant == "" {
+			l.Errorf("Token has no tenant claim")
+			return jwt.ErrTokenInvalid
+		}
+	} else if token.Claims.Tenant != "" {
+		l.Errorf("Unexpected tenant claim: %s in the token", token.Claims.Tenant)
+		return jwt.ErrTokenInvalid
 	}
 
 	//check service-specific claims - iss
