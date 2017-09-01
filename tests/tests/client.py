@@ -62,6 +62,15 @@ class InternalApiClient(ApiClient):
     def __init__(self):
         super().__init__()
 
+    def verify(self, token, uri='/api/management/1.0/auth/verify', method='POST'):
+        if not token.startswith('Bearer '):
+            token = "Bearer " + token
+        return self.client.auth.post_auth_verify(**{
+            'Authorization': token,
+            'X-Original-URI': uri,
+            'X-Original-Method' :method,
+        }).result()
+
 
 class ManagementApiClient(ApiClient):
     log = logging.getLogger('client.ManagementClient')
