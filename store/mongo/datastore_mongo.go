@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
@@ -287,19 +288,45 @@ func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
 }
 
 func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migrations []migrate.Migration) error {
-	m := migrate.DummyMigrator{
-		Session: db.session,
-		Db:      mstore.DbFromContext(ctx, DbName),
+	l := log.FromContext(ctx)
+
+	dbs := []string{DbName}
+
+	if db.multitenant {
+		l.Infof("running migrations in multitenant mode")
+
+		tdbs, err := migrate.GetTenantDbs(db.session, mstore.IsTenantDb(DbName))
+		if err != nil {
+			return errors.Wrap(err, "failed go retrieve tenant DBs")
+		}
+		dbs = tdbs
+	} else {
+		l.Infof("running migrations in single tenant mode")
 	}
 
-	ver, err := migrate.NewVersion(version)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse service version")
+	if db.automigrate {
+		l.Infof("automigrate is ON, will apply migrations")
+	} else {
+		l.Infof("automigrate is OFF, will check db version compatibility")
 	}
 
-	err = m.Apply(ctx, *ver, migrations)
-	if err != nil {
-		return errors.Wrap(err, "failed to apply migrations")
+	for _, d := range dbs {
+		l.Infof("migrating %s", d)
+		m := migrate.DummyMigrator{
+			Session:     db.session,
+			Db:          d,
+			Automigrate: db.automigrate,
+		}
+
+		ver, err := migrate.NewVersion(version)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse service version")
+		}
+
+		err = m.Apply(ctx, *ver, nil)
+		if err != nil {
+			return errors.Wrap(err, "failed to apply migrations")
+		}
 	}
 
 	return nil
