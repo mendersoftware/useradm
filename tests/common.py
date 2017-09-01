@@ -16,7 +16,7 @@ import json
 import pytest
 from pymongo import MongoClient
 from base64 import b64encode
-from client import CliClient, ManagementApiClient
+from client import CliClient, ManagementApiClient, InternalApiClient
 
 def make_auth(sub, tenant=None):
     """
@@ -65,6 +65,10 @@ def cli():
 @pytest.fixture(scope="session")
 def api_client_mgmt():
     return ManagementApiClient()
+
+@pytest.fixture(scope="session")
+def api_client_int():
+    return InternalApiClient()
 
 @pytest.yield_fixture(scope="class")
 def init_users(cli, api_client_mgmt, mongo):
