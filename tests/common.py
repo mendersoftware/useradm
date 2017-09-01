@@ -111,3 +111,12 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
+
+@pytest.yield_fixture(scope="class")
+def user_tokens(init_users, api_client_mgmt):
+    tokens = []
+    for user in init_users:
+        _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
+        tokens.append(r.text)
+
+    yield tokens
