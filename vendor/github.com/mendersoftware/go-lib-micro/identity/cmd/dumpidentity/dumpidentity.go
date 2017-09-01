@@ -11,31 +11,28 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-package store
+package main
 
 import (
-	"context"
-	"strings"
+	"fmt"
+	"log"
+	"os"
 
 	"github.com/mendersoftware/go-lib-micro/identity"
 )
 
-// DbFromContext generates database name using tenant field from identity extracted
-// from context and original database name
-func DbFromContext(ctx context.Context, origDbName string) string {
-	identity := identity.FromContext(ctx)
-	if identity != nil && identity.Tenant != "" {
-		return origDbName + "-" + identity.Tenant
-	} else {
-		return origDbName
-	}
-}
+func main() {
 
-type TenantDbMatchFunc func(name string) bool
-
-func IsTenantDb(baseDb string) TenantDbMatchFunc {
-	prefix := baseDb + "-"
-	return func(name string) bool {
-		return strings.HasPrefix(name, prefix)
+	if len(os.Args) < 2 {
+		log.Fatalf("usage: dumpidentity <token>")
 	}
+
+	token := os.Args[1]
+	idata, err := identity.ExtractIdentity(token)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+		return
+	}
+
+	fmt.Printf("%+v\n", idata)
 }
