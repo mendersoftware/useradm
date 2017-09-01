@@ -104,3 +104,39 @@ def run_fake_get_tenants(tenant_id, status=200):
     with mockserver.run_fake(get_fake_tenantadm_addr(),
                              handlers=handlers) as server:
         yield server
+
+@contextmanager
+def run_fake_user_tenants(tenant_users):
+    """
+    Runs GET /tenants?username=<user>. Takes a dict of `{tenant: list of
+    users}`, returns valid tenant with `tenant_id` for `user`, otherwise an
+    empty list.
+
+    """
+    user_to_tenant = {}
+    for tenant, users in tenant_users.items():
+        for user in users:
+            user_to_tenant[user] = tenant
+
+    def fake_get_tenants_for_user(request):
+        # extract username from query parameter
+        user_args = request.arguments.get('username', '')
+        req_user = user_args[0].decode() if len(user_args) > 0 else ''
+
+        tenant = user_to_tenant.get(req_user, '')
+        if tenant:
+            return (200, {},
+                    json.dumps([{"id": tenant, "name": "foo"}]))
+        else:
+            return (200, {}, '[]')
+
+
+    handlers = [
+            ('GET', '/api/internal/v1/tenantadm/tenants',
+             fake_get_tenants_for_user),
+        ]
+
+
+    with mockserver.run_fake(get_fake_tenantadm_addr(),
+                             handlers=handlers) as server:
+        yield server
