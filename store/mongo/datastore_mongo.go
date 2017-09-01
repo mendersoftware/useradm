@@ -64,7 +64,9 @@ type DataStoreMongoConfig struct {
 }
 
 type DataStoreMongo struct {
-	session *mgo.Session
+	session     *mgo.Session
+	automigrate bool
+	multitenant bool
 }
 
 func GetDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
@@ -314,4 +316,14 @@ func (db *DataStoreMongo) EnsureIndexes(ctx context.Context, s *mgo.Session) err
 
 	return s.DB(mstore.DbFromContext(ctx, DbName)).
 		C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
+}
+
+func (db *DataStoreMongo) WithMultitenant() *DataStoreMongo {
+	db.multitenant = true
+	return db
+}
+
+func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
+	db.automigrate = true
+	return db
 }
