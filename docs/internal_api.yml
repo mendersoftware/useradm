@@ -25,6 +25,24 @@ paths:
          required: true
          type: string
          format: Bearer [token]
+       - name: X-Original-URI
+         in: header
+         description: |
+           URI the original request was sent to, the URI is expected to have
+           at least 4 components, eg. /api/management/1.0/foo/bar
+         required: true
+         type: string
+         format: HTTP path
+       - name: X-Original-Method
+         in: header
+         description: HTTP method used when accessing the original URI
+         required: true
+         type: string
+         enum:
+           - GET
+           - PUT
+           - POST
+           - DELETE
      responses:
         200:
             description: The token is valid.
