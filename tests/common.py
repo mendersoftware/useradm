@@ -96,7 +96,7 @@ def init_users_mt(cli, api_client_mgmt, mongo):
     for t in tenant_users:
         for i in range(5):
             cli.create_user("user-{}-{}@foo.com".format(i,t), "correcthorsebatterystaple", None, t)
-            tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
+        tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
 
