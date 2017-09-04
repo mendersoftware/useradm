@@ -113,6 +113,7 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     yield tenant_users
     mongo_cleanup(mongo)
 
+
 @pytest.yield_fixture(scope="class")
 def user_tokens(init_users, api_client_mgmt):
     tokens = []
@@ -121,6 +122,13 @@ def user_tokens(init_users, api_client_mgmt):
         tokens.append(r.text)
 
     yield tokens
+
+
+@pytest.yield_fixture(scope='function')
+def clean_db(mongo):
+    mongo_cleanup(mongo)
+    yield
+    mongo_cleanup(mongo)
 
 
 def b64pad(b64data):
