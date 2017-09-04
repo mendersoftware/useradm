@@ -15,8 +15,9 @@
 import json
 import pytest
 from pymongo import MongoClient
-from base64 import b64encode
+from base64 import b64encode, urlsafe_b64decode
 from client import CliClient, ManagementApiClient, InternalApiClient
+
 
 def make_auth(sub, tenant=None):
     """
@@ -120,3 +121,26 @@ def user_tokens(init_users, api_client_mgmt):
         tokens.append(r.text)
 
     yield tokens
+
+
+def b64pad(b64data):
+    """Pad base64 string with '=' to achieve a length that is a multiple of 4
+    """
+    return b64data + '=' * (4 - (len(b64data) % 4))
+
+
+def explode_jwt(token):
+    parts = token.split('.')
+    assert len(parts) == 3
+
+    # JWT fields are passed in a header and use URL safe encoding, which
+    # substitutes - instead of + and _ instead of /
+    hdr_raw = urlsafe_b64decode(b64pad(parts[0]))
+    claims_raw = urlsafe_b64decode(b64pad(parts[1]))
+    sign = urlsafe_b64decode(b64pad(parts[2]))
+
+    # unpack json data
+    hdr = json.loads(hdr_raw.decode())
+    claims = json.loads(claims_raw.decode())
+
+    return hdr, claims, sign
