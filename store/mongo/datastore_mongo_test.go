@@ -24,6 +24,7 @@ import (
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/mgo.v2/bson"
 
 	"github.com/mendersoftware/useradm/model"
 )
@@ -613,46 +614,97 @@ func TestMigrate(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
+		tenantDbs   []string
+		automigrate bool
+
 		version string
 		err     string
 	}{
 		"0.1.0": {
-			version: "0.1.0",
-			err:     "",
+			automigrate: true,
+			version:     "0.1.0",
+			err:         "",
+		},
+		"0.1.0, no automigrate": {
+			automigrate: false,
+			version:     "0.1.0",
+			err:         "",
 		},
 		"1.2.3": {
-			version: "1.2.3",
-			err:     "",
+			automigrate: true,
+			version:     "1.2.3",
+			err:         "",
 		},
 		"0.1 error": {
-			version: "0.1",
-			err:     "failed to parse service version: failed to parse Version: unexpected EOF",
+			automigrate: true,
+			version:     "0.1",
+			err:         "failed to parse service version: failed to parse Version: unexpected EOF",
+		},
+		"0.1.0, automigrate, multitenant": {
+			tenantDbs:   []string{"useradm-tenant1", "useradm-tenant2"},
+			automigrate: true,
+			version:     "0.1.0",
+			err:         "",
+		},
+		"0.1.0, no automigrate, multitenant": {
+			tenantDbs:   []string{"useradm-tenant1", "useradm-tenant2"},
+			automigrate: true,
+			version:     "0.1.0",
+			err:         "",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Logf("case: %s", name)
 		db.Wipe()
-		session := db.Session()
 
-		store, err := NewDataStoreMongoWithSession(session)
+		store, err := NewDataStoreMongoWithSession(db.Session())
 		assert.NoError(t, err)
+
+		// set up automigration
+		if tc.automigrate {
+			store = store.WithAutomigrate()
+		}
+
+		// set up multitenancy/tenant dbs
+		if len(tc.tenantDbs) != 0 {
+			store = store.WithMultitenant()
+
+			for _, d := range tc.tenantDbs {
+				err := store.session.DB(d).C("foo").Insert(bson.M{"foo": "bar"})
+				assert.NoError(t, err)
+			}
+		}
 
 		ctx := context.Background()
 
 		err = store.Migrate(ctx, tc.version, nil)
-		if tc.err == "" {
-			assert.NoError(t, err)
-			var out []migrate.MigrationEntry
-			session.DB(DbName).C(migrate.DbMigrationsColl).Find(nil).All(&out)
-			assert.Len(t, out, 1)
-			v, _ := migrate.NewVersion(tc.version)
-			assert.Equal(t, *v, out[0].Version)
-		} else {
+
+		if tc.err != "" {
 			assert.EqualError(t, err, tc.err)
+		} else {
+
+			// verify migration entry in all databases (>1 if multitenant)
+			dbs := []string{DbName}
+			if len(tc.tenantDbs) > 0 {
+				dbs = tc.tenantDbs
+			}
+
+			for _, d := range dbs {
+				var out []migrate.MigrationEntry
+				err = store.session.DB(d).C(migrate.DbMigrationsColl).Find(nil).All(&out)
+				if tc.automigrate {
+					assert.Len(t, out, 1)
+					assert.NoError(t, err)
+
+					v, _ := migrate.NewVersion(tc.version)
+					assert.Equal(t, *v, out[0].Version)
+				} else {
+					assert.Len(t, out, 0)
+				}
+			}
 		}
 
-		session.Close()
+		store.session.Close()
 	}
-
 }

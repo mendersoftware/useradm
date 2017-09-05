@@ -54,9 +54,16 @@ func doMain(args []string) {
 	}
 	app.Commands = []cli.Command{
 		{
-			Name:   "server",
-			Usage:  "Run as server (default)",
-			Action: runDeamon,
+			Name:  "server",
+			Usage: "Run the service as a server",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "automigrate",
+					Usage: "Run database migrations before starting.",
+				},
+			},
+
+			Action: runServer,
 		},
 		{
 			Name:  "create-user",
@@ -82,7 +89,8 @@ func doMain(args []string) {
 			Action: runCreateUser,
 		},
 	}
-	app.Action = runDeamon
+
+	app.Action = runServer
 	app.Before = func(args *cli.Context) error {
 		log.Setup(debug)
 
@@ -102,7 +110,7 @@ func doMain(args []string) {
 	app.Run(args)
 }
 
-func runDeamon(args *cli.Context) error {
+func runServer(args *cli.Context) error {
 	devSetup := args.GlobalBool("dev")
 
 	l := log.New(log.Ctx{})
@@ -122,6 +130,14 @@ func runDeamon(args *cli.Context) error {
 		return cli.NewExitError(
 			fmt.Sprintf("failed to connect to db: %v", err),
 			2)
+	}
+
+	if args.Bool("automigrate") {
+		db = db.WithAutomigrate()
+	}
+
+	if config.Config.Get(SettingTenantAdmAddr) != "" {
+		db = db.WithMultitenant()
 	}
 
 	err = db.Migrate(ctx, mongo.DbVersion, nil)
