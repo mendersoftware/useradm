@@ -15,8 +15,9 @@
 import json
 import pytest
 from pymongo import MongoClient
-from base64 import b64encode
-from client import CliClient, ManagementApiClient
+from base64 import b64encode, urlsafe_b64decode
+from client import CliClient, ManagementApiClient, InternalApiClient
+
 
 def make_auth(sub, tenant=None):
     """
@@ -66,6 +67,10 @@ def cli():
 def api_client_mgmt():
     return ManagementApiClient()
 
+@pytest.fixture(scope="session")
+def api_client_int():
+    return InternalApiClient()
+
 @pytest.yield_fixture(scope="class")
 def init_users(cli, api_client_mgmt, mongo):
     for i in range(5):
@@ -91,7 +96,7 @@ def init_users_mt(cli, api_client_mgmt, mongo):
     for t in tenant_users:
         for i in range(5):
             cli.create_user("user-{}-{}@foo.com".format(i,t), "correcthorsebatterystaple", None, t)
-            tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
+        tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
 
@@ -107,3 +112,43 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
+
+
+@pytest.yield_fixture(scope="class")
+def user_tokens(init_users, api_client_mgmt):
+    tokens = []
+    for user in init_users:
+        _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
+        tokens.append(r.text)
+
+    yield tokens
+
+
+@pytest.yield_fixture(scope='function')
+def clean_db(mongo):
+    mongo_cleanup(mongo)
+    yield
+    mongo_cleanup(mongo)
+
+
+def b64pad(b64data):
+    """Pad base64 string with '=' to achieve a length that is a multiple of 4
+    """
+    return b64data + '=' * (4 - (len(b64data) % 4))
+
+
+def explode_jwt(token):
+    parts = token.split('.')
+    assert len(parts) == 3
+
+    # JWT fields are passed in a header and use URL safe encoding, which
+    # substitutes - instead of + and _ instead of /
+    hdr_raw = urlsafe_b64decode(b64pad(parts[0]))
+    claims_raw = urlsafe_b64decode(b64pad(parts[1]))
+    sign = urlsafe_b64decode(b64pad(parts[2]))
+
+    # unpack json data
+    hdr = json.loads(hdr_raw.decode())
+    claims = json.loads(claims_raw.decode())
+
+    return hdr, claims, sign
