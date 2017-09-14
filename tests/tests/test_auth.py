@@ -44,6 +44,8 @@ class TestAuthLogin:
 
         token = r.text
         assert len(token)
+        _, claims, _ = explode_jwt(token)
+        assert 'mender.user' in claims and claims['mender.user'] == True
 
 
 class TestAuthLoginMultitenant:

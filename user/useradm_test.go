@@ -503,8 +503,9 @@ func TestUserAdmVerify(t *testing.T) {
 	testCases := map[string]struct {
 		token *jwt.Token
 
-		dbUser *model.User
-		dbErr  error
+		callsDB bool
+		dbUser  *model.User
+		dbErr   error
 
 		err error
 	}{
@@ -513,44 +514,54 @@ func TestUserAdmVerify(t *testing.T) {
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
+					User:    true,
 				},
 			},
+			callsDB: true,
 			dbUser: &model.User{
 				ID: "1234",
 			},
-			dbErr: nil,
-			err:   nil,
 		},
 		"error: invalid token issuer": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "foo",
+					User:    true,
 				},
 			},
-			dbUser: nil,
-			dbErr:  nil,
-			err:    ErrUnauthorized,
+			err: ErrUnauthorized,
+		},
+		"error: not a user token": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			err: ErrUnauthorized,
 		},
 		"error: user not found": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
+					User:    true,
 				},
 			},
-			dbUser: nil,
-			err:    ErrUnauthorized,
+			callsDB: true,
+			err:     ErrUnauthorized,
 		},
 		"error: db": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
+					User:    true,
 				},
 			},
-			dbUser: nil,
-			dbErr:  errors.New("db internal error"),
+			callsDB: true,
+			dbErr:   errors.New("db internal error"),
 
 			err: errors.New("useradm: failed to get user: db internal error"),
 		},
@@ -564,8 +575,10 @@ func TestUserAdmVerify(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("GetUserById", ctx,
-				tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+			if tc.callsDB || tc.dbUser != nil || tc.dbErr != nil {
+				db.On("GetUserById", ctx,
+					tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+			}
 
 			useradm := NewUserAdm(nil, db, config)
 
@@ -576,6 +589,7 @@ func TestUserAdmVerify(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			db.AssertExpectations(t)
 		})
 	}
 }
