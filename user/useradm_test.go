@@ -557,25 +557,26 @@ func TestUserAdmVerify(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(fmt.Sprintf("test case: %s", name), func(t *testing.T) {
 
-		config := Config{Issuer: "mender"}
+			config := Config{Issuer: "mender"}
 
-		ctx := context.Background()
+			ctx := context.Background()
 
-		db := &mstore.DataStore{}
-		db.On("GetUserById", ctx,
-			tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+			db := &mstore.DataStore{}
+			db.On("GetUserById", ctx,
+				tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, config)
+			useradm := NewUserAdm(nil, db, config)
 
-		err := useradm.Verify(ctx, tc.token)
+			err := useradm.Verify(ctx, tc.token)
 
-		if tc.err != nil {
-			assert.EqualError(t, err, tc.err.Error())
-		} else {
-			assert.NoError(t, err)
-		}
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 
