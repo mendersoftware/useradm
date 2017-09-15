@@ -134,6 +134,7 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
 			Subject:   subject,
 			Scope:     scope,
 			Tenant:    tenant,
+			User:      true,
 		},
 	}
 }
@@ -216,6 +217,11 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	}
 
 	l := log.FromContext(ctx)
+
+	if token.Claims.User != true {
+		l.Errorf("not a user token")
+		return ErrUnauthorized
+	}
 
 	if ua.verifyTenant {
 		if token.Claims.Tenant == "" {

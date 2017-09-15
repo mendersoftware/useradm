@@ -503,8 +503,9 @@ func TestUserAdmVerify(t *testing.T) {
 	testCases := map[string]struct {
 		token *jwt.Token
 
-		dbUser *model.User
-		dbErr  error
+		callsDB bool
+		dbUser  *model.User
+		dbErr   error
 
 		err error
 	}{
@@ -513,69 +514,83 @@ func TestUserAdmVerify(t *testing.T) {
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
+					User:    true,
 				},
 			},
+			callsDB: true,
 			dbUser: &model.User{
 				ID: "1234",
 			},
-			dbErr: nil,
-			err:   nil,
 		},
 		"error: invalid token issuer": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "foo",
+					User:    true,
 				},
 			},
-			dbUser: nil,
-			dbErr:  nil,
-			err:    ErrUnauthorized,
+			err: ErrUnauthorized,
+		},
+		"error: not a user token": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+				},
+			},
+			err: ErrUnauthorized,
 		},
 		"error: user not found": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
+					User:    true,
 				},
 			},
-			dbUser: nil,
-			err:    ErrUnauthorized,
+			callsDB: true,
+			err:     ErrUnauthorized,
 		},
 		"error: db": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
+					User:    true,
 				},
 			},
-			dbUser: nil,
-			dbErr:  errors.New("db internal error"),
+			callsDB: true,
+			dbErr:   errors.New("db internal error"),
 
 			err: errors.New("useradm: failed to get user: db internal error"),
 		},
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(fmt.Sprintf("test case: %s", name), func(t *testing.T) {
 
-		config := Config{Issuer: "mender"}
+			config := Config{Issuer: "mender"}
 
-		ctx := context.Background()
+			ctx := context.Background()
 
-		db := &mstore.DataStore{}
-		db.On("GetUserById", ctx,
-			tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+			db := &mstore.DataStore{}
+			if tc.callsDB || tc.dbUser != nil || tc.dbErr != nil {
+				db.On("GetUserById", ctx,
+					tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
+			}
 
-		useradm := NewUserAdm(nil, db, config)
+			useradm := NewUserAdm(nil, db, config)
 
-		err := useradm.Verify(ctx, tc.token)
+			err := useradm.Verify(ctx, tc.token)
 
-		if tc.err != nil {
-			assert.EqualError(t, err, tc.err.Error())
-		} else {
-			assert.NoError(t, err)
-		}
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+			db.AssertExpectations(t)
+		})
 	}
 }
 
