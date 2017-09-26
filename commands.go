@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
 
+	"github.com/mendersoftware/useradm/client/tenant"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store/mongo"
 	"github.com/mendersoftware/useradm/user"
@@ -79,6 +80,15 @@ func commandCreateUser(c config.Reader, username, password, userId, tenantId str
 	}
 
 	ua := useradm.NewUserAdm(nil, db, useradm.Config{})
+	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {
+		l.Infof("setting up tenant verification")
+
+		tc := tenant.NewClient(tenant.Config{
+			TenantAdmAddr: tadmAddr,
+		})
+
+		ua = ua.WithTenantVerification(tc)
+	}
 
 	ctx := getTenantContext(tenantId)
 	if err := ua.CreateUser(ctx, &u); err != nil {
