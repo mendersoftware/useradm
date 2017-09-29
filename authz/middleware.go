@@ -49,7 +49,7 @@ type ResourceActionExtractor func(r *rest.Request) (*Action, error)
 // MiddlewareFunc makes AuthzMiddleware implement the Middleware interface.
 func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 	return func(w rest.ResponseWriter, r *rest.Request) {
-		l := requestlog.GetRequestLogger(r.Env)
+		l := requestlog.GetRequestLogger(r)
 
 		//get token, no token header = http 401
 		tokstr := extractToken(r.Header)

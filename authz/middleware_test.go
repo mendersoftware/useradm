@@ -14,7 +14,6 @@
 package authz_test
 
 import (
-	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -35,6 +34,7 @@ import (
 	. "github.com/mendersoftware/useradm/authz"
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
+	mtest "github.com/mendersoftware/useradm/utils/testing"
 )
 
 func TestAuthzMiddleware(t *testing.T) {
@@ -212,7 +212,7 @@ func TestAuthzMiddleware(t *testing.T) {
 		)
 		rest.ErrorFieldName = "error"
 
-		ctx := context.Background()
+		ctx := mtest.ContextMatcher()
 
 		//setup mocks
 		a := &mauthz.Authorizer{}
