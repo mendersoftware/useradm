@@ -132,7 +132,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
-		ctx := context.TODO()
+		ctx := mtesting.ContextMatcher()
 
 		//make mock useradm
 		uadm := &museradm.App{}
@@ -452,7 +452,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 	for name, tc := range testCases {
 		t.Logf("test case: %v", name)
 
-		ctx := context.TODO()
+		ctx := mtesting.ContextMatcher()
 
 		//make mock useradm
 		uadm := &museradm.App{}
@@ -560,7 +560,7 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
 
-			ctx := context.TODO()
+			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
 			uadm := &museradm.App{}
@@ -651,7 +651,7 @@ func TestUserAdmApiGetUser(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
 
-			ctx := context.TODO()
+			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
 			uadm := &museradm.App{}
@@ -718,7 +718,7 @@ func TestUserAdmApiDeleteUser(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
 
-			ctx := context.TODO()
+			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
 			uadm := &museradm.App{}
