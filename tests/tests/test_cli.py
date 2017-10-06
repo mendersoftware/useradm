@@ -19,6 +19,34 @@ import pytest
 import tenantadm
 
 
+
+class Migration:
+    DB_NAME = "useradm"
+    MIGRATION_COLLECTION = "migration_info"
+    DB_VERSION = "0.1.0"
+
+    @staticmethod
+    def verify_db_and_collections(client, dbname):
+        dbs = client.database_names()
+        assert dbname in dbs
+
+        colls = client[dbname].collection_names()
+        assert Migration.MIGRATION_COLLECTION in colls
+
+    @staticmethod
+    def verify_migration(db, expected_version):
+        major, minor, patch = [int(x) for x in expected_version.split('.')]
+        version = {
+            "version.major": major,
+            "version.minor": minor,
+            "version.patch": patch,
+        }
+
+        mi = db[Migration.MIGRATION_COLLECTION].find_one(version)
+        print('found migration:', mi)
+        assert mi
+
+
 class TestCli:
     def test_create_user(self, api_client_mgmt, cli, clean_db):
         cli.create_user('foo@bar.com', '1234youseeme')
@@ -40,6 +68,19 @@ class TestCli:
         users = api_client_mgmt.get_users()
         assert [user for user in users \
                 if user.email == 'foo@bar.com' and user.id == '123456']
+
+    def test_create_user_with_id(self, api_client_mgmt, cli, clean_db):
+        cli.create_user('foo@bar.com', '1234youseeme', user_id='123456')
+        users = api_client_mgmt.get_users()
+        assert [user for user in users \
+                if user.email == 'foo@bar.com' and user.id == '123456']
+
+    def test_migrate(self, cli, clean_db, mongo):
+        cli.migrate()
+
+        Migration.verify_db_and_collections(mongo, Migration.DB_NAME)
+        Migration.verify_migration(mongo[Migration.DB_NAME],
+                                   Migration.DB_VERSION)
 
 
 class TestCliMultitenant:
@@ -71,3 +112,10 @@ class TestCliMultitenant:
             assert token
             _, claims, _ = explode_jwt(token)
             assert claims['mender.tenant'] == tenant
+
+    def test_migrate(self, cli, clean_db, mongo):
+        cli.migrate(tenant_id="foobar")
+
+        tenant_db = Migration.DB_NAME + '-foobar'
+        Migration.verify_db_and_collections(mongo, tenant_db)
+        Migration.verify_migration(mongo[tenant_db], Migration.DB_VERSION)
