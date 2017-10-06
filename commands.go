@@ -112,3 +112,35 @@ func getTenantContext(tenantId string) context.Context {
 
 	return ctx
 }
+
+func commandMigrate(c config.Reader, tenantId string) error {
+	l := log.New(log.Ctx{})
+
+	l.Printf("User Administration Service, version %s starting up",
+		CreateVersionString())
+
+	if tenantId != "" {
+		l.Printf("migrating tenant %v", tenantId)
+	} else {
+		l.Printf("migrating default tenant")
+	}
+
+	db, err := mongo.NewDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
+
+	if err != nil {
+		return errors.Wrap(err, "database connection failed")
+	}
+
+	// we want to apply migrations
+	db.WithAutomigrate()
+
+	ctx := context.Background()
+
+	err = db.MigrateTenant(ctx, mongo.DbVersion, tenantId)
+	if err != nil {
+		return errors.Wrap(err, "failed to run migrations")
+	}
+
+	return nil
+
+}

@@ -88,6 +88,18 @@ func doMain(args []string) {
 			},
 			Action: runCreateUser,
 		},
+		{
+			Name:  "migrate",
+			Usage: "Run migrations",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "tenant",
+					Usage: "Takes ID of specific tenant to migrate.",
+				},
+			},
+
+			Action: runMigrate,
+		},
 	}
 
 	app.Action = runServer
@@ -159,6 +171,14 @@ func runCreateUser(args *cli.Context) error {
 		args.String("username"), args.String("password"), args.String("user-id"), args.String("tenant-id"))
 	if err != nil {
 		return cli.NewExitError(err.Error(), 5)
+	}
+	return nil
+}
+
+func runMigrate(args *cli.Context) error {
+	err := commandMigrate(config.Config, args.String("tenant"))
+	if err != nil {
+		return cli.NewExitError(err.Error(), 6)
 	}
 	return nil
 }
