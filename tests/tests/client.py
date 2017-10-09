@@ -136,3 +136,11 @@ class CliClient:
             args.extend(['--tenant-id', tenant_id])
 
         subprocess.run(args, check=True)
+
+    def migrate(self, tenant_id=None):
+        args = [self.cmd, 'migrate']
+
+        if tenant_id:
+            args += ['--tenant', tenant_id]
+
+        subprocess.run(args, check=True)
