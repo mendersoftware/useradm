@@ -362,12 +362,22 @@ func (db *DataStoreMongo) EnsureIndexes(ctx context.Context, s *mgo.Session) err
 		C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
 }
 
+// WithMultitenant enables multitenant support and returns a new datastore based
+// on current one
 func (db *DataStoreMongo) WithMultitenant() *DataStoreMongo {
-	db.multitenant = true
-	return db
+	return &DataStoreMongo{
+		session:     db.session,
+		automigrate: db.automigrate,
+		multitenant: true,
+	}
 }
 
+// WithAutomigrate enables automatic migration and returns a new datastore based
+// on current one
 func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
-	db.automigrate = true
-	return db
+	return &DataStoreMongo{
+		session:     db.session,
+		automigrate: true,
+		multitenant: db.multitenant,
+	}
 }
