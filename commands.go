@@ -79,7 +79,8 @@ func commandCreateUser(c config.Reader, username, password, userId, tenantId str
 		return errors.Wrap(err, "database connection failed")
 	}
 
-	ua := useradm.NewUserAdm(nil, db, useradm.Config{})
+	ua := useradm.NewUserAdm(nil, db, mongo.NewTenantStoreMongo(db),
+		useradm.Config{})
 	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {
 		l.Infof("setting up tenant verification")
 

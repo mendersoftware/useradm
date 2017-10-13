@@ -50,6 +50,8 @@ type App interface {
 	// SignToken generates a signed
 	// token using configuration & method set up in UserAdmApp
 	SignToken(ctx context.Context, t *jwt.Token) (string, error)
+
+	CreateTenant(ctx context.Context, tenant model.NewTenant) error
 }
 
 type Config struct {
@@ -73,14 +75,18 @@ type UserAdm struct {
 	verifyTenant bool
 	cTenant      tenant.ClientRunner
 	clientGetter ApiClientGetter
+	tenantKeeper store.TenantDataKeeper
 }
 
-func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore, config Config) *UserAdm {
+func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore,
+	tenantKeeper store.TenantDataKeeper, config Config) *UserAdm {
+
 	return &UserAdm{
 		jwtHandler:   jwtHandler,
 		db:           db,
 		config:       config,
 		clientGetter: simpleApiClientGetter,
+		tenantKeeper: tenantKeeper,
 	}
 }
 
@@ -292,4 +298,11 @@ func (u *UserAdm) WithTenantVerification(c tenant.ClientRunner) *UserAdm {
 	u.verifyTenant = true
 	u.cTenant = c
 	return u
+}
+
+func (u *UserAdm) CreateTenant(ctx context.Context, tenant model.NewTenant) error {
+	if err := u.tenantKeeper.MigrateTenant(ctx, tenant.ID); err != nil {
+		return errors.Wrapf(err, "failed to apply migrations for tenant %v", tenant.ID)
+	}
+	return nil
 }

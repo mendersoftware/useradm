@@ -63,7 +63,7 @@ func TestUserAdmSignToken(t *testing.T) {
 			mock.AnythingOfType("*jwt.Token"),
 		).Return(tc.signed, tc.signErr)
 
-		useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
+		useradm := NewUserAdm(&mockJWTHandler, nil, nil, tc.config)
 		signed, err := useradm.SignToken(ctx, &jwt.Token{})
 
 		if tc.signErr != nil {
@@ -230,7 +230,7 @@ func TestUserAdmLogin(t *testing.T) {
 		db := &mstore.DataStore{}
 		db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
-		useradm := NewUserAdm(nil, db, tc.config)
+		useradm := NewUserAdm(nil, db, nil, tc.config)
 		if tc.verifyTenant {
 			cTenant := &mct.ClientRunner{}
 			cTenant.On("GetTenant", ContextMatcher(), tc.inEmail, &apiclient.HttpApi{}).
@@ -345,7 +345,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 			mock.AnythingOfType("*model.User")).
 			Return(tc.dbErr)
 
-		useradm := NewUserAdm(nil, db, Config{})
+		useradm := NewUserAdm(nil, db, nil, Config{})
 		if tc.verifyTenant {
 			id := &identity.Identity{
 				Tenant: "foo",
@@ -469,7 +469,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.dbErr)
 
-			useradm := NewUserAdm(nil, db, Config{})
+			useradm := NewUserAdm(nil, db, nil, Config{})
 
 			if tc.verifyTenant {
 				id := &identity.Identity{
@@ -580,7 +580,7 @@ func TestUserAdmVerify(t *testing.T) {
 					tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
 			}
 
-			useradm := NewUserAdm(nil, db, config)
+			useradm := NewUserAdm(nil, db, nil, config)
 
 			err := useradm.Verify(ctx, tc.token)
 
@@ -641,7 +641,7 @@ func TestUserAdmGetUsers(t *testing.T) {
 			db := &mstore.DataStore{}
 			db.On("GetUsers", ctx).Return(tc.dbUsers, tc.dbErr)
 
-			useradm := NewUserAdm(nil, db, Config{})
+			useradm := NewUserAdm(nil, db, nil, Config{})
 
 			users, err := useradm.GetUsers(ctx)
 
@@ -698,7 +698,7 @@ func TestUserAdmGetUser(t *testing.T) {
 			db := &mstore.DataStore{}
 			db.On("GetUserById", ctx, "foo").Return(tc.dbUser, tc.dbErr)
 
-			useradm := NewUserAdm(nil, db, Config{})
+			useradm := NewUserAdm(nil, db, nil, Config{})
 
 			user, err := useradm.GetUser(ctx, "foo")
 
@@ -753,7 +753,7 @@ func TestUserAdmDeleteUser(t *testing.T) {
 			db := &mstore.DataStore{}
 			db.On("DeleteUser", ContextMatcher(), "foo").Return(tc.dbErr)
 
-			useradm := NewUserAdm(nil, db, Config{})
+			useradm := NewUserAdm(nil, db, nil, Config{})
 			if tc.verifyTenant {
 				id := &identity.Identity{
 					Tenant: "bar",
@@ -771,6 +771,47 @@ func TestUserAdmDeleteUser(t *testing.T) {
 
 			err := useradm.DeleteUser(ctx, "foo")
 
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestUserAdmCreateTenant(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		tenant    string
+		tenantErr error
+		err       error
+	}{
+		"ok": {
+			tenant: "foobar",
+		},
+		"error": {
+			tenant:    "1234",
+			tenantErr: errors.New("migration failed"),
+			err:       errors.New("failed to apply migrations for tenant 1234: migration failed"),
+		},
+	}
+
+	for name := range testCases {
+		tc := testCases[name]
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			tenantDb := &mstore.TenantDataKeeper{}
+			tenantDb.On("MigrateTenant", ContextMatcher(), tc.tenant).Return(tc.tenantErr)
+
+			useradm := NewUserAdm(nil, nil, tenantDb, Config{})
+
+			err := useradm.CreateTenant(ctx, model.NewTenant{ID: tc.tenant})
 			if tc.err != nil {
 				assert.EqualError(t, err, tc.err.Error())
 			} else {
