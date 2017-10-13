@@ -58,6 +58,8 @@ class ApiClient:
 class InternalApiClient(ApiClient):
     log = logging.getLogger('client.InternalClient')
     spec_option = 'internal_spec'
+    api_url = "http://%s/api/internal/v1/useradm/" % \
+              pytest.config.getoption("host")
 
     def __init__(self):
         super().__init__()
@@ -75,6 +77,8 @@ class InternalApiClient(ApiClient):
 class ManagementApiClient(ApiClient):
     log = logging.getLogger('client.ManagementClient')
     spec_option = 'management_spec'
+    api_url = "http://%s/api/management/v1/useradm/" % \
+              pytest.config.getoption("host")
 
     # default user auth - single user, single tenant
     auth = {"Authorization": "Bearer foobarbaz"}

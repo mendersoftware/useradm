@@ -144,7 +144,8 @@ func TestUserAdmApiLogin(t *testing.T) {
 		uadm.On("SignToken", ctx, tc.uaToken).Return(tc.signed, tc.signErr)
 
 		//make mock request
-		req := makeReq("POST", "http://1.2.3.4/api/0.1.0/auth/login", tc.inAuthHeader, nil)
+		req := makeReq("POST", "http://1.2.3.4/api/management/v1/useradm/auth/login",
+			tc.inAuthHeader, nil)
 
 		api := makeMockApiHandler(t, uadm)
 
@@ -166,7 +167,7 @@ func TestCreateUser(t *testing.T) {
 	}{
 		"ok": {
 			inReq: test.MakeSimpleRequest("POST",
-				"http://1.2.3.4/api/0.1.0/users",
+				"http://1.2.3.4/api/management/v1/useradm/users",
 				map[string]interface{}{
 					"email":    "foo@foo.com",
 					"password": "foobarbar",
@@ -181,7 +182,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		"password too short": {
 			inReq: test.MakeSimpleRequest("POST",
-				"http://1.2.3.4/api/0.1.0/users",
+				"http://1.2.3.4/api/management/v1/useradm/users",
 				map[string]interface{}{
 					"email":    "foo@foo.com",
 					"password": "foobar",
@@ -196,7 +197,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		"duplicated email": {
 			inReq: test.MakeSimpleRequest("POST",
-				"http://1.2.3.4/api/0.1.0/users",
+				"http://1.2.3.4/api/management/v1/useradm/users",
 				map[string]interface{}{
 					"email":    "foo@foo.com",
 					"password": "foobarbar",
@@ -212,7 +213,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		"no body": {
 			inReq: test.MakeSimpleRequest("POST",
-				"http://1.2.3.4/api/0.1.0/users", nil),
+				"http://1.2.3.4/api/management/v1/useradm/users", nil),
 
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
@@ -253,7 +254,7 @@ func TestUpdateUser(t *testing.T) {
 	}{
 		"ok": {
 			inReq: test.MakeSimpleRequest("PUT",
-				"http://1.2.3.4/api/0.1.0/users/123",
+				"http://1.2.3.4/api/management/v1/useradm/users/123",
 				map[string]interface{}{
 					"email":    "foo@foo.com",
 					"password": "foobarbar",
@@ -268,7 +269,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		"password too short": {
 			inReq: test.MakeSimpleRequest("PUT",
-				"http://1.2.3.4/api/0.1.0/users/123",
+				"http://1.2.3.4/api/management/v1/useradm/users/123",
 				map[string]interface{}{
 					"password": "foobar",
 				},
@@ -282,7 +283,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		"duplicated email": {
 			inReq: test.MakeSimpleRequest("PUT",
-				"http://1.2.3.4/api/0.1.0/users/123",
+				"http://1.2.3.4/api/management/v1/useradm/users/123",
 				map[string]interface{}{
 					"email": "foo@foo.com",
 				},
@@ -297,7 +298,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		"no body": {
 			inReq: test.MakeSimpleRequest("PUT",
-				"http://1.2.3.4/api/0.1.0/users/123", nil),
+				"http://1.2.3.4/api/management/v1/useradm/users/123", nil),
 
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
@@ -307,7 +308,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		"incorrect body": {
 			inReq: test.MakeSimpleRequest("PUT",
-				"http://1.2.3.4/api/0.1.0/users/123",
+				"http://1.2.3.4/api/management/v1/useradm/users/123",
 				map[string]interface{}{
 					"id": "1234",
 				}),
@@ -465,7 +466,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 
 		//make request
 		req := makeReq("POST",
-			"http://1.2.3.4/api/0.1.0/auth/verify",
+			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
 			"Bearer "+token,
 			nil)
 
@@ -571,7 +572,7 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 
 			//make request
 			req := makeReq("GET",
-				"http://1.2.3.4/api/0.1.0/users",
+				"http://1.2.3.4/api/management/v1/useradm/users",
 				"Bearer "+token,
 				nil)
 
@@ -662,7 +663,7 @@ func TestUserAdmApiGetUser(t *testing.T) {
 
 			//make request
 			req := makeReq("GET",
-				"http://1.2.3.4/api/0.1.0/users/foo",
+				"http://1.2.3.4/api/management/v1/useradm/users/foo",
 				"Bearer "+token,
 				nil)
 
@@ -729,7 +730,7 @@ func TestUserAdmApiDeleteUser(t *testing.T) {
 
 			//make request
 			req := makeReq("DELETE",
-				"http://1.2.3.4/api/0.1.0/users/foo",
+				"http://1.2.3.4/api/management/v1/useradm/users/foo",
 				"Bearer "+token,
 				nil)
 
