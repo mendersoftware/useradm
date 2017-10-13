@@ -24,7 +24,7 @@ import (
 )
 
 func IsVerificationEndpoint(r *rest.Request) bool {
-	if r.URL.Path == uriAuthVerify && r.Method == http.MethodPost {
+	if r.URL.Path == uriInternalAuthVerify && r.Method == http.MethodPost {
 		return true
 	} else {
 		return false

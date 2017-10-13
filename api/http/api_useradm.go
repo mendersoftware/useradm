@@ -30,11 +30,11 @@ import (
 )
 
 const (
-	uriBase       = "/api/0.1.0/"
-	uriAuthLogin  = uriBase + "auth/login"
-	uriAuthVerify = uriBase + "auth/verify"
-	uriUser       = uriBase + "users/:id"
-	uriUsers      = uriBase + "users"
+	uriManagementAuthLogin = "/api/management/v1/useradm/auth/login"
+	uriManagementUser      = "/api/management/v1/useradm/users/:id"
+	uriManagementUsers     = "/api/management/v1/useradm/users"
+
+	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
 )
 
 var (
@@ -55,13 +55,14 @@ func NewUserAdmApiHandlers(userAdm useradm.App) ApiHandler {
 
 func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
-		rest.Post(uriAuthLogin, i.AuthLoginHandler),
-		rest.Post(uriAuthVerify, i.AuthVerifyHandler),
-		rest.Post(uriUsers, i.AddUserHandler),
-		rest.Get(uriUsers, i.GetUsersHandler),
-		rest.Get(uriUser, i.GetUserHandler),
-		rest.Put(uriUser, i.UpdateUserHandler),
-		rest.Delete(uriUser, i.DeleteUserHandler),
+		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
+
+		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
+		rest.Post(uriManagementUsers, i.AddUserHandler),
+		rest.Get(uriManagementUsers, i.GetUsersHandler),
+		rest.Get(uriManagementUser, i.GetUserHandler),
+		rest.Put(uriManagementUser, i.UpdateUserHandler),
+		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 	}
 
 	routes = append(routes)
