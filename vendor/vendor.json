@@ -21,10 +21,10 @@
 			"revisionTime": "2016-11-06T00:05:15Z"
 		},
 		{
-			"checksumSHA1": "CDOphCxF7dup+hBBVRpFeQhM9Jw=",
+			"checksumSHA1": "zmznNwfuOYHW3ffmdenwBnrnXB4=",
 			"path": "github.com/asaskevich/govalidator",
-			"revision": "593d64559f7600f29581a3ee42177f5dbded27a9",
-			"revisionTime": "2016-07-15T17:06:12Z"
+			"revision": "ca5f9e638c83bac66bfac70ded5bded1503135a7",
+			"revisionTime": "2017-10-02T08:57:17Z"
 		},
 		{
 			"checksumSHA1": "2Fy1Y6Z3lRRX1891WF/+HT4XS2I=",
@@ -154,14 +154,12 @@
 		},
 		{
 			"checksumSHA1": "aNohLlfa9GXT2AxsAKoO543Xsrk=",
-			"origin": "github.com/mendersoftware/useradm/vendor/github.com/mendersoftware/go-lib-micro/identity/cmd/dumpidentity",
 			"path": "github.com/mendersoftware/go-lib-micro/identity/cmd/dumpidentity",
 			"revision": "402eede06f94565d7306e78b8d8ade667264fc67",
 			"revisionTime": "2017-09-29T08:22:05Z"
 		},
 		{
 			"checksumSHA1": "I4c9X9UIBpI6VK1XPEt/Yo+P3RU=",
-			"origin": "github.com/mendersoftware/useradm/vendor/github.com/mendersoftware/go-lib-micro/keys",
 			"path": "github.com/mendersoftware/go-lib-micro/keys",
 			"revision": "402eede06f94565d7306e78b8d8ade667264fc67",
 			"revisionTime": "2017-09-29T08:22:05Z"
@@ -186,7 +184,6 @@
 		},
 		{
 			"checksumSHA1": "TUgDM70077zxQQOJVlIdFnl/He0=",
-			"origin": "github.com/mendersoftware/useradm/vendor/github.com/mendersoftware/go-lib-micro/mongo/migrate/mocks",
 			"path": "github.com/mendersoftware/go-lib-micro/mongo/migrate/mocks",
 			"revision": "402eede06f94565d7306e78b8d8ade667264fc67",
 			"revisionTime": "2017-09-29T08:22:05Z"
