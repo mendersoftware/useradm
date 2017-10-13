@@ -133,7 +133,7 @@ func commandMigrate(c config.Reader, tenantId string) error {
 	}
 
 	// we want to apply migrations
-	db.WithAutomigrate()
+	db = db.WithAutomigrate()
 
 	ctx := context.Background()
 
