@@ -62,10 +62,11 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "database connection failed")
 	}
 
-	ua := useradm.NewUserAdm(jwth, db, useradm.Config{
-		Issuer:         c.GetString(SettingJWTIssuer),
-		ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
-	})
+	ua := useradm.NewUserAdm(jwth, db, mongo.NewTenantStoreMongo(db),
+		useradm.Config{
+			Issuer:         c.GetString(SettingJWTIssuer),
+			ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+		})
 
 	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {
 		l.Infof("settting up tenant verification")

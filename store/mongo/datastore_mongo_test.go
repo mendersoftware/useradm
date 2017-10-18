@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
@@ -707,4 +708,33 @@ func TestMigrate(t *testing.T) {
 
 		store.session.Close()
 	}
+}
+
+func TestWithAutomigrate(t *testing.T) {
+	db.Wipe()
+
+	session := db.Session()
+	defer session.Close()
+
+	store, err := NewDataStoreMongoWithSession(session)
+	assert.NoError(t, err)
+
+	new_store := store.WithAutomigrate()
+
+	assert.NotEqual(t, unsafe.Pointer(store), unsafe.Pointer(new_store))
+	store.session.Close()
+}
+
+func TestWithMultitenant(t *testing.T) {
+	db.Wipe()
+
+	session := db.Session()
+	defer session.Close()
+
+	store, err := NewDataStoreMongoWithSession(session)
+	assert.NoError(t, err)
+
+	new_store := store.WithMultitenant()
+
+	assert.NotEqual(t, unsafe.Pointer(store), unsafe.Pointer(new_store))
 }

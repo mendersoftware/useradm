@@ -41,3 +41,10 @@ type DataStore interface {
 	GetUsers(ctx context.Context) ([]model.User, error)
 	DeleteUser(ctx context.Context, id string) error
 }
+
+// TenantDataKeeper is an interface for executing administrative opeartions on
+// tenants
+type TenantDataKeeper interface {
+	// MigrateTenant migrates given tenant to the latest DB version
+	MigrateTenant(ctx context.Context, id string) error
+}

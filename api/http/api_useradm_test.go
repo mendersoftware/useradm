@@ -740,6 +740,91 @@ func TestUserAdmApiDeleteUser(t *testing.T) {
 		})
 	}
 }
+
+func TestUserAdmApiCreateTenant(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		uaError error
+		body    interface{}
+		tenant  model.NewTenant
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			uaError: nil,
+			body: map[string]interface{}{
+				"tenant_id": "foobar",
+			},
+			tenant: model.NewTenant{ID: "foobar"},
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+		},
+		"error: useradm internal": {
+			body: map[string]interface{}{
+				"tenant_id": "failing-tenant",
+			},
+			uaError: errors.New("some internal error"),
+			tenant:  model.NewTenant{ID: "failing-tenant"},
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+		"error: no tenant id": {
+			body: map[string]interface{}{
+				"tenant_id": "",
+			},
+			tenant: model.NewTenant{},
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("tenant_id: non zero value required"),
+			),
+		},
+		"error: empty json": {
+			tenant: model.NewTenant{},
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("JSON payload is empty"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			ctx := mtesting.ContextMatcher()
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("CreateTenant", ctx, tc.tenant).Return(tc.uaError)
+
+			//make handler
+			api := makeMockApiHandler(t, uadm)
+
+			//make request
+			req := makeReq(http.MethodPost,
+				"http://1.2.3.4/api/internal/v1/useradm/tenants",
+				"",
+				tc.body)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
 func makeReq(method, url, auth string, body interface{}) *http.Request {
 	req := test.MakeSimpleRequest(method, url, body)
 

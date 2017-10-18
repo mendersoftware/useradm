@@ -127,7 +127,7 @@ def user_tokens(init_users, api_client_mgmt):
 @pytest.yield_fixture(scope='function')
 def clean_db(mongo):
     mongo_cleanup(mongo)
-    yield
+    yield mongo
     mongo_cleanup(mongo)
 
 

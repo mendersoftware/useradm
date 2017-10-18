@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/asaskevich/govalidator"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
@@ -35,6 +36,7 @@ const (
 	uriManagementUsers     = "/api/management/v1/useradm/users"
 
 	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
+	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
 )
 
 var (
@@ -56,6 +58,7 @@ func NewUserAdmApiHandlers(userAdm useradm.App) ApiHandler {
 func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
+		rest.Post(uriInternalTenants, i.CreateTenantHandler),
 
 		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriManagementUsers, i.AddUserHandler),
@@ -282,4 +285,36 @@ func readBodyRaw(r *rest.Request) ([]byte, error) {
 	}
 
 	return content, nil
+}
+
+type newTenantRequest struct {
+	TenantID string `json:"tenant_id" valid:"required"`
+}
+
+func (u *UserAdmApiHandlers) CreateTenantHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	var newTenant newTenantRequest
+
+	if err := r.DecodeJsonPayload(&newTenant); err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	if _, err := govalidator.ValidateStruct(newTenant); err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	err := u.userAdm.CreateTenant(ctx, model.NewTenant{
+		ID: newTenant.TenantID,
+	})
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

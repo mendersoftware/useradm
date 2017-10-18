@@ -37,7 +37,7 @@ func TestValidateNew(t *testing.T) {
 				Email:    "foobar",
 				Password: "correcthorsebatterystaple",
 			},
-			outErr: "Email: foobar does not validate as email;",
+			outErr: "email: foobar does not validate as email",
 		},
 		"email ok, pass invalid (empty)": {
 			inUser: User{

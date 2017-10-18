@@ -73,6 +73,11 @@ class InternalApiClient(ApiClient):
             'X-Original-Method' :method,
         }).result()
 
+    def create_tenant(self, tenant_id):
+        return self.client.tenants.post_tenants(tenant={
+            "tenant_id": tenant_id,
+        }).result()
+
 
 class ManagementApiClient(ApiClient):
     log = logging.getLogger('client.ManagementClient')
