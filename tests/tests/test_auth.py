@@ -60,8 +60,8 @@ class TestAuthLoginMultitenant:
                 for email in users:
                     _, r = api_client_mgmt.login(email, password)
                     assert r.status_code == 200
+                    assert r.headers['Content-Type'] == "application/jwt"
                     _, claims, _ = explode_jwt(r.text)
-
                     assert claims['mender.tenant'] == tenant
 
     @pytest.mark.parametrize("email,password", [
@@ -92,6 +92,7 @@ class TestAuthVerify:
     def test_ok(self, api_client_int, init_users, user_tokens):
         for user, token in zip(init_users, user_tokens):
             _, r = api_client_int.verify(token)
+
             assert r.status_code == 200
 
     def test_tamper_claims(self, api_client_int, init_users, user_tokens):
