@@ -111,8 +111,8 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	w.(http.ResponseWriter).Write([]byte(raw))
 	w.Header().Set("Content-Type", "application/jwt")
+	w.(http.ResponseWriter).Write([]byte(raw))
 }
 
 func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {
