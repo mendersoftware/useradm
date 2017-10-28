@@ -361,7 +361,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 			useradm = useradm.WithTenantVerification(cTenant)
 		}
 
-		err := useradm.CreateUser(ctx, &tc.inUser)
+		err := useradm.CreateUser(ctx, &tc.inUser, true)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())

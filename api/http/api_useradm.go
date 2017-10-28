@@ -14,11 +14,13 @@
 package http
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/asaskevich/govalidator"
+	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
@@ -37,6 +39,7 @@ const (
 
 	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
+	uriInternalTenantUser = "/api/internal/v1/useradm/tenants/:id/users"
 )
 
 var (
@@ -59,6 +62,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
+		rest.Post(uriInternalTenantUser, i.CreateTenantUserHandler),
 
 		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriManagementUsers, i.AddUserHandler),
@@ -136,6 +140,38 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	w.WriteHeader(http.StatusOK)
 }
 
+func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	user, err := parseUser(r)
+	if err != nil {
+		if err == model.ErrPasswordTooShort {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
+		} else {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		}
+		return
+	}
+
+	ctx = getTenantContext(ctx, r.PathParam("id"))
+
+	err = u.userAdm.CreateUser(ctx, &user.User, user.Propagate)
+	if err != nil {
+		if err == store.ErrDuplicateEmail {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
+		} else {
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+		}
+		return
+	}
+
+	w.Header().Add("Location", "users/"+string(user.ID))
+	w.WriteHeader(http.StatusCreated)
+
+}
+
 func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Request) {
 	ctx := r.Context()
 
@@ -151,7 +187,7 @@ func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Reque
 		return
 	}
 
-	err = u.userAdm.CreateUser(ctx, user)
+	err = u.userAdm.CreateUser(ctx, &user.User, true)
 	if err != nil {
 		if err == store.ErrDuplicateEmail {
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
@@ -245,8 +281,8 @@ func (u *UserAdmApiHandlers) DeleteUserHandler(w rest.ResponseWriter, r *rest.Re
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func parseUser(r *rest.Request) (*model.User, error) {
-	user := model.User{}
+func parseUser(r *rest.Request) (*User, error) {
+	user := User{Propagate: true}
 
 	//decode body
 	err := r.DecodeJsonPayload(&user)
@@ -317,4 +353,24 @@ func (u *UserAdmApiHandlers) CreateTenantHandler(w rest.ResponseWriter, r *rest.
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func getTenantContext(ctx context.Context, tenantId string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if tenantId != "" {
+		id := &identity.Identity{
+			Tenant: tenantId,
+		}
+
+		ctx = identity.WithContext(ctx, id)
+	}
+
+	return ctx
+}
+
+type User struct {
+	model.User
+	Propagate bool
 }

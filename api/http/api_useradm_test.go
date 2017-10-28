@@ -229,7 +229,7 @@ func TestCreateUser(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("CreateUser", mtesting.ContextMatcher(),
-				mock.AnythingOfType("*model.User")).
+				mock.AnythingOfType("*model.User"), true).
 				Return(tc.createUserErr)
 
 			api := makeMockApiHandler(t, uadm)
