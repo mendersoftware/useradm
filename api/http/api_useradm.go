@@ -172,7 +172,6 @@ func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *r
 		return
 	}
 
-	w.Header().Add("Location", "users/"+string(user.ID))
 	w.WriteHeader(http.StatusCreated)
 
 }

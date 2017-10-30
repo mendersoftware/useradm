@@ -94,10 +94,6 @@ paths:
       responses:
         201:
           description: The user was successfully created.
-          headers:
-            Location:
-              type: string
-              description: URI for the newly created 'User' resource.
         400:
           description: |
               The request body is malformed.
