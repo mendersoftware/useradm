@@ -155,7 +155,12 @@ func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *r
 		return
 	}
 
-	ctx = getTenantContext(ctx, r.PathParam("id"))
+	tenantId := r.PathParam("id")
+	if tenantId == "" {
+		rest_utils.RestErrWithLog(w, r, l, errors.New("Entity not found"), http.StatusNotFound)
+		return
+	}
+	ctx = getTenantContext(ctx, tenantId)
 
 	err = u.userAdm.CreateUser(ctx, &user.User, user.Propagate)
 	if err != nil {
