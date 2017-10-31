@@ -76,6 +76,43 @@ paths:
           description: Unexpected error.
           schema:
             $ref: '#/definitions/Error'
+  /tenants/{tenant_id}/users:
+    post:
+      summary: Create user
+      parameters:
+        - name: tenant_id
+          in: path
+          type: string
+          description: Tenant ID.
+          required: true
+        - name: user
+          in: body
+          description: New user data.
+          required: true
+          schema:
+            $ref: "#/definitions/UserNew"
+      responses:
+        201:
+          description: The user was successfully created.
+        400:
+          description: |
+              The request body is malformed.
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: |
+                Tenant with given ID does not exist.
+          schema:
+            $ref: '#/definitions/Error'
+        422:
+          description: |
+                User name or ID is duplicated.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
 
 definitions:
   Error:
@@ -98,3 +135,29 @@ definitions:
     example:
       application/json:
         tenant_id: "1234"
+  UserNew:
+    description: New user descriptor.
+    type: object
+    properties:
+      email:
+        description: User's email.
+        type: string
+        format: email
+      password:
+        description: User's password.
+        type: string
+      propagate:
+        description: |
+          When propagate is true, the useradm will propagate user information
+          to tenantadm, otherwise no request to tenantadm will be made.
+          Defaults to true.
+        type: boolean
+    required:
+      - email
+      - password
+    example:
+      application/json:
+        email: 'user@acme.com'
+        password: 'secret'
+        propagate: false
+

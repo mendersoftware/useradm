@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/useradm/authz"
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
@@ -229,7 +230,152 @@ func TestCreateUser(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("CreateUser", mtesting.ContextMatcher(),
-				mock.AnythingOfType("*model.User")).
+				mock.AnythingOfType("*model.User"), true).
+				Return(tc.createUserErr)
+
+			api := makeMockApiHandler(t, uadm)
+
+			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
+			recorded := test.RunRequest(t, api, tc.inReq)
+
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
+func TestCreateUserForTenant(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		inReq *http.Request
+
+		createUserErr error
+
+		checker mt.ResponseChecker
+
+		propagate bool
+	}{
+		"ok": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":     "foo@foo.com",
+					"password":  "foobarbar",
+					"propagate": true,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+			propagate: true,
+		},
+		"proagate false": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":     "foo@foo.com",
+					"password":  "foobarbar",
+					"propagate": false,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+			propagate: false,
+		},
+		"propagate default true": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+			propagate: true,
+		},
+		"password too short": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError(model.ErrPasswordTooShort.Error()),
+			),
+			propagate: true,
+		},
+		"duplicated email": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+			createUserErr: store.ErrDuplicateEmail,
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError(store.ErrDuplicateEmail.Error()),
+			),
+			propagate: true,
+		},
+		"no body": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users", nil),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("failed to decode request body: JSON payload is empty"),
+			),
+			propagate: true,
+		},
+		"no tenant id": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants//users",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusNotFound,
+				nil,
+				restError("Entity not found"),
+			),
+			propagate: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("CreateUser", mock.MatchedBy(func(c context.Context) bool {
+				return identity.FromContext(c).Tenant == "1"
+			}),
+				mock.AnythingOfType("*model.User"), tc.propagate).
 				Return(tc.createUserErr)
 
 			api := makeMockApiHandler(t, uadm)

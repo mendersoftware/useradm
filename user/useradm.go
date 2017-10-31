@@ -40,7 +40,7 @@ var (
 type App interface {
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
-	CreateUser(ctx context.Context, u *model.User) error
+	CreateUser(ctx context.Context, u *model.User, propagate bool) error
 	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
 	Verify(ctx context.Context, token *jwt.Token) error
 	GetUsers(ctx context.Context) ([]model.User, error)
@@ -149,12 +149,12 @@ func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 	return u.jwtHandler.ToJWT(t)
 }
 
-func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
+func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User, propagate bool) error {
 	if u.ID == "" {
 		u.ID = uuid.NewV4().String()
 	}
 
-	if ua.verifyTenant {
+	if ua.verifyTenant && propagate {
 		id := identity.FromContext(ctx)
 		err := ua.cTenant.CreateUser(ctx,
 			&tenant.User{

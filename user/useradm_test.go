@@ -264,8 +264,10 @@ func TestUserAdmCreateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUser model.User
 
-		verifyTenant bool
-		tenantErr    error
+		withTenantVerification bool
+		propagate              bool
+		tenantErr              error
+		shouldVerifyTenant     bool
 
 		dbErr error
 
@@ -276,8 +278,10 @@ func TestUserAdmCreateUser(t *testing.T) {
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
-			dbErr:  nil,
-			outErr: nil,
+			dbErr:              nil,
+			outErr:             nil,
+			propagate:          true,
+			shouldVerifyTenant: false,
 		},
 		"ok, multitenant": {
 			inUser: model.User{
@@ -285,8 +289,24 @@ func TestUserAdmCreateUser(t *testing.T) {
 				Password: "correcthorsebatterystaple",
 			},
 
-			verifyTenant: true,
-			tenantErr:    nil,
+			withTenantVerification: true,
+			propagate:              true,
+			tenantErr:              nil,
+			shouldVerifyTenant:     true,
+
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"ok, multitenant, progate: false": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			withTenantVerification: true,
+			propagate:              false,
+			tenantErr:              nil,
+			shouldVerifyTenant:     false,
 
 			dbErr:  nil,
 			outErr: nil,
@@ -297,8 +317,10 @@ func TestUserAdmCreateUser(t *testing.T) {
 				Password: "correcthorsebatterystaple",
 			},
 
-			verifyTenant: true,
-			tenantErr:    ct.ErrDuplicateUser,
+			withTenantVerification: true,
+			propagate:              true,
+			tenantErr:              ct.ErrDuplicateUser,
+			shouldVerifyTenant:     true,
 
 			dbErr:  nil,
 			outErr: errors.New("user with a given email already exists"),
@@ -309,8 +331,10 @@ func TestUserAdmCreateUser(t *testing.T) {
 				Password: "correcthorsebatterystaple",
 			},
 
-			verifyTenant: true,
-			tenantErr:    errors.New("http 500"),
+			withTenantVerification: true,
+			propagate:              true,
+			tenantErr:              errors.New("http 500"),
+			shouldVerifyTenant:     true,
 
 			dbErr:  nil,
 			outErr: errors.New("useradm: failed to create user in tenantadm: http 500"),
@@ -346,28 +370,33 @@ func TestUserAdmCreateUser(t *testing.T) {
 			Return(tc.dbErr)
 
 		useradm := NewUserAdm(nil, db, nil, Config{})
-		if tc.verifyTenant {
-			id := &identity.Identity{
-				Tenant: "foo",
-			}
-			ctx = identity.WithContext(ctx, id)
+		cTenant := &mct.ClientRunner{}
 
-			cTenant := &mct.ClientRunner{}
+		id := &identity.Identity{
+			Tenant: "foo",
+		}
+		ctx = identity.WithContext(ctx, id)
+
+		if tc.shouldVerifyTenant {
 			cTenant.On("CreateUser",
 				ContextMatcher(),
 				mock.AnythingOfType("*tenant.User"),
 				&apiclient.HttpApi{}).
 				Return(tc.tenantErr)
+		}
+		if tc.withTenantVerification {
 			useradm = useradm.WithTenantVerification(cTenant)
 		}
 
-		err := useradm.CreateUser(ctx, &tc.inUser)
+		err := useradm.CreateUser(ctx, &tc.inUser, tc.propagate)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
 		} else {
 			assert.NoError(t, err)
 		}
+
+		cTenant.AssertExpectations(t)
 	}
 
 }
