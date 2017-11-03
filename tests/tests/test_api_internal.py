@@ -70,6 +70,8 @@ class TestInternalApiUserForTenantCreateMultitenant:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
 
     def test_fail_no_password(self, api_client_int):
         new_user = {"email":"foobar"}
@@ -77,6 +79,8 @@ class TestInternalApiUserForTenantCreateMultitenant:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
 
     def test_fail_no_email(self, api_client_int):
         new_user = {"password": "asdf1234zxcv"}
@@ -84,6 +88,8 @@ class TestInternalApiUserForTenantCreateMultitenant:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
 
     def test_fail_not_an_email(self, api_client_int):
         new_user = {"email":"foobar", "password": "asdf1234zxcv"}
@@ -91,6 +97,8 @@ class TestInternalApiUserForTenantCreateMultitenant:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
 
     def test_fail_pwd_too_short(self, api_client_int):
         new_user = {"email":"foo@bar.com", "password": "asdf"}
@@ -98,3 +106,5 @@ class TestInternalApiUserForTenantCreateMultitenant:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 422
+        else:
+            pytest.fail("Exception expected")
