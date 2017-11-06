@@ -12,7 +12,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import api_client_int, mongo, clean_db
+from common import api_client_int, mongo, clean_db, make_auth, api_client_mgmt
 import bravado
 import pytest
 import tenantadm
@@ -41,3 +41,70 @@ class TestInternalApiTenantCreate:
             _, r = api_client_int.create_tenant('')
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
+
+class TestInternalApiUserForTenantCreateMultitenant:
+    def test_ok(self, api_client_int,api_client_mgmt, clean_db, ):
+        user = {"email":"stefan@example.com", "password":"secret12345"}
+
+        with tenantadm.run_fake_create_user(user):
+            api_client_int.create_user_for_tenant('foobar', user)
+
+        auth = make_auth("foo", 'foobar')
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == 1
+
+    def test_no_propagate(self, api_client_int,api_client_mgmt, clean_db, ):
+        user = {"email":"stefan@example.com", "password":"secret12345",
+                "propagate" : False }
+
+        with tenantadm.run_fake_create_user(user, 500):
+            api_client_int.create_user_for_tenant('foobar', user)
+
+        auth = make_auth("foo", 'foobar')
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == 1
+
+    def test_fail_malformed_body(self, api_client_int):
+        new_user = {"foo":"bar"}
+        try:
+            api_client_int.create_user_for_tenant('foobar', new_user)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
+
+    def test_fail_no_password(self, api_client_int):
+        new_user = {"email":"foobar"}
+        try:
+            api_client_int.create_user_for_tenant('foobar', new_user)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
+
+    def test_fail_no_email(self, api_client_int):
+        new_user = {"password": "asdf1234zxcv"}
+        try:
+            api_client_int.create_user_for_tenant('foobar', new_user)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
+
+    def test_fail_not_an_email(self, api_client_int):
+        new_user = {"email":"foobar", "password": "asdf1234zxcv"}
+        try:
+            api_client_int.create_user_for_tenant('foobar', new_user)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
+
+    def test_fail_pwd_too_short(self, api_client_int):
+        new_user = {"email":"foo@bar.com", "password": "asdf"}
+        try:
+            api_client_int.create_user_for_tenant('foobar', new_user)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 422
+        else:
+            pytest.fail("Exception expected")

@@ -78,6 +78,9 @@ class InternalApiClient(ApiClient):
             "tenant_id": tenant_id,
         }).result()
 
+    def create_user_for_tenant(self, tenant_id, user):
+        return self.client.tenants.post_tenants_tenant_id_users(tenant_id = tenant_id, user = user).result()
+
 
 class ManagementApiClient(ApiClient):
     log = logging.getLogger('client.ManagementClient')
