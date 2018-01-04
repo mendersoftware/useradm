@@ -850,6 +850,91 @@ func TestUserAdmCreateTenant(t *testing.T) {
 	}
 }
 
+func TestUserAdmSetPassword(t *testing.T) {
+	testCases := map[string]struct {
+		inUser      model.User
+		dbGetErr    error
+		dbUpdateErr error
+		outErr      error
+		foundUser   *model.User
+	}{
+		"ok": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			dbGetErr:  nil,
+			outErr:    nil,
+			foundUser: &model.User{ID: "test_id"},
+		},
+
+		"error, user not found": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			dbGetErr:  nil,
+			outErr:    errors.New("user not found"),
+			foundUser: nil,
+		},
+
+		"error, get from db": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			dbGetErr:  errors.New("db failed"),
+			outErr:    errors.New("useradm: failed to get user by email: db failed"),
+			foundUser: nil,
+		},
+		"error, update db": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+
+			dbUpdateErr: errors.New("db failed"),
+			outErr:      errors.New("useradm: failed to update user information: db failed"),
+			foundUser:   &model.User{ID: "test_id"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		ctx := context.Background()
+
+		db := &mstore.DataStore{}
+
+		db.On("GetUserByEmail",
+			ContextMatcher(),
+			tc.inUser.Email).
+			Return(tc.foundUser, tc.dbGetErr)
+
+		if tc.foundUser != nil {
+			db.On("UpdateUser",
+				ContextMatcher(),
+				tc.foundUser.ID,
+				mock.AnythingOfType("*model.UserUpdate")).
+				Return(tc.dbUpdateErr)
+		}
+		useradm := NewUserAdm(nil, db, nil, Config{})
+		cTenant := &mct.ClientRunner{}
+
+		err := useradm.SetPassword(ctx, model.UserUpdate{Email: tc.inUser.Email})
+
+		if tc.outErr != nil {
+			assert.EqualError(t, err, tc.outErr.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+
+		cTenant.AssertExpectations(t)
+	}
+
+}
+
 func ContextMatcher() interface{} {
 	return mock.MatchedBy(func(c context.Context) bool {
 		return true
