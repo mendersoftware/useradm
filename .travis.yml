@@ -93,7 +93,7 @@ before_script:
     - gocyclo -over 15 `find . -iname '*.go' | grep -v 'vendor' | grep -v '_test.go'`
 
     # Verify that the Swagger docs are valid
-    - if test "$(ls -A docs)"; then swagger validate docs/*.yml; fi
+    - swagger-cli validate docs/*.yml
 
     # Verify that the Swagger docs follow the autodeployment requirements
     - if test "$(ls -A docs)"; then python2.7 verify_docs.py `find docs -name "*.yml"`; fi
