@@ -93,7 +93,7 @@ before_script:
     - gocyclo -over 15 `find . -iname '*.go' | grep -v 'vendor' | grep -v '_test.go'`
 
     # Verify that the Swagger docs are valid
-    - if test "$(ls -A docs)"; then swagger validate docs/*.yml; fi
+    - swagger-cli validate docs/*.yml
 
     # Verify that the Swagger docs follow the autodeployment requirements
     - if test "$(ls -A docs)"; then python2.7 verify_docs.py `find docs -name "*.yml"`; fi
@@ -145,10 +145,10 @@ before_deploy:
     - if [ "$JOB_TYPE" = compile_and_basic_tests ]; then
         if [ ! -z "$TRAVIS_TAG" ]; then export IMAGE_TAG=$TRAVIS_TAG; else export IMAGE_TAG=$TRAVIS_BRANCH; fi ;
         docker tag $DOCKER_REPOSITORY:pr $DOCKER_REPOSITORY:$IMAGE_TAG ;
-        docker login --email=$DOCKER_HUB_EMAIL --username=$DOCKER_HUB_USERNAME --password=$DOCKER_HUB_PASSWORD ;
+        docker login --username=$DOCKER_HUB_USERNAME --password=$DOCKER_HUB_PASSWORD ;
         docker push $DOCKER_REPOSITORY:$IMAGE_TAG ;
 
-        if [ "$TRAVIS_BRANCH" = master ]; then 
+        if [ "$TRAVIS_BRANCH" = master ]; then
             export COMMIT_TAG="$TRAVIS_BRANCH"_"$TRAVIS_COMMIT";
             docker tag $DOCKER_REPOSITORY:pr $DOCKER_REPOSITORY:$COMMIT_TAG;
             docker push $DOCKER_REPOSITORY:$COMMIT_TAG;
