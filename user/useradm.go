@@ -35,6 +35,7 @@ var (
 	ErrUnauthorized = errors.New("unauthorized")
 	ErrAuthExpired  = errors.New("token expired")
 	ErrAuthInvalid  = errors.New("token is invalid")
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type App interface {
@@ -46,6 +47,7 @@ type App interface {
 	GetUsers(ctx context.Context) ([]model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
 	DeleteUser(ctx context.Context, id string) error
+	SetPassword(ctx context.Context, u model.UserUpdate) error
 
 	// SignToken generates a signed
 	// token using configuration & method set up in UserAdmApp
@@ -305,4 +307,18 @@ func (u *UserAdm) CreateTenant(ctx context.Context, tenant model.NewTenant) erro
 		return errors.Wrapf(err, "failed to apply migrations for tenant %v", tenant.ID)
 	}
 	return nil
+}
+
+func (ua *UserAdm) SetPassword(ctx context.Context, uu model.UserUpdate) error {
+	u, err := ua.db.GetUserByEmail(ctx, uu.Email)
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get user by email")
+
+	}
+	if u == nil {
+		return ErrUserNotFound
+	}
+
+	err = ua.db.UpdateUser(ctx, u.ID, &uu)
+	return errors.Wrap(err, "useradm: failed to update user information")
 }

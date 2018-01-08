@@ -145,3 +145,46 @@ func commandMigrate(c config.Reader, tenantId string) error {
 	return nil
 
 }
+
+func commandSetPassword(c config.Reader, username, password, tenantId string) error {
+	l := log.NewEmpty()
+
+	l.Debugf("set password for '%s'", username)
+
+	if password == "" {
+		var err error
+		if password, err = safeReadPassword(); err != nil {
+			return err
+		}
+	}
+
+	db, err := mongo.GetDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
+	if err != nil {
+		return errors.Wrap(err, "database connection failed")
+	}
+
+	ua := useradm.NewUserAdm(nil, db, mongo.NewTenantStoreMongo(db),
+		useradm.Config{})
+
+	u := model.User{
+		Email:    username,
+		Password: password,
+	}
+
+	if err := u.ValidateNew(); err != nil {
+		return errors.Wrap(err, "user validation failed")
+	}
+
+	ctx := getTenantContext(tenantId)
+
+	uu := model.UserUpdate{
+		Email:    username,
+		Password: password,
+	}
+
+	if err := ua.SetPassword(ctx, uu); err != nil {
+		return errors.Wrap(err, "setting password failed")
+	}
+
+	return nil
+}

@@ -209,7 +209,7 @@ func (db *DataStoreMongo) UpdateUser(ctx context.Context, id string, u *model.Us
 			return store.ErrDuplicateEmail
 		}
 
-		return errors.Wrap(err, "failed to insert user")
+		return errors.Wrap(err, "failed to update user")
 	}
 
 	return nil

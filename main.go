@@ -89,6 +89,21 @@ func doMain(args []string) {
 			Action: runCreateUser,
 		},
 		{
+			Name:  "set-password",
+			Usage: "Set password",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "username",
+					Usage: "Name of created user, must be an email address",
+				},
+				cli.StringFlag{
+					Name:  "password",
+					Usage: "User's password, leave empty to have it read from stdin",
+				},
+			},
+			Action: runSetPassword,
+		},
+		{
 			Name:  "migrate",
 			Usage: "Run migrations",
 			Flags: []cli.Flag{
@@ -179,6 +194,15 @@ func runMigrate(args *cli.Context) error {
 	err := commandMigrate(config.Config, args.String("tenant"))
 	if err != nil {
 		return cli.NewExitError(err.Error(), 6)
+	}
+	return nil
+}
+
+func runSetPassword(args *cli.Context) error {
+	err := commandSetPassword(config.Config,
+		args.String("username"), args.String("password"), args.String("tenant-id"))
+	if err != nil {
+		return cli.NewExitError(err.Error(), 7)
 	}
 	return nil
 }
