@@ -100,6 +100,10 @@ func doMain(args []string) {
 					Name:  "password",
 					Usage: "User's password, leave empty to have it read from stdin",
 				},
+				cli.StringFlag{
+					Name:  "tenant-id",
+					Usage: "Tenant ID, if running a multitenant setup (optional).",
+				},
 			},
 			Action: runSetPassword,
 		},
