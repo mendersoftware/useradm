@@ -75,6 +75,24 @@ class TestCli:
         assert [user for user in users \
                 if user.email == 'foo@bar.com' and user.id == '123456']
 
+    def test_set_password(self, api_client_mgmt, cli, clean_db):
+        password = '1234youseeme'
+        new_password = '5678youseeme'
+        email = 'foo@bar.com'
+        cli.create_user(email, password)
+        _, r = api_client_mgmt.login(email, password)
+        assert r.status_code == 200
+        cli.set_password(email, new_password)
+        status_code = 200
+        try:
+            _, r = api_client_mgmt.login(email, password)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 401
+            status_code = 401
+        assert status_code == 401
+        _, r = api_client_mgmt.login(email, new_password)
+        assert r.status_code == 200
+
     def test_migrate(self, cli, clean_db, mongo):
         cli.migrate()
 
@@ -106,6 +124,36 @@ class TestCliMultitenant:
 
         with tenantadm.run_fake_user_tenants(users_db):
             _, r = api_client_mgmt.login(email, password)
+            assert r.status_code == 200
+
+            token = r.text
+            assert token
+            _, claims, _ = explode_jwt(token)
+            assert claims['mender.tenant'] == tenant
+
+    def test_set_password(self, api_client_mgmt, cli, clean_db):
+        password = '1234youseeme'
+        new_password = '5678youseeme'
+        email = 'foo@bar.com'
+        tenant = 'tenant1id'
+
+        users_db = {tenant: [email]}
+
+        cli.create_user(email, password, tenant_id=tenant)
+
+        with tenantadm.run_fake_user_tenants(users_db):
+            _, r = api_client_mgmt.login(email, password)
+            assert r.status_code == 200
+
+            cli.set_password(email, new_password, tenant)
+            status_code = 200
+            try:
+                _, r = api_client_mgmt.login(email, password)
+            except bravado.exception.HTTPError as e:
+                assert e.response.status_code == 401
+                status_code = 401
+            assert status_code == 401
+            _, r = api_client_mgmt.login(email, new_password)
             assert r.status_code == 200
 
             token = r.text

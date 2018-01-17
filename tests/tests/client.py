@@ -149,6 +149,17 @@ class CliClient:
 
         subprocess.run(args, check=True)
 
+    def set_password(self, name, pwd, tenant_id=None):
+        args = [self.cmd,
+                'set-password',
+                '--username', name,
+                '--password', pwd]
+
+        if tenant_id is not None:
+            args.extend(['--tenant-id', tenant_id])
+
+        subprocess.run(args, check=True)
+
     def migrate(self, tenant_id=None):
         args = [self.cmd, 'migrate']
 
