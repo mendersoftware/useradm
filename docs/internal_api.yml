@@ -113,6 +113,31 @@ paths:
           description: Internal server error.
           schema:
             $ref: "#/definitions/Error"
+  /tokens:
+    delete:
+      summary: Delete all user tokens
+      description: |
+         This endpoint is designed to be used for tenant account suspension purpose.
+         When only tenant_id parameter is set, tokens for all tenant users will be removed.
+         It is also possible to remove tokens for user with given user_id by setting
+         optional user_id parameter.
+      parameters:
+        - name: tenant_id
+          in: query
+          type: string
+          description: Tenant ID.
+          required: true
+        - name: user_id
+          in: query
+          type: string
+          description: User ID.
+      responses:
+        204:
+          description: Tokens deleted.
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
 
 definitions:
   Error:
