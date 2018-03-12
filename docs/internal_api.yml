@@ -148,8 +148,7 @@ definitions:
         description: Description of the error.
         type: string
     example:
-      application/json:
-        error: "missing Authorization header"
+      error: "missing Authorization header"
   TenantNew:
     description: Tenant configuration.
     type: object
@@ -158,8 +157,7 @@ definitions:
         description: ID of given tenant.
         type: string
     example:
-      application/json:
-        tenant_id: "1234"
+      tenant_id: "1234"
   UserNew:
     description: New user descriptor.
     type: object
@@ -181,8 +179,6 @@ definitions:
       - email
       - password
     example:
-      application/json:
-        email: 'user@acme.com'
-        password: 'secret'
-        propagate: false
-
+      email: 'user@acme.com'
+      password: 'secret'
+      propagate: false
