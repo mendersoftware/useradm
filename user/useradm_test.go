@@ -88,6 +88,8 @@ func TestUserAdmLogin(t *testing.T) {
 		dbUser    *model.User
 		dbUserErr error
 
+		dbTokenErr error
+
 		outErr   error
 		outToken *jwt.Token
 
@@ -220,6 +222,27 @@ func TestUserAdmLogin(t *testing.T) {
 				ExpirationTime: 10,
 			},
 		},
+		"error: db.SaveToken() error": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbUser: &model.User{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			dbTokenErr: errors.New("db failed"),
+
+			outErr:   errors.New("useradm: failed to save token: db failed"),
+			outToken: nil,
+
+			config: Config{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -229,6 +252,8 @@ func TestUserAdmLogin(t *testing.T) {
 
 		db := &mstore.DataStore{}
 		db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
+
+		db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
 
 		useradm := NewUserAdm(nil, db, nil, tc.config)
 		if tc.verifyTenant {
@@ -246,6 +271,7 @@ func TestUserAdmLogin(t *testing.T) {
 		} else {
 			if tc.outToken != nil && assert.NotNil(t, token) {
 				assert.NoError(t, err)
+				assert.NotEmpty(t, token.Id)
 				assert.NotEmpty(t, token.Claims.ID)
 				assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
 				assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)

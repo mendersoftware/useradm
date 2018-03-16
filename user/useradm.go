@@ -127,8 +127,13 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 		return nil, ErrUnauthorized
 	}
 
-	//generate token
+	//generate and save token
 	t := u.generateToken(user.ID, scope.All, ident.Tenant)
+
+	err = u.db.SaveToken(ctx, t)
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to save token")
+	}
 
 	return t, nil
 }
