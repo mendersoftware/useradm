@@ -134,9 +134,12 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 }
 
 func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
+	id := uuid.NewV4().String()
+
 	return &jwt.Token{
+		Id: id,
 		Claims: jwt.Claims{
-			ID:        uuid.NewV4().String(),
+			ID:        id,
 			Issuer:    u.config.Issuer,
 			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
 			Subject:   subject,
