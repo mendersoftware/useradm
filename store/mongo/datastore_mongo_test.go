@@ -23,6 +23,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2/bson"
@@ -604,6 +605,96 @@ func TestMongoDeleteUser(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, tc.outUsers, users)
+
+		session.Close()
+	}
+}
+
+func TestMongoSaveToken(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	testCases := map[string]struct {
+		token  *jwt.Token
+		tenant string
+	}{
+		"ok 1": {
+			token: &jwt.Token{
+				Id: "id-3",
+				Claims: jwt.Claims{
+					Audience:  "audience",
+					ExpiresAt: 1234,
+					ID:        "id-3",
+					IssuedAt:  5678,
+					Issuer:    "iss-3",
+					NotBefore: 7890,
+					Subject:   "sub-3",
+					Scope:     "scope-3",
+					Tenant:    "tenant-3",
+					User:      true,
+				},
+			},
+		},
+		"ok 2": {
+			token: &jwt.Token{
+				Id: "id-4",
+				Claims: jwt.Claims{
+					ExpiresAt: 1234,
+					ID:        "id-4",
+					IssuedAt:  5678,
+					Subject:   "sub-4",
+					Tenant:    "tenant-4",
+					User:      true,
+				},
+			},
+		},
+		"ok 3, MT": {
+			token: &jwt.Token{
+				Id: "id-3",
+				Claims: jwt.Claims{
+					Audience:  "audience",
+					ExpiresAt: 1234,
+					ID:        "id-3",
+					IssuedAt:  5678,
+					Issuer:    "iss-3",
+					NotBefore: 7890,
+					Subject:   "sub-3",
+					Scope:     "scope-3",
+					Tenant:    "tenant-3",
+					User:      true,
+				},
+			},
+			tenant: "tenant-1",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		//setup
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		//test
+		err = store.SaveToken(ctx, tc.token)
+		assert.NoError(t, err)
+
+		var token jwt.Token
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).FindId(tc.token.Claims.ID).One(&token)
+		assert.NoError(t, err)
+
+		assert.Equal(t, *tc.token, token)
 
 		session.Close()
 	}
