@@ -258,9 +258,16 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	if user == nil && err == nil {
 		return ErrUnauthorized
 	}
-
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to get user")
+	}
+
+	dbToken, err := ua.db.GetTokenById(ctx, token.Id)
+	if dbToken == nil && err == nil {
+		return ErrUnauthorized
+	}
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get token")
 	}
 
 	return nil
