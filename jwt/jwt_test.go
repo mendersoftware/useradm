@@ -172,7 +172,8 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 		token, err := jwtHandler.FromJWT(tc.inToken)
 		if tc.outErr == nil {
 			assert.NoError(t, err)
-			assert.Equal(t, tc.outToken, *token)
+			assert.Equal(t, tc.outToken.Claims, (*token).Claims)
+			assert.NotEmpty(t, token.Id)
 		} else {
 			assert.EqualError(t, tc.outErr, err.Error())
 		}

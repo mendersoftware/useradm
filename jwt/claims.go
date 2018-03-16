@@ -18,16 +18,16 @@ import (
 )
 
 type Claims struct {
-	Audience  string `json:"aud,omitempty"`
-	ExpiresAt int64  `json:"exp,omitempty"`
-	ID        string `json:"jti,omitempty"`
-	IssuedAt  int64  `json:"iat,omitempty"`
-	Issuer    string `json:"iss,omitempty"`
-	NotBefore int64  `json:"nbf,omitempty"`
-	Subject   string `json:"sub,omitempty"`
-	Scope     string `json:"scp,omitempty"`
-	Tenant    string `json:"mender.tenant,omitempty"`
-	User      bool   `json:"mender.user,omitempty"`
+	Audience  string `json:"aud,omitempty" bson:"aud,omitempty"`
+	ExpiresAt int64  `json:"exp,omitempty" bson:"exp,omitempty"`
+	ID        string `json:"jti,omitempty" bson:"jti,omitempty"`
+	IssuedAt  int64  `json:"iat,omitempty" bson:"iat,omitempty"`
+	Issuer    string `json:"iss,omitempty" bson:"iss,omitempty"`
+	NotBefore int64  `json:"nbf,omitempty" bson:"nbf,omitempty"`
+	Subject   string `json:"sub,omitempty" bson:"sub,omitempty"`
+	Scope     string `json:"scp,omitempty" bson:"scp,omitempty"`
+	Tenant    string `json:"mender.tenant,omitempty" bson:"tenant,omitempty"`
+	User      bool   `json:"mender.user,omitempty" bson:"user,omitempty"`
 }
 
 // Valid checks if claims are valid. Returns error if validation fails.
