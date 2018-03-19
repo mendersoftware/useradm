@@ -127,16 +127,24 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 		return nil, ErrUnauthorized
 	}
 
-	//generate token
+	//generate and save token
 	t := u.generateToken(user.ID, scope.All, ident.Tenant)
+
+	err = u.db.SaveToken(ctx, t)
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to save token")
+	}
 
 	return t, nil
 }
 
 func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
+	id := uuid.NewV4().String()
+
 	return &jwt.Token{
+		Id: id,
 		Claims: jwt.Claims{
-			ID:        uuid.NewV4().String(),
+			ID:        id,
 			Issuer:    u.config.Issuer,
 			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
 			Subject:   subject,
@@ -250,9 +258,16 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	if user == nil && err == nil {
 		return ErrUnauthorized
 	}
-
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to get user")
+	}
+
+	dbToken, err := ua.db.GetTokenById(ctx, token.Id)
+	if dbToken == nil && err == nil {
+		return ErrUnauthorized
+	}
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get token")
 	}
 
 	return nil

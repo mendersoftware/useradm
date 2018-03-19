@@ -88,6 +88,8 @@ func TestUserAdmLogin(t *testing.T) {
 		dbUser    *model.User
 		dbUserErr error
 
+		dbTokenErr error
+
 		outErr   error
 		outToken *jwt.Token
 
@@ -220,6 +222,27 @@ func TestUserAdmLogin(t *testing.T) {
 				ExpirationTime: 10,
 			},
 		},
+		"error: db.SaveToken() error": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbUser: &model.User{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			dbTokenErr: errors.New("db failed"),
+
+			outErr:   errors.New("useradm: failed to save token: db failed"),
+			outToken: nil,
+
+			config: Config{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -229,6 +252,8 @@ func TestUserAdmLogin(t *testing.T) {
 
 		db := &mstore.DataStore{}
 		db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
+
+		db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
 
 		useradm := NewUserAdm(nil, db, nil, tc.config)
 		if tc.verifyTenant {
@@ -246,6 +271,7 @@ func TestUserAdmLogin(t *testing.T) {
 		} else {
 			if tc.outToken != nil && assert.NotNil(t, token) {
 				assert.NoError(t, err)
+				assert.NotEmpty(t, token.Id)
 				assert.NotEmpty(t, token.Claims.ID)
 				assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
 				assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)
@@ -532,27 +558,38 @@ func TestUserAdmVerify(t *testing.T) {
 	testCases := map[string]struct {
 		token *jwt.Token
 
-		callsDB bool
-		dbUser  *model.User
-		dbErr   error
+		dbUser    *model.User
+		dbUserErr error
+
+		dbToken    *jwt.Token
+		dbTokenErr error
 
 		err error
 	}{
 		"ok": {
 			token: &jwt.Token{
+				Id: "token-1",
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
-			callsDB: true,
 			dbUser: &model.User{
 				ID: "1234",
+			},
+			dbToken: &jwt.Token{
+				Id: "token-1",
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+					User:    true,
+				},
 			},
 		},
 		"error: invalid token issuer": {
 			token: &jwt.Token{
+				Id: "token-1",
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "foo",
@@ -563,6 +600,7 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: not a user token": {
 			token: &jwt.Token{
+				Id: "token-1",
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
@@ -572,27 +610,63 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: user not found": {
 			token: &jwt.Token{
+				Id: "token-1",
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
-			callsDB: true,
-			err:     ErrUnauthorized,
+			err: ErrUnauthorized,
 		},
-		"error: db": {
+		"error: token not found": {
 			token: &jwt.Token{
+				Id: "token-1",
 				Claims: jwt.Claims{
 					Subject: "1234",
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
-			callsDB: true,
-			dbErr:   errors.New("db internal error"),
+			dbUser: &model.User{
+				ID: "1234",
+			},
+
+			dbToken:    nil,
+			dbTokenErr: nil,
+
+			err: ErrUnauthorized,
+		},
+		"error: db user": {
+			token: &jwt.Token{
+				Id: "token-1",
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+					User:    true,
+				},
+			},
+			dbUserErr: errors.New("db internal error"),
 
 			err: errors.New("useradm: failed to get user: db internal error"),
+		},
+		"error: db token": {
+			token: &jwt.Token{
+				Id: "token-1",
+				Claims: jwt.Claims{
+					Subject: "1234",
+					Issuer:  "mender",
+					User:    true,
+				},
+			},
+			dbUser: &model.User{
+				ID: "1234",
+			},
+
+			dbToken:    nil,
+			dbTokenErr: errors.New("db failed"),
+
+			err: errors.New("useradm: failed to get token: db failed"),
 		},
 	}
 
@@ -604,10 +678,10 @@ func TestUserAdmVerify(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			if tc.callsDB || tc.dbUser != nil || tc.dbErr != nil {
-				db.On("GetUserById", ctx,
-					tc.token.Claims.Subject).Return(tc.dbUser, tc.dbErr)
-			}
+			db.On("GetUserById", ctx,
+				tc.token.Claims.Subject).Return(tc.dbUser, tc.dbUserErr)
+			db.On("GetTokenById", ctx,
+				tc.token.Id).Return(tc.dbToken, tc.dbTokenErr)
 
 			useradm := NewUserAdm(nil, db, nil, config)
 
@@ -618,7 +692,6 @@ func TestUserAdmVerify(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			db.AssertExpectations(t)
 		})
 	}
 }

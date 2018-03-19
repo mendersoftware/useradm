@@ -15,5 +15,6 @@ package jwt
 
 // Token wrapper
 type Token struct {
+	Id     string `bson:"_id"`
 	Claims Claims
 }

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 )
 
@@ -40,6 +41,8 @@ type DataStore interface {
 	GetUserById(ctx context.Context, id string) (*model.User, error)
 	GetUsers(ctx context.Context) ([]model.User, error)
 	DeleteUser(ctx context.Context, id string) error
+	SaveToken(ctx context.Context, token *jwt.Token) error
+	GetTokenById(ctx context.Context, id string) (*jwt.Token, error)
 }
 
 // TenantDataKeeper is an interface for executing administrative opeartions on

@@ -30,14 +30,16 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store"
 )
 
 const (
-	DbVersion   = "0.1.0"
-	DbName      = "useradm"
-	DbUsersColl = "users"
+	DbVersion    = "0.1.0"
+	DbName       = "useradm"
+	DbUsersColl  = "users"
+	DbTokensColl = "tokens"
 
 	DbUserEmail = "email"
 	DbUserPass  = "password"
@@ -256,6 +258,27 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 	return &user, nil
 }
 
+func (db *DataStoreMongo) GetTokenById(ctx context.Context, id string) (*jwt.Token, error) {
+	s := db.session.Copy()
+	defer s.Close()
+
+	var token jwt.Token
+
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).
+		FindId(id).
+		One(&token)
+
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, nil
+		} else {
+			return nil, errors.Wrap(err, "failed to fetch token")
+		}
+	}
+
+	return &token, nil
+}
+
 func (db *DataStoreMongo) GetUsers(ctx context.Context) ([]model.User, error) {
 	s := db.session.Copy()
 	defer s.Close()
@@ -286,6 +309,19 @@ func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
 	default:
 		return err
 	}
+}
+
+func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error {
+	s := db.session.Copy()
+	defer s.Close()
+
+	c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl)
+
+	if err := c.Insert(token); err != nil {
+		return errors.Wrap(err, "failed to store token")
+	}
+
+	return nil
 }
 
 func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, tenant string) error {
