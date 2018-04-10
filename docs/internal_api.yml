@@ -134,6 +134,11 @@ paths:
       responses:
         204:
           description: Tokens deleted.
+        400:
+          description: |
+            Invalid parameters.
+          schema:
+            $ref: "#/definitions/Error"
         500:
           description: Internal server error.
           schema:

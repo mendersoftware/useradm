@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2018 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -984,4 +984,80 @@ func makeReq(method, url, auth string, body interface{}) *http.Request {
 
 func restError(status string) map[string]interface{} {
 	return map[string]interface{}{"error": status, "request_id": "test"}
+}
+
+func TestUserAdmApiDeleteTokens(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		params string
+
+		uaError error
+
+		checker mt.ResponseChecker
+	}{
+		"ok, tenant": {
+			params:  "?tenant_id=foo",
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"ok, tenant and user": {
+			params:  "?tenant_id=foo&user_id=bar",
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"error: wrong params": {
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("tenant_id must be provided"),
+			),
+		},
+		"error: useradm internal": {
+			params:  "?tenant_id=foo",
+			uaError: errors.New("some internal error"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			ctx := mtesting.ContextMatcher()
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("DeleteTokens", ctx, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(tc.uaError)
+
+			//make handler
+			api := makeMockApiHandler(t, uadm)
+
+			//make request
+			req := makeReq("DELETE",
+				"http://1.2.3.4/api/internal/v1/useradm/tokens"+tc.params,
+				"",
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
 }

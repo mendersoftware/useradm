@@ -417,3 +417,40 @@ func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
 		multitenant: db.multitenant,
 	}
 }
+
+// deletes all tenant's tokens (identity in context)
+func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
+	s := db.session.Copy()
+	defer s.Close()
+
+	c := db.session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl)
+	ci, err := c.RemoveAll(nil)
+
+	if ci.Removed == 0 {
+		return store.ErrTokenNotFound
+	}
+
+	return err
+}
+
+// deletes all user's tokens
+func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId string) error {
+	s := db.session.Copy()
+	defer s.Close()
+
+	c := db.session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl)
+	filter := bson.M{
+		"claims.sub": userId,
+	}
+	ci, err := c.RemoveAll(filter)
+
+	if ci.Removed == 0 {
+		return store.ErrTokenNotFound
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "failed to remove tokens")
+	}
+
+	return nil
+}

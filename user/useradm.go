@@ -53,6 +53,8 @@ type App interface {
 	// token using configuration & method set up in UserAdmApp
 	SignToken(ctx context.Context, t *jwt.Token) (string, error)
 
+	DeleteTokens(ctx context.Context, tenantId, userId string) error
+
 	CreateTenant(ctx context.Context, tenant model.NewTenant) error
 }
 
@@ -336,4 +338,24 @@ func (ua *UserAdm) SetPassword(ctx context.Context, uu model.UserUpdate) error {
 
 	err = ua.db.UpdateUser(ctx, u.ID, &uu)
 	return errors.Wrap(err, "useradm: failed to update user information")
+}
+
+func (ua *UserAdm) DeleteTokens(ctx context.Context, tenantId, userId string) error {
+	ctx = identity.WithContext(ctx, &identity.Identity{
+		Tenant: tenantId,
+	})
+
+	var err error
+
+	if userId != "" {
+		err = ua.db.DeleteTokensByUserId(ctx, userId)
+	} else {
+		err = ua.db.DeleteTokens(ctx)
+	}
+
+	if err != nil && err != store.ErrTokenNotFound {
+		return errors.Wrapf(err, "failed to delete tokens for tenant: %v, user id: %v", tenantId, userId)
+	}
+
+	return nil
 }

@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2018 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ const (
 	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
 	uriInternalTenantUser = "/api/internal/v1/useradm/tenants/:id/users"
+	uriInternalTokens     = "/api/internal/v1/useradm/tokens"
 )
 
 var (
@@ -63,6 +64,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
 		rest.Post(uriInternalTenantUser, i.CreateTenantUserHandler),
+		rest.Delete(uriInternalTokens, i.DeleteTokensHandler),
 
 		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriManagementUsers, i.AddUserHandler),
@@ -377,4 +379,26 @@ func getTenantContext(ctx context.Context, tenantId string) context.Context {
 type User struct {
 	model.User
 	Propagate bool
+}
+
+func (u *UserAdmApiHandlers) DeleteTokensHandler(w rest.ResponseWriter, r *rest.Request) {
+
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	tenantId := r.URL.Query().Get("tenant_id")
+	if tenantId == "" {
+		rest_utils.RestErrWithLog(w, r, l, errors.New("tenant_id must be provided"), http.StatusBadRequest)
+		return
+	}
+	userId := r.URL.Query().Get("user_id")
+
+	err := u.userAdm.DeleteTokens(ctx, tenantId, userId)
+	switch err {
+	case nil:
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+	}
 }

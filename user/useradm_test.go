@@ -1013,3 +1013,54 @@ func ContextMatcher() interface{} {
 		return true
 	})
 }
+
+func TestUserAdmDeleteTokens(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		user   string
+		tenant string
+		dbErr  error
+
+		outErr error
+	}{
+		"ok": {},
+		"ok, tenant": {
+			tenant: "foo",
+		},
+		"ok, tenant and user": {
+			tenant: "foo",
+			user:   "foo",
+		},
+		"db error": {
+			user:   "foo",
+			tenant: "foo",
+			dbErr:  errors.New("db connection failed"),
+			outErr: errors.New("failed to delete tokens for tenant: foo, user id: foo: db connection failed"),
+		},
+	}
+
+	for name := range testCases {
+		tc := testCases[name]
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			db := &mstore.DataStore{}
+			db.On("DeleteTokens", ContextMatcher(), mock.AnythingOfType("string")).Return(tc.dbErr)
+			db.On("DeleteTokensByUserId", ContextMatcher(), mock.AnythingOfType("string")).Return(tc.dbErr)
+
+			useradm := NewUserAdm(nil, db, nil, Config{})
+
+			err := useradm.DeleteTokens(ctx, tc.tenant, tc.user)
+
+			if tc.outErr != nil {
+				assert.EqualError(t, err, tc.outErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
