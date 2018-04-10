@@ -43,6 +43,12 @@ type DataStore interface {
 	DeleteUser(ctx context.Context, id string) error
 	SaveToken(ctx context.Context, token *jwt.Token) error
 	GetTokenById(ctx context.Context, id string) (*jwt.Token, error)
+
+	// deletes all tenant's tokens (identity in context)
+	DeleteTokens(ctx context.Context) error
+
+	// deletes user tokens
+	DeleteTokensByUserId(ctx context.Context, userId string) error
 }
 
 // TenantDataKeeper is an interface for executing administrative opeartions on

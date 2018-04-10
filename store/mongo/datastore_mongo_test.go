@@ -29,6 +29,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/mendersoftware/useradm/model"
+	"github.com/mendersoftware/useradm/store"
 )
 
 func TestMongoCreateUser(t *testing.T) {
@@ -969,4 +970,325 @@ func TestWithMultitenant(t *testing.T) {
 	new_store := store.WithMultitenant()
 
 	assert.NotEqual(t, unsafe.Pointer(store), unsafe.Pointer(new_store))
+}
+
+func TestMongoDeleteTokens(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		inTokens []interface{}
+
+		outError string
+	}{
+		"ok": {
+			inTokens: []interface{}{
+				jwt.Token{
+					Id: "id-1",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "sub-1",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-2",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-2",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "sub-1",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-3",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-2",
+						IssuedAt:  5678,
+						Issuer:    "iss-2",
+						NotBefore: 7890,
+						Subject:   "sub-2",
+						Scope:     "scope-2",
+						User:      true,
+					},
+				},
+			},
+		},
+		"ok - tenant": {
+			tenant: "tenant-1",
+			inTokens: []interface{}{
+				jwt.Token{
+					Id: "id-1",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "sub-1",
+						Scope:     "scope-1",
+						Tenant:    "tenant-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-2",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-2",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "sub-1",
+						Scope:     "scope-1",
+						Tenant:    "tenant-1",
+						User:      true,
+					},
+				},
+			},
+		},
+		"tenant, no tokens": {
+			tenant:   "tenant-2",
+			outError: store.ErrTokenNotFound.Error(),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		if len(tc.inTokens) > 0 {
+			err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).Insert(tc.inTokens...)
+			assert.NoError(t, err)
+		}
+
+		err = store.DeleteTokens(ctx)
+		if tc.outError != "" {
+			assert.EqualError(t, err, tc.outError)
+		} else {
+			assert.NoError(t, err)
+		}
+
+		var tokens []jwt.Token
+		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).Find(nil).All(&tokens)
+		assert.NoError(t, err)
+		assert.Nil(t, tokens)
+
+		session.Close()
+	}
+}
+
+func TestMongoDeleteTokensByUserId(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		user     string
+		inTokens []interface{}
+
+		outTokens []jwt.Token
+		outError  string
+	}{
+		"ok": {
+			user: "user-1",
+			inTokens: []interface{}{
+				jwt.Token{
+					Id: "id-1",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-1",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-2",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-2",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-1",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-3",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-2",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+			},
+			outTokens: []jwt.Token{
+				jwt.Token{
+					Id: "id-3",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-2",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+			},
+		},
+		"ok - tenant": {
+			user:   "user-1",
+			tenant: "tenant-1",
+			inTokens: []interface{}{
+				jwt.Token{
+					Id: "id-1",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-1",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-2",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-2",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-1",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+				jwt.Token{
+					Id: "id-3",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-2",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+			},
+			outTokens: []jwt.Token{
+				jwt.Token{
+					Id: "id-3",
+					Claims: jwt.Claims{
+						Audience:  "audience",
+						ExpiresAt: 1234,
+						ID:        "id-1",
+						IssuedAt:  5678,
+						Issuer:    "iss-1",
+						NotBefore: 7890,
+						Subject:   "user-2",
+						Scope:     "scope-1",
+						User:      true,
+					},
+				},
+			},
+		},
+		"ok - no tokens": {
+			user:     "user2",
+			outError: store.ErrTokenNotFound.Error(),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		if len(tc.inTokens) > 0 {
+			err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).Insert(tc.inTokens...)
+			assert.NoError(t, err)
+		}
+
+		err = store.DeleteTokensByUserId(ctx, tc.user)
+		if tc.outError != "" {
+			assert.EqualError(t, err, tc.outError)
+		} else {
+			assert.NoError(t, err)
+		}
+
+		var tokens []jwt.Token
+		if tc.outTokens != nil {
+			err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).Find(nil).All(&tokens)
+			assert.NoError(t, err)
+		}
+
+		assert.Equal(t, tc.outTokens, tokens)
+
+		session.Close()
+	}
 }
