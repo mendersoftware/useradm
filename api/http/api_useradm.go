@@ -103,7 +103,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 	token, err := u.userAdm.Login(ctx, email, pass)
 	if err != nil {
 		switch {
-		case err == useradm.ErrUnauthorized:
+		case err == useradm.ErrUnauthorized || err == useradm.ErrTenantAccountSuspended:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnauthorized)
 		default:
 			rest_utils.RestErrWithLogInternal(w, r, l, err)

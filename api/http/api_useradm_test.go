@@ -128,6 +128,16 @@ func TestUserAdmApiLogin(t *testing.T) {
 				restError("internal error"),
 			),
 		},
+		"error: tenant account suspended": {
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			signed:       "initial",
+			uaError:      useradm.ErrTenantAccountSuspended,
+
+			checker: mt.NewJSONResponse(
+				http.StatusUnauthorized,
+				nil,
+				restError(useradm.ErrTenantAccountSuspended.Error())),
+		},
 	}
 
 	for name, tc := range testCases {
