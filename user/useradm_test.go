@@ -173,6 +173,32 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr:   errors.New("failed to check user's tenant: some error"),
 			outToken: nil,
 		},
+		"error, multitenant: tenant account suspended": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			verifyTenant: true,
+			tenant: &ct.Tenant{
+				ID:     "tenant1id",
+				Name:   "tenant1",
+				Status: "suspended",
+			},
+			tenantErr: nil,
+
+			dbUser: &model.User{
+				ID:       "1234",
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			outErr: ErrTenantAccountSuspended,
+
+			config: Config{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
 		"error: no user": {
 			inEmail:    "foo@bar.com",
 			inPassword: "correcthorsebatterystaple",
