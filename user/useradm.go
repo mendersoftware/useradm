@@ -32,10 +32,15 @@ import (
 )
 
 var (
-	ErrUnauthorized = errors.New("unauthorized")
-	ErrAuthExpired  = errors.New("token expired")
-	ErrAuthInvalid  = errors.New("token is invalid")
-	ErrUserNotFound = errors.New("user not found")
+	ErrUnauthorized           = errors.New("unauthorized")
+	ErrAuthExpired            = errors.New("token expired")
+	ErrAuthInvalid            = errors.New("token is invalid")
+	ErrUserNotFound           = errors.New("user not found")
+	ErrTenantAccountSuspended = errors.New("tenant account suspended")
+)
+
+const (
+	TenantStatusSuspended = "suspended"
 )
 
 type App interface {
@@ -107,6 +112,10 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 
 		if tenant == nil {
 			return nil, ErrUnauthorized
+		}
+
+		if tenant.Status == TenantStatusSuspended {
+			return nil, ErrTenantAccountSuspended
 		}
 
 		ident.Tenant = tenant.ID
