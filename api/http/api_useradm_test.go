@@ -498,7 +498,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func makeMockApiHandler(t *testing.T, uadm useradm.App) http.Handler {
-	handlers := NewUserAdmApiHandlers(uadm)
+	handlers := NewUserAdmApiHandlers(uadm, nil)
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()

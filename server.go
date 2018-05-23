@@ -78,7 +78,7 @@ func RunServer(c config.Reader) error {
 		ua = ua.WithTenantVerification(tc)
 	}
 
-	useradmapi := api_http.NewUserAdmApiHandlers(ua)
+	useradmapi := api_http.NewUserAdmApiHandlers(ua, db)
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {

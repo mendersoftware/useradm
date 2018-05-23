@@ -50,12 +50,14 @@ var (
 
 type UserAdmApiHandlers struct {
 	userAdm useradm.App
+	db      store.DataStore
 }
 
 // return an ApiHandler for user administration and authentiacation app
-func NewUserAdmApiHandlers(userAdm useradm.App) ApiHandler {
+func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore) ApiHandler {
 	return &UserAdmApiHandlers{
 		userAdm: userAdm,
+		db:      db,
 	}
 }
 
