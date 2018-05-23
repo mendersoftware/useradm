@@ -158,7 +158,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 		req := makeReq("POST", "http://1.2.3.4/api/management/v1/useradm/auth/login",
 			tc.inAuthHeader, nil)
 
-		api := makeMockApiHandler(t, uadm)
+		api := makeMockApiHandler(t, uadm, nil)
 
 		//test
 		recorded := test.RunRequest(t, api, req)
@@ -243,7 +243,7 @@ func TestCreateUser(t *testing.T) {
 				mock.AnythingOfType("*model.User"), true).
 				Return(tc.createUserErr)
 
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
 			recorded := test.RunRequest(t, api, tc.inReq)
@@ -388,7 +388,7 @@ func TestCreateUserForTenant(t *testing.T) {
 				mock.AnythingOfType("*model.User"), tc.propagate).
 				Return(tc.createUserErr)
 
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
 			recorded := test.RunRequest(t, api, tc.inReq)
@@ -487,7 +487,7 @@ func TestUpdateUser(t *testing.T) {
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.updateUserErr)
 
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
 			recorded := test.RunRequest(t, api, tc.inReq)
@@ -497,8 +497,8 @@ func TestUpdateUser(t *testing.T) {
 	}
 }
 
-func makeMockApiHandler(t *testing.T, uadm useradm.App) http.Handler {
-	handlers := NewUserAdmApiHandlers(uadm, nil)
+func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http.Handler {
+	handlers := NewUserAdmApiHandlers(uadm, db)
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()
@@ -618,7 +618,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 			Return(tc.uaError)
 
 		//make handler
-		api := makeMockApiHandler(t, uadm)
+		api := makeMockApiHandler(t, uadm, nil)
 
 		//make request
 		req := makeReq("POST",
@@ -724,7 +724,7 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 			uadm.On("GetUsers", ctx).Return(tc.uaUsers, tc.uaError)
 
 			//make handler
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
 			req := makeReq("GET",
@@ -815,7 +815,7 @@ func TestUserAdmApiGetUser(t *testing.T) {
 			uadm.On("GetUser", ctx, "foo").Return(tc.uaUser, tc.uaError)
 
 			//make handler
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
 			req := makeReq("GET",
@@ -882,7 +882,7 @@ func TestUserAdmApiDeleteUser(t *testing.T) {
 			uadm.On("DeleteUser", ctx, "foo").Return(tc.uaError)
 
 			//make handler
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
 			req := makeReq("DELETE",
@@ -966,7 +966,7 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 			uadm.On("CreateTenant", ctx, tc.tenant).Return(tc.uaError)
 
 			//make handler
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
 			req := makeReq(http.MethodPost,
@@ -1057,7 +1057,7 @@ func TestUserAdmApiDeleteTokens(t *testing.T) {
 			uadm.On("DeleteTokens", ctx, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(tc.uaError)
 
 			//make handler
-			api := makeMockApiHandler(t, uadm)
+			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
 			req := makeReq("DELETE",
