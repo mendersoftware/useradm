@@ -242,6 +242,67 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
+  /settings:
+    get:
+      summary: Get user settings
+      description: |
+        Returns user settings.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        200:
+          description: Successful response - a user information is returned.
+          schema:
+            $ref: "#/definitions/Settings"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      summary: Set user settings
+      description: |
+        Create user settings or replace existing settings with provided object.
+      parameters:
+        - name: settings
+          in: body
+          description: New user settings.
+          required: true
+          schema:
+            $ref: "#/definitions/Settings"
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        201:
+          description: User settings set.
+        400:
+          description: |
+              The request body is malformed.
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
 definitions:
   UserNew:
     description: New user descriptor.
@@ -317,3 +378,7 @@ definitions:
       application/json:
         error: "missing Authorization header"
         request_id: "f7881e82-0492-49fb-b459-795654e7188a"
+
+  Settings:
+    description: User settings.
+    type: object
