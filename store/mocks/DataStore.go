@@ -171,6 +171,20 @@ func (_m *DataStore) GetUsers(ctx context.Context) ([]model.User, error) {
 	return r0, r1
 }
 
+// SaveSettings provides a mock function with given fields: ctx, s
+func (_m *DataStore) SaveSettings(ctx context.Context, s map[string]interface{}) error {
+	ret := _m.Called(ctx, s)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, map[string]interface{}) error); ok {
+		r0 = rf(ctx, s)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SaveToken provides a mock function with given fields: ctx, token
 func (_m *DataStore) SaveToken(ctx context.Context, token *jwt.Token) error {
 	ret := _m.Called(ctx, token)
