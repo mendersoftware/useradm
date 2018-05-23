@@ -36,6 +36,7 @@ const (
 	uriManagementAuthLogin = "/api/management/v1/useradm/auth/login"
 	uriManagementUser      = "/api/management/v1/useradm/users/:id"
 	uriManagementUsers     = "/api/management/v1/useradm/users"
+	uriManagementSettings  = "/api/management/v1/useradm/settings"
 
 	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
@@ -74,6 +75,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Get(uriManagementUser, i.GetUserHandler),
 		rest.Put(uriManagementUser, i.UpdateUserHandler),
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
+		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 	}
 
 	routes = append(routes)
@@ -403,4 +405,25 @@ func (u *UserAdmApiHandlers) DeleteTokensHandler(w rest.ResponseWriter, r *rest.
 	default:
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 	}
+}
+
+func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	var settings map[string]interface{}
+
+	err := r.DecodeJsonPayload(&settings)
+	if err != nil {
+		rest_utils.RestErrWithLog(w, r, l, errors.New("cannot parse request body as json"), http.StatusBadRequest)
+		return
+	}
+
+	err = u.db.SaveSettings(ctx, settings)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

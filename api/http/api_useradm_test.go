@@ -38,6 +38,7 @@ import (
 	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store"
+	mstore "github.com/mendersoftware/useradm/store/mocks"
 	"github.com/mendersoftware/useradm/user"
 	museradm "github.com/mendersoftware/useradm/user/mocks"
 	mtesting "github.com/mendersoftware/useradm/utils/testing"
@@ -971,6 +972,87 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 			//make request
 			req := makeReq(http.MethodPost,
 				"http://1.2.3.4/api/internal/v1/useradm/tenants",
+				"",
+				tc.body)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
+func TestUserAdmApiSaveSettings(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		body interface{}
+
+		dbError error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			body: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": "bar-val",
+			},
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+		},
+		"ok, empty": {
+			body: map[string]interface{}{},
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+		},
+		"error, not json": {
+			body: "asdf",
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("cannot parse request body as json"),
+			),
+		},
+		"error, db": {
+			body: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": "bar-val",
+			},
+
+			dbError: errors.New("generic"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			ctx := mtesting.ContextMatcher()
+
+			//make mock store
+			db := &mstore.DataStore{}
+			db.On("SaveSettings", ctx, tc.body).Return(tc.dbError)
+
+			//make handler
+			api := makeMockApiHandler(t, nil, db)
+
+			//make request
+			req := makeReq(http.MethodPost,
+				"http://1.2.3.4/api/management/v1/useradm/settings",
 				"",
 				tc.body)
 
