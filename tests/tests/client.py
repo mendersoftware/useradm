@@ -131,6 +131,18 @@ class ManagementApiClient(ApiClient):
         auth = common.make_basic_auth(username, password)
         return self.client.auth.post_auth_login(Authorization=auth).result()
 
+    def post_settings(self, settings, auth=None):
+        if auth is None:
+            auth=self.auth
+
+        return requests.post(self.make_api_url('/settings'), json=settings, headers=auth)
+
+    def get_settings(self, auth=None):
+        if auth is None:
+            auth=self.auth
+
+        return requests.get(self.make_api_url('/settings'), headers=auth)
+
 
 class CliClient:
     cmd = '/testing/useradm'
