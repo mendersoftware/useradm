@@ -36,10 +36,11 @@ import (
 )
 
 const (
-	DbVersion    = "0.1.0"
-	DbName       = "useradm"
-	DbUsersColl  = "users"
-	DbTokensColl = "tokens"
+	DbVersion      = "0.1.0"
+	DbName         = "useradm"
+	DbUsersColl    = "users"
+	DbTokensColl   = "tokens"
+	DbSettingsColl = "settings"
 
 	DbUserEmail = "email"
 	DbUserPass  = "password"
@@ -450,6 +451,20 @@ func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId strin
 
 	if err != nil {
 		return errors.Wrap(err, "failed to remove tokens")
+	}
+
+	return nil
+}
+
+func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interface{}) error {
+	sess := db.session.Copy()
+	defer sess.Close()
+
+	c := sess.DB(mstore.DbFromContext(ctx, DbName)).C(DbSettingsColl)
+
+	_, err := c.Upsert(bson.M{}, s)
+	if err != nil {
+		return errors.Wrapf(err, "failed to store settings %v", s)
 	}
 
 	return nil
