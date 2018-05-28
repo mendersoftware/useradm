@@ -76,6 +76,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Put(uriManagementUser, i.UpdateUserHandler),
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
+		rest.Get(uriManagementSettings, i.GetSettingsHandler),
 	}
 
 	routes = append(routes)
@@ -426,4 +427,19 @@ func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	settings, err := u.db.GetSettings(ctx)
+
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.WriteJson(settings)
 }

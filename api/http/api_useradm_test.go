@@ -1063,6 +1063,66 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 	}
 }
 
+func TestUserAdmApiGetSettings(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		dbSettings map[string]interface{}
+		dbError    error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			dbSettings: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": "bar-val",
+			},
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				map[string]interface{}{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			),
+		},
+		"error: generic": {
+			dbError: errors.New("failed to get settings"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			ctx := mtesting.ContextMatcher()
+
+			//make mock store
+			db := &mstore.DataStore{}
+			db.On("GetSettings", ctx).Return(tc.dbSettings, tc.dbError)
+
+			//make handler
+			api := makeMockApiHandler(t, nil, db)
+
+			//make request
+			req := makeReq(http.MethodGet,
+				"http://1.2.3.4/api/management/v1/useradm/settings",
+				"",
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
 func makeReq(method, url, auth string, body interface{}) *http.Request {
 	req := test.MakeSimpleRequest(method, url, body)
 
