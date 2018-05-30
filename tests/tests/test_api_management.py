@@ -359,3 +359,50 @@ class TestManagementApiPutUserMultitenant(TestManagementApiPutUserBase):
         update = {"email": init_users_mt_f[tenant_id][1].email, "password": "secretpassword123"}
         with tenantadm.run_fake_update_user(tenant_id, user.id, update, 422):
             self._do_test_fail_duplicate_email(api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id)
+
+
+class TestManagementApiPostSettingsBase:
+    def _do_test_ok(self, api_client_mgmt, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        # nonempty
+        self._set_and_verify({"foo": "foo-val", "bar": "bar-val"}, api_client_mgmt, auth)
+
+        # empty
+        self._set_and_verify({}, api_client_mgmt, auth)
+
+    def _set_and_verify(self, settings, api_client_mgmt, auth):
+        r = api_client_mgmt.post_settings(settings, auth)
+        assert r.status_code==201
+
+        found = api_client_mgmt.get_settings(auth)
+        assert found.json() == settings
+
+    def _do_test_fail_bad_request(self, api_client_mgmt, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        try:
+            r = api_client_mgmt.post_settings("asdf", auth)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+
+
+class TestManagementApiPostSettings(TestManagementApiPostSettingsBase):
+    def test_ok(self, api_client_mgmt):
+        self._do_test_ok(api_client_mgmt)
+
+    def test_bad_request(self, api_client_mgmt):
+        self._do_test_fail_bad_request(api_client_mgmt)
+
+class TestManagementApiPostSettingsMultitenant(TestManagementApiPostSettingsBase):
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_ok(self, api_client_mgmt, init_users_mt_f, tenant_id):
+        self._do_test_ok(api_client_mgmt, tenant_id)
+
+    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    def test_bad_request(self, api_client_mgmt, tenant_id):
+        self._do_test_fail_bad_request(api_client_mgmt, tenant_id)
