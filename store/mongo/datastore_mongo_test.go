@@ -1404,3 +1404,70 @@ func TestMongoSaveSettings(t *testing.T) {
 		session.Close()
 	}
 }
+
+func TestMongoGetSettings(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	testCases := map[string]struct {
+		settingsExisting map[string]interface{}
+		settingsOut      map[string]interface{}
+		tenant           string
+		err              string
+	}{
+		"ok": {
+			settingsExisting: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": 42,
+			},
+			settingsOut: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": 42,
+			},
+		},
+		"ok, tenant": {
+			settingsExisting: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": 42,
+			},
+			settingsOut: map[string]interface{}{
+				"foo": "foo-val",
+				"bar": 42,
+			},
+			tenant: "tenant-foo",
+		},
+		"ok, empty": {
+			settingsOut: map[string]interface{}{},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
+
+		session := db.Session()
+		store, err := NewDataStoreMongoWithSession(session)
+		assert.NoError(t, err)
+
+		if tc.settingsExisting != nil {
+			err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbSettingsColl).Insert(tc.settingsExisting)
+			assert.NoError(t, err)
+		}
+
+		out, err := store.GetSettings(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, tc.settingsOut, out)
+
+		session.Close()
+	}
+}

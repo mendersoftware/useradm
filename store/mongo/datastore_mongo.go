@@ -469,3 +469,25 @@ func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interfa
 
 	return nil
 }
+
+func (db *DataStoreMongo) GetSettings(ctx context.Context) (map[string]interface{}, error) {
+	sess := db.session.Copy()
+	defer sess.Close()
+
+	c := sess.DB(mstore.DbFromContext(ctx, DbName)).C(DbSettingsColl)
+
+	var settings map[string]interface{}
+
+	err := c.Find(nil).
+		Select(bson.M{"_id": 0}).
+		One(&settings)
+
+	switch err {
+	case nil:
+		return settings, nil
+	case mgo.ErrNotFound:
+		return map[string]interface{}{}, nil
+	default:
+		return nil, errors.Wrapf(err, "failed to get settings")
+	}
+}
