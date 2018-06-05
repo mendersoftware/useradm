@@ -361,7 +361,7 @@ class TestManagementApiPutUserMultitenant(TestManagementApiPutUserBase):
             self._do_test_fail_duplicate_email(api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id)
 
 
-class TestManagementApiPostSettingsBase:
+class TestManagementApiSettingsBase:
     def _do_test_ok(self, api_client_mgmt, tenant_id=None):
         auth=None
         if tenant_id is not None:
@@ -372,6 +372,14 @@ class TestManagementApiPostSettingsBase:
 
         # empty
         self._set_and_verify({}, api_client_mgmt, auth)
+
+    def _do_test_no_settings(self, api_client_mgmt, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        found = api_client_mgmt.get_settings(auth)
+        assert found.json() == {}
 
     def _set_and_verify(self, settings, api_client_mgmt, auth):
         r = api_client_mgmt.post_settings(settings, auth)
@@ -391,14 +399,17 @@ class TestManagementApiPostSettingsBase:
             assert e.response.status_code == 400
 
 
-class TestManagementApiPostSettings(TestManagementApiPostSettingsBase):
+class TestManagementApiSettings(TestManagementApiSettingsBase):
     def test_ok(self, api_client_mgmt):
         self._do_test_ok(api_client_mgmt)
+
+    def test_no_settings(self, api_client_mgmt):
+        self._do_test_no_settings(api_client_mgmt)
 
     def test_bad_request(self, api_client_mgmt):
         self._do_test_fail_bad_request(api_client_mgmt)
 
-class TestManagementApiPostSettingsMultitenant(TestManagementApiPostSettingsBase):
+class TestManagementApiSettingsMultitenant(TestManagementApiSettingsBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_ok(self, api_client_mgmt, init_users_mt_f, tenant_id):
         self._do_test_ok(api_client_mgmt, tenant_id)
