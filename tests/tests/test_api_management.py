@@ -373,6 +373,14 @@ class TestManagementApiSettingsBase:
         # empty
         self._set_and_verify({}, api_client_mgmt, auth)
 
+    def _do_test_no_settings(self, api_client_mgmt, tenant_id=None):
+        auth=None
+        if tenant_id is not None:
+            auth = make_auth("foo", tenant_id)
+
+        found = api_client_mgmt.get_settings(auth)
+        assert found.json() == {}
+
     def _set_and_verify(self, settings, api_client_mgmt, auth):
         r = api_client_mgmt.post_settings(settings, auth)
         assert r.status_code==201
@@ -394,6 +402,9 @@ class TestManagementApiSettingsBase:
 class TestManagementApiSettings(TestManagementApiSettingsBase):
     def test_ok(self, api_client_mgmt):
         self._do_test_ok(api_client_mgmt)
+
+    def test_no_settings(self, api_client_mgmt):
+        self._do_test_no_settings(api_client_mgmt)
 
     def test_bad_request(self, api_client_mgmt):
         self._do_test_fail_bad_request(api_client_mgmt)
