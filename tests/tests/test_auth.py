@@ -76,6 +76,22 @@ class TestAuthLoginMultitenant:
             except bravado.exception.HTTPError as herr:
                 assert herr.response.status_code == 401
 
+    def test_suspended_tenant(self, api_client_mgmt, init_users_mt):
+        password = "correcthorsebatterystaple"
+
+        users_db = { tenant: [user.email for user in users] \
+                     for tenant, users in init_users_mt.items() }
+
+        with tenantadm.run_fake_user_tenants(users_db, status='suspended'):
+            for tenant, users in users_db.items():
+                try:
+                    for email in users:
+                        _, r = api_client_mgmt.login(email, password)
+                        assert r.status_code == 401
+                except bravado.exception.HTTPError as herr:
+                    assert herr.response.status_code == 401
+                    assert herr.swagger_result.error == 'tenant account suspended'
+
 
 class TestAuthVerify:
     @pytest.mark.parametrize("token", [

@@ -106,11 +106,12 @@ def run_fake_get_tenants(tenant_id, status=200):
         yield server
 
 @contextmanager
-def run_fake_user_tenants(tenant_users):
+def run_fake_user_tenants(tenant_users, status='active'):
     """
     Runs GET /tenants?username=<user>. Takes a dict of `{tenant: list of
     users}`, returns valid tenant with `tenant_id` for `user`, otherwise an
     empty list.
+    Returned tenant will have the 'status' field set accordingly.
 
     """
     user_to_tenant = {}
@@ -126,7 +127,7 @@ def run_fake_user_tenants(tenant_users):
         tenant = user_to_tenant.get(req_user, '')
         if tenant:
             return (200, {},
-                    json.dumps([{"id": tenant, "name": "foo"}]))
+                    json.dumps([{"id": tenant, "status": status, "name": "foo", "tenant_token": "sometoken"}]))
         else:
             return (200, {}, '[]')
 
