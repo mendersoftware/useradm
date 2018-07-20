@@ -171,13 +171,15 @@ func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 }
 
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User, propagate bool) error {
+	var tenantErr error
+
 	if u.ID == "" {
 		u.ID = uuid.NewV4().String()
 	}
 
+	id := identity.FromContext(ctx)
 	if ua.verifyTenant && propagate {
-		id := identity.FromContext(ctx)
-		err := ua.cTenant.CreateUser(ctx,
+		tenantErr = ua.cTenant.CreateUser(ctx,
 			&tenant.User{
 				ID:       u.ID,
 				Name:     u.Email,
@@ -185,21 +187,50 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User, propagate bool
 			},
 			ua.clientGetter())
 
-		if err != nil {
-			switch err {
-			case tenant.ErrDuplicateUser:
-				return store.ErrDuplicateEmail
-			default:
-				return errors.Wrap(err, "useradm: failed to create user in tenantadm")
-			}
+		if tenantErr != nil && tenantErr != tenant.ErrDuplicateUser {
+			return errors.Wrap(tenantErr, "useradm: failed to create user in tenantadm")
 		}
+	}
+
+	if tenantErr == tenant.ErrDuplicateUser {
+		// check if the user exists in useradm
+		// if the user does not exists then we should try to remove the user from tenantadm
+		user, err := ua.db.GetUserByEmail(ctx, u.Email)
+		if err != nil {
+			return errors.Wrap(err, "tenant data out of sync: failed to get user from db")
+		}
+		if user == nil {
+			if compensateErr := ua.compensateTenantUser(ctx, u.ID, id.Tenant); compensateErr != nil {
+				tenantErr = compensateErr
+			}
+			return errors.Wrap(tenantErr, "tenant data out of sync")
+		}
+		return store.ErrDuplicateEmail
 	}
 
 	if err := ua.db.CreateUser(ctx, u); err != nil {
 		if err == store.ErrDuplicateEmail {
 			return err
 		}
+		if ua.verifyTenant && propagate {
+			// if the user could not be created in the useradm database
+			// try to remove the user from tenantadm
+			if compensateErr := ua.compensateTenantUser(ctx, u.ID, id.Tenant); compensateErr != nil {
+				err = errors.Wrap(err, compensateErr.Error())
+			}
+		}
+
 		return errors.Wrap(err, "useradm: failed to create user in the db")
+	}
+
+	return nil
+}
+
+func (ua *UserAdm) compensateTenantUser(ctx context.Context, userId, tenantId string) error {
+	err := ua.cTenant.DeleteUser(ctx, tenantId, userId, ua.clientGetter())
+
+	if err != nil {
+		return errors.Wrap(err, "faield to delete tenant user")
 	}
 
 	return nil
