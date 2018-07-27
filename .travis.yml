@@ -22,6 +22,7 @@ env:
     matrix:
         - JOB_TYPE=compile_and_basic_tests
         - JOB_TYPE=acceptance_tests
+        - JOB_TYPE=backend_integration_tests
 
     global:
         # Should be encrypted or set as private travis variables (in travis settings):
@@ -128,6 +129,15 @@ script:
         ./tests/build-acceptance ./tests ./docs/internal_api.yml ./docs/management_api.yml useradm;
 
         TESTS_DIR=$PWD/tests ./tests/run-test-environment "acceptance" $PWD/integration ./tests/docker-compose-acceptance.yml && TESTS_DIR=$PWD/tests ./tests/run-test-environment "acceptance" $PWD/integration ./tests/docker-compose-acceptance-multitenant.yml;
+      fi
+    - if [ "$JOB_TYPE" = backend_integration_tests ]; then
+        git clone -b master https://github.com/mendersoftware/integration.git;
+
+        CGO_ENABLED=0 go build;
+        sudo docker build -t mendersoftware/useradm:pr .;
+
+        ./integration/extra/release_tool.py --set-version-of mender-useradm --version pr;
+        ./integration/backend-tests/run;
       fi
 
 after_success:
