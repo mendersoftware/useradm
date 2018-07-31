@@ -129,8 +129,9 @@ jobs:
         - ./integration/backend-tests/run;
     - stage: Build and publish
       name: "dockerhub"
+      if: type = push
       install: skip
-      before_deploy:
+      script:
         - CGO_ENABLED=0 go build -ldflags "-X main.Commit=`echo $TRAVIS_COMMIT` -X main.Tag=`echo $TRAVIS_TAG` -X main.Branch=`echo $TRAVIS_BRANCH` -X main.BuildNumber=`echo $TRAVIS_BUILD_NUMBER`" ;
         - sudo docker build -t $DOCKER_REPOSITORY:pr . ;
         - if [ ! -z "$TRAVIS_TAG" ]; then export IMAGE_TAG=$TRAVIS_TAG; else export IMAGE_TAG=$TRAVIS_BRANCH; fi ;
@@ -143,13 +144,9 @@ jobs:
             docker tag $DOCKER_REPOSITORY:pr $DOCKER_REPOSITORY:$COMMIT_TAG;
             docker push $DOCKER_REPOSITORY:$COMMIT_TAG;
           fi;
-      # dummy deploy just to get the 'before_deploy' running
-      deploy:
-        -
-          provider: script
-          script: /bin/true
     - stage: Build and publish
       name: "docs"
+      if: type = push
       install: skip
       script: skip
       deploy:
