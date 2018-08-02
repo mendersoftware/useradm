@@ -14,7 +14,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-useradm
+            - mender-mongo
         volumes:
             - "${TESTS_DIR}:/testing"
         environment:

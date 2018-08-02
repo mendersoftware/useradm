@@ -51,7 +51,7 @@ def make_basic_auth(username, password):
 
 @pytest.fixture(scope="session")
 def mongo():
-    return MongoClient('mender-mongo-useradm:27017')
+    return MongoClient('mender-mongo:27017')
 
 def mongo_cleanup(mongo):
     dbs = mongo.database_names()
