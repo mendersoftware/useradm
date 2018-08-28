@@ -135,6 +135,8 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 
 	l.Infof("setting up %s middleware", mwtype)
 
+	api.Use(commonLoggingAccessStack...)
+
 	mwstack, ok := middlewareMap[mwtype]
 	if !ok {
 		return fmt.Errorf("incorrect middleware type: %s", mwtype)
