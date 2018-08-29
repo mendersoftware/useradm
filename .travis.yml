@@ -126,7 +126,11 @@ jobs:
         - sudo docker build -t mendersoftware/useradm:pr .;
 
         - ./integration/extra/release_tool.py --set-version-of mender-useradm --version pr;
-        - ./integration/backend-tests/run;
+          # single tenant
+        - PYTEST_ARGS="-k 'not Multitenant'" ./integration/backend-tests/run;
+          # multitenant
+        - PYTEST_ARGS="-k 'Multitenant'" ./integration/backend-tests/run -f=./integration/docker-compose.tenant.yml  -f=./integration/docker-compose.mt.yml -f=./integration/docker-compose.storage.minio.yml;
+
     - stage: Build and publish
       name: "dockerhub"
       if: type = push
