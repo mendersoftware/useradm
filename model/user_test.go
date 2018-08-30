@@ -39,6 +39,20 @@ func TestValidateNew(t *testing.T) {
 			},
 			outErr: "email: foobar does not validate as email",
 		},
+		"email invalid(+) pass ok": {
+			inUser: User{
+				Email:    "foobar+org@org.com",
+				Password: "correcthorsebatterystaple",
+			},
+			outErr: "email: invalid character '+' in email address",
+		},
+		"email invalid(non-ascii), pass ok": {
+			inUser: User{
+				Email:    "ąę@org.com",
+				Password: "correcthorsebatterystaple",
+			},
+			outErr: "email: ąę@org.com does not validate as ascii",
+		},
 		"email ok, pass invalid (empty)": {
 			inUser: User{
 				Email:    "foo@bar.com",
