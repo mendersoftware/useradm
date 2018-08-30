@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2018 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"github.com/asaskevich/govalidator"
@@ -35,7 +36,7 @@ type User struct {
 	ID string `json:"id" bson:"_id"`
 
 	// user email address
-	Email string `json:"email" bson:",omitempty" valid:"email"`
+	Email string `json:"email" bson:",omitempty" valid:"email,ascii"`
 
 	// user password
 	Password string `json:"password,omitempty" bson:"password"`
@@ -72,6 +73,10 @@ func (u User) ValidateNew() error {
 		return errors.New("password can't be empty")
 	}
 
+	if err := checkEmail(u.Email); err != nil {
+		return err
+	}
+
 	if err := checkPwd(u.Password); err != nil {
 		return err
 	}
@@ -97,6 +102,14 @@ func (u UserUpdate) Validate() error {
 func checkPwd(password string) error {
 	if len(password) < MinPasswordLength {
 		return ErrPasswordTooShort
+	}
+
+	return nil
+}
+
+func checkEmail(email string) error {
+	if strings.Contains(email, "+") {
+		return errors.New("email: invalid character '+' in email address")
 	}
 
 	return nil

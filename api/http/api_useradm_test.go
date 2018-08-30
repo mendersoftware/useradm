@@ -223,6 +223,36 @@ func TestCreateUser(t *testing.T) {
 				restError(store.ErrDuplicateEmail.Error()),
 			),
 		},
+		"invalid email ('+')": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/users",
+				map[string]interface{}{
+					"email":    "foo+@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("email: invalid character '+' in email address"),
+			),
+		},
+		"invalid email (non-ascii)": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/users",
+				map[string]interface{}{
+					"email":    "ąę@org.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("email: ąę@org.com does not validate as ascii"),
+			),
+		},
 		"no body": {
 			inReq: test.MakeSimpleRequest("POST",
 				"http://1.2.3.4/api/management/v1/useradm/users", nil),
