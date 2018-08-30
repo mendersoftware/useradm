@@ -309,7 +309,7 @@ definitions:
     type: object
     properties:
       email:
-        description: A unique email address.
+        description: A unique email address. Invalid characters are non-ascii and '+'.
         type: string
       password:
         description: Password.
