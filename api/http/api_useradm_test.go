@@ -313,6 +313,57 @@ func TestCreateUserForTenant(t *testing.T) {
 			),
 			propagate: true,
 		},
+		"ok, with password hash": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":         "foo@foo.com",
+					"password_hash": "foobarbar",
+					"propagate":     false,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+			propagate: false,
+		},
+		"error, no pass or hash": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":     "foo@foo.com",
+					"propagate": true,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("password *or* password_hash must be provided"),
+			),
+			propagate: true,
+		},
+		"error, both pass and hash provided": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":         "foo@foo.com",
+					"password":      "foobarbar",
+					"password_hash": "foobarbar",
+					"propagate":     true,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("password *or* password_hash must be provided"),
+			),
+			propagate: true,
+		},
 		"proagate false": {
 			inReq: test.MakeSimpleRequest("POST",
 				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
