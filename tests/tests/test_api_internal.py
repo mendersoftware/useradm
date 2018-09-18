@@ -124,6 +124,6 @@ class TestInternalApiUserForTenantCreateMultitenant:
         try:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
-            assert e.response.status_code == 422
+            assert e.response.status_code == 400
         else:
             pytest.fail("Exception expected")

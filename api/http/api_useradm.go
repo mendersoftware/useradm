@@ -154,11 +154,7 @@ func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *r
 
 	user, err := parseUserInternal(r)
 	if err != nil {
-		if err == model.ErrPasswordTooShort {
-			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
-		} else {
-			rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
-		}
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
 		return
 	}
 

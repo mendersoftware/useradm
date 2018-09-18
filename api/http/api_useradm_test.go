@@ -407,7 +407,7 @@ func TestCreateUserForTenant(t *testing.T) {
 			),
 
 			checker: mt.NewJSONResponse(
-				http.StatusUnprocessableEntity,
+				http.StatusBadRequest,
 				nil,
 				restError(model.ErrPasswordTooShort.Error()),
 			),
