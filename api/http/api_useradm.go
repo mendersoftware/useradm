@@ -152,7 +152,7 @@ func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *r
 
 	l := log.FromContext(ctx)
 
-	user, err := parseUser(r)
+	user, err := parseUserInternal(r)
 	if err != nil {
 		if err == model.ErrPasswordTooShort {
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
@@ -168,8 +168,7 @@ func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *r
 		return
 	}
 	ctx = getTenantContext(ctx, tenantId)
-
-	err = u.userAdm.CreateUser(ctx, &user.User, user.Propagate)
+	err = u.userAdm.CreateUser(ctx, &user.User, user.ShouldPropagate())
 	if err != nil {
 		if err == store.ErrDuplicateEmail {
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
@@ -198,7 +197,7 @@ func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Reque
 		return
 	}
 
-	err = u.userAdm.CreateUser(ctx, &user.User, true)
+	err = u.userAdm.CreateUser(ctx, user, true)
 	if err != nil {
 		if err == store.ErrDuplicateEmail {
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
@@ -292,8 +291,24 @@ func (u *UserAdmApiHandlers) DeleteUserHandler(w rest.ResponseWriter, r *rest.Re
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func parseUser(r *rest.Request) (*User, error) {
-	user := User{Propagate: true}
+func parseUser(r *rest.Request) (*model.User, error) {
+	user := model.User{}
+
+	//decode body
+	err := r.DecodeJsonPayload(&user)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode request body")
+	}
+
+	if err := user.ValidateNew(); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func parseUserInternal(r *rest.Request) (*model.UserInternal, error) {
+	user := model.UserInternal{}
 
 	//decode body
 	err := r.DecodeJsonPayload(&user)
@@ -379,11 +394,6 @@ func getTenantContext(ctx context.Context, tenantId string) context.Context {
 	}
 
 	return ctx
-}
-
-type User struct {
-	model.User
-	Propagate bool
 }
 
 func (u *UserAdmApiHandlers) DeleteTokensHandler(w rest.ResponseWriter, r *rest.Request) {
