@@ -53,6 +53,16 @@ class TestInternalApiUserForTenantCreateMultitenant:
         users = api_client_mgmt.get_users(auth)
         assert len(users) == 1
 
+    def test_ok_pwd_hash(self, api_client_int,api_client_mgmt, clean_db):
+        user = {"email":"stefan@example.com", "password_hash":"secret12345", "propagate": False}
+
+        with tenantadm.run_fake_create_user(user):
+            api_client_int.create_user_for_tenant('foobar', user)
+
+        auth = make_auth("foo", 'foobar')
+        users = api_client_mgmt.get_users(auth)
+        assert len(users) == 1
+
     def test_no_propagate(self, api_client_int,api_client_mgmt, clean_db, ):
         user = {"email":"stefan@example.com", "password":"secret12345",
                 "propagate" : False }
@@ -75,6 +85,15 @@ class TestInternalApiUserForTenantCreateMultitenant:
 
     def test_fail_no_password(self, api_client_int):
         new_user = {"email":"foobar"}
+        try:
+            api_client_int.create_user_for_tenant('foobar', new_user)
+        except bravado.exception.HTTPError as e:
+            assert e.response.status_code == 400
+        else:
+            pytest.fail("Exception expected")
+
+    def test_fail_pwd_and_hash(self, api_client_int,api_client_mgmt, clean_db):
+        new_user = {"email":"foobar@tenant.com", "password": "secret1234", "password_hash": "secret1234"}
         try:
             api_client_int.create_user_for_tenant('foobar', new_user)
         except bravado.exception.HTTPError as e:
