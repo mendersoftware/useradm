@@ -172,17 +172,21 @@ func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 }
 
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User, propagate bool) error {
-	var tenantErr error
-
-	if u.ID == "" {
-		u.ID = uuid.NewV4().String()
-	}
-
 	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate password hash")
 	}
 	u.Password = string(hash)
+
+	return ua.doCreateUser(ctx, u, true)
+}
+
+func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bool) error {
+	var tenantErr error
+
+	if u.ID == "" {
+		u.ID = uuid.NewV4().String()
+	}
 
 	id := identity.FromContext(ctx)
 	if ua.verifyTenant && propagate {
