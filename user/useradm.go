@@ -124,6 +124,7 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 
 	//get user
 	user, err := u.db.GetUserByEmail(ctx, email)
+
 	if user == nil && err == nil {
 		return nil, ErrUnauthorized
 	}
@@ -176,6 +177,12 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User, propagate bool
 	if u.ID == "" {
 		u.ID = uuid.NewV4().String()
 	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate password hash")
+	}
+	u.Password = string(hash)
 
 	id := identity.FromContext(ctx)
 	if ua.verifyTenant && propagate {
