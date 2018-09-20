@@ -37,13 +37,13 @@ func (_m *App) CreateTenant(ctx context.Context, tenant model.NewTenant) error {
 	return r0
 }
 
-// CreateUser provides a mock function with given fields: ctx, u, propagate
-func (_m *App) CreateUser(ctx context.Context, u *model.User, propagate bool) error {
-	ret := _m.Called(ctx, u, propagate)
+// CreateUser provides a mock function with given fields: ctx, u
+func (_m *App) CreateUser(ctx context.Context, u *model.User) error {
+	ret := _m.Called(ctx, u)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *model.User, bool) error); ok {
-		r0 = rf(ctx, u, propagate)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.User) error); ok {
+		r0 = rf(ctx, u)
 	} else {
 		r0 = ret.Error(0)
 	}
