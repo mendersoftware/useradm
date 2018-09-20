@@ -413,10 +413,10 @@ func TestCreateUserForTenant(t *testing.T) {
 
 			//make mock useradm
 			uadm := &museradm.App{}
-			uadm.On("CreateUser", mock.MatchedBy(func(c context.Context) bool {
+			uadm.On("CreateUserInternal", mock.MatchedBy(func(c context.Context) bool {
 				return identity.FromContext(c).Tenant == "1"
 			}),
-				mock.AnythingOfType("*model.User"), tc.propagate).
+				mock.AnythingOfType("*model.UserInternal")).
 				Return(tc.createUserErr)
 
 			api := makeMockApiHandler(t, uadm, nil)

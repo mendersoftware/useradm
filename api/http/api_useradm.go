@@ -168,7 +168,7 @@ func (u *UserAdmApiHandlers) CreateTenantUserHandler(w rest.ResponseWriter, r *r
 		return
 	}
 	ctx = getTenantContext(ctx, tenantId)
-	err = u.userAdm.CreateUser(ctx, &user.User, user.ShouldPropagate())
+	err = u.userAdm.CreateUserInternal(ctx, user)
 	if err != nil {
 		if err == store.ErrDuplicateEmail {
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
@@ -197,7 +197,7 @@ func (u *UserAdmApiHandlers) AddUserHandler(w rest.ResponseWriter, r *rest.Reque
 		return
 	}
 
-	err = u.userAdm.CreateUser(ctx, user, true)
+	err = u.userAdm.CreateUser(ctx, user)
 	if err != nil {
 		if err == store.ErrDuplicateEmail {
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
