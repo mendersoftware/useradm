@@ -47,6 +47,7 @@ type App interface {
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
 	CreateUser(ctx context.Context, u *model.User, propagate bool) error
+	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
 	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
 	Verify(ctx context.Context, token *jwt.Token) error
 	GetUsers(ctx context.Context) ([]model.User, error)
@@ -179,6 +180,20 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User, propagate bool
 	u.Password = string(hash)
 
 	return ua.doCreateUser(ctx, u, true)
+}
+
+func (ua *UserAdm) CreateUserInternal(ctx context.Context, u *model.UserInternal) error {
+	if u.PasswordHash != "" {
+		u.Password = u.PasswordHash
+	} else {
+		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return errors.Wrap(err, "failed to generate password hash")
+		}
+		u.Password = string(hash)
+	}
+
+	return ua.doCreateUser(ctx, &u.User, u.ShouldPropagate())
 }
 
 func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bool) error {

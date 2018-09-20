@@ -51,6 +51,20 @@ func (_m *App) CreateUser(ctx context.Context, u *model.User, propagate bool) er
 	return r0
 }
 
+// CreateUserInternal provides a mock function with given fields: ctx, u
+func (_m *App) CreateUserInternal(ctx context.Context, u *model.UserInternal) error {
+	ret := _m.Called(ctx, u)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *model.UserInternal) error); ok {
+		r0 = rf(ctx, u)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteTokens provides a mock function with given fields: ctx, tenantId, userId
 func (_m *App) DeleteTokens(ctx context.Context, tenantId string, userId string) error {
 	ret := _m.Called(ctx, tenantId, userId)
