@@ -110,7 +110,6 @@ func TestMongoCreateUser(t *testing.T) {
 		err = session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(exisitingUsers...)
 		assert.NoError(t, err)
 
-		pass := tc.inUser.Password
 		err = store.CreateUser(ctx, &tc.inUser)
 
 		if tc.outErr == "" {
@@ -118,9 +117,7 @@ func TestMongoCreateUser(t *testing.T) {
 			var user model.User
 			err := session.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).FindId("1234").One(&user)
 			assert.NoError(t, err)
-			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(pass))
-
-			assert.NoError(t, err)
+			assert.Equal(t, tc.inUser.Password, user.Password)
 
 		} else {
 			assert.EqualError(t, err, tc.outErr)
