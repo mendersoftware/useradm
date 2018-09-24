@@ -271,7 +271,7 @@ func TestCreateUser(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("CreateUser", mtesting.ContextMatcher(),
-				mock.AnythingOfType("*model.User"), true).
+				mock.AnythingOfType("*model.User")).
 				Return(tc.createUserErr)
 
 			api := makeMockApiHandler(t, uadm, nil)
@@ -310,6 +310,57 @@ func TestCreateUserForTenant(t *testing.T) {
 				http.StatusCreated,
 				nil,
 				nil,
+			),
+			propagate: true,
+		},
+		"ok, with password hash": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":         "foo@foo.com",
+					"password_hash": "foobarbar",
+					"propagate":     false,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusCreated,
+				nil,
+				nil,
+			),
+			propagate: false,
+		},
+		"error, no pass or hash": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":     "foo@foo.com",
+					"propagate": true,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("password *or* password_hash must be provided"),
+			),
+			propagate: true,
+		},
+		"error, both pass and hash provided": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/1/users",
+				map[string]interface{}{
+					"email":         "foo@foo.com",
+					"password":      "foobarbar",
+					"password_hash": "foobarbar",
+					"propagate":     true,
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("password *or* password_hash must be provided"),
 			),
 			propagate: true,
 		},
@@ -356,7 +407,7 @@ func TestCreateUserForTenant(t *testing.T) {
 			),
 
 			checker: mt.NewJSONResponse(
-				http.StatusUnprocessableEntity,
+				http.StatusBadRequest,
 				nil,
 				restError(model.ErrPasswordTooShort.Error()),
 			),
@@ -413,10 +464,10 @@ func TestCreateUserForTenant(t *testing.T) {
 
 			//make mock useradm
 			uadm := &museradm.App{}
-			uadm.On("CreateUser", mock.MatchedBy(func(c context.Context) bool {
+			uadm.On("CreateUserInternal", mock.MatchedBy(func(c context.Context) bool {
 				return identity.FromContext(c).Tenant == "1"
 			}),
-				mock.AnythingOfType("*model.User"), tc.propagate).
+				mock.AnythingOfType("*model.UserInternal")).
 				Return(tc.createUserErr)
 
 			api := makeMockApiHandler(t, uadm, nil)

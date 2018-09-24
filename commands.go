@@ -92,7 +92,7 @@ func commandCreateUser(c config.Reader, username, password, userId, tenantId str
 	}
 
 	ctx := getTenantContext(tenantId)
-	if err := ua.CreateUser(ctx, &u, true); err != nil {
+	if err := ua.CreateUser(ctx, &u); err != nil {
 		return errors.Wrap(err, "creating user failed")
 	}
 

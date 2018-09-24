@@ -48,6 +48,47 @@ type User struct {
 	UpdatedTs *time.Time `json:"updated_ts,omitempty" bson:"updated_ts,omitempty"`
 }
 
+type UserInternal struct {
+	User
+	PasswordHash string `json:"password_hash,omitempty" bson:"-"`
+	Propagate    *bool  `json:"propagate,omitempty" bson:"-"`
+}
+
+func (u *UserInternal) ValidateNew() error {
+	if u.Email == "" {
+		return errors.New("email can't be empty")
+	}
+
+	if _, err := govalidator.ValidateStruct(u); err != nil {
+		return err
+	}
+
+	if err := checkEmail(u.Email); err != nil {
+		return err
+	}
+
+	if u.Password == "" && u.PasswordHash == "" ||
+		u.Password != "" && u.PasswordHash != "" {
+		return errors.New("password *or* password_hash must be provided")
+	}
+
+	if u.Password != "" {
+		if err := checkPwd(u.Password); err != nil {
+			return err
+		}
+	}
+
+	if u.PasswordHash != "" && u.ShouldPropagate() {
+		return errors.New("password_hash is not supported with 'propagate'; use 'password' instead")
+	}
+
+	return nil
+}
+
+func (u UserInternal) ShouldPropagate() bool {
+	return u.Propagate == nil || *u.Propagate
+}
+
 type UserUpdate struct {
 
 	// user email address
