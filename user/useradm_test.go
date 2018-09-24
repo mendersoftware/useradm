@@ -312,7 +312,7 @@ func TestUserAdmLogin(t *testing.T) {
 
 }
 
-func TestUserAdmCreateUser(t *testing.T) {
+func TestUserAdmDoCreateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUser model.User
 
@@ -545,7 +545,7 @@ func TestUserAdmCreateUser(t *testing.T) {
 			useradm = useradm.WithTenantVerification(cTenant)
 		}
 
-		err := useradm.CreateUser(ctx, &tc.inUser, tc.propagate)
+		err := useradm.doCreateUser(ctx, &tc.inUser, tc.propagate)
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())

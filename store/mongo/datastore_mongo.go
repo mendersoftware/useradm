@@ -164,17 +164,10 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 
 	now := time.Now().UTC()
 
-	//compute/set password hash
-	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate password hash")
-	}
-	u.Password = string(hash)
-
 	u.CreatedTs = &now
 	u.UpdatedTs = &now
 
-	err = s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(u)
+	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(u)
 	if err != nil {
 		if mgo.IsDup(err) {
 			return store.ErrDuplicateEmail
