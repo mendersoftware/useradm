@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2018 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -134,6 +134,8 @@ func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, 
 	})
 
 	l.Infof("setting up %s middleware", mwtype)
+
+	api.Use(commonLoggingAccessStack...)
 
 	mwstack, ok := middlewareMap[mwtype]
 	if !ok {
