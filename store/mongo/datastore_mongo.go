@@ -21,14 +21,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
