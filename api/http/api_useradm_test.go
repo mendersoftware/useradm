@@ -250,7 +250,7 @@ func TestCreateUser(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError("email: ąę@org.com does not validate as ascii"),
+				restError("email: ąę@org.com does not validate as ascii;"),
 			),
 		},
 		"no body": {
@@ -1024,7 +1024,7 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError("tenant_id: non zero value required"),
+				restError("tenant_id: non zero value required;"),
 			),
 		},
 		"error: empty json": {
