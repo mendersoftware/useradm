@@ -1,11 +1,11 @@
-FROM golang:1.11 as builder
+FROM golang:1.11-alpine3.9 as builder
 RUN mkdir -p /go/src/github.com/mendersoftware/useradm
 WORKDIR /go/src/github.com/mendersoftware/useradm
 ADD ./ .
 RUN CGO_ENABLED=0 GOARCH=amd64 go build -o useradm .
 
 
-FROM alpine:3.4
+FROM alpine:3.9
 EXPOSE 8080
 RUN mkdir -p /etc/useradm/rsa
 ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
