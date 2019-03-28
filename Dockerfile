@@ -1,9 +1,7 @@
 FROM golang:1.11 as builder
-ENV GO111MODULE=on
 RUN mkdir -p /go/src/github.com/mendersoftware/useradm
 WORKDIR /go/src/github.com/mendersoftware/useradm
 ADD ./ .
-RUN go mod download
 RUN CGO_ENABLED=0 GOARCH=amd64 go build -o useradm .
 
 
