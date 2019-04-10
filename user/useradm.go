@@ -62,6 +62,7 @@ type App interface {
 	DeleteTokens(ctx context.Context, tenantId, userId string) error
 
 	CreateTenant(ctx context.Context, tenant model.NewTenant) error
+	GetDemoUserName() string
 }
 
 type Config struct {
@@ -69,6 +70,8 @@ type Config struct {
 	Issuer string
 	// token expiration time
 	ExpirationTime int64
+ DemoUserName string
+ DemoUserPassword string
 }
 
 type ApiClientGetter func() apiclient.HttpRunner
@@ -361,6 +364,10 @@ func (ua *UserAdm) GetUser(ctx context.Context, id string) (*model.User, error) 
 	}
 
 	return user, nil
+}
+
+func (ua *UserAdm) GetDemoUserName() string {
+ return ua.config.DemoUserName
 }
 
 func (ua *UserAdm) DeleteUser(ctx context.Context, id string) error {

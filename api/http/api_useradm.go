@@ -248,6 +248,22 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 
 	id := r.PathParam("id")
 
+	user, err := u.db.GetUserById(ctx, id)
+	if user == nil {
+		l.Infof("failed to get user for id %s.", id)
+		return
+	}
+	if err != nil {
+		l.Infof("error getting user for id %s.", id)
+		return
+	}
+
+	if user.Email == u.userAdm.GetDemoUserName() {
+		w.WriteHeader(http.StatusNoContent)
+		l.Infof("refusing to update demo user %s.", user.Email)
+		return
+	}
+
 	userUpdate, err := parseUserUpdate(r)
 	if err != nil {
 		if err == model.ErrPasswordTooShort {
@@ -278,7 +294,25 @@ func (u *UserAdmApiHandlers) DeleteUserHandler(w rest.ResponseWriter, r *rest.Re
 
 	l := log.FromContext(ctx)
 
-	err := u.userAdm.DeleteUser(ctx, r.PathParam("id"))
+	id := r.PathParam("id")
+
+	user, err := u.db.GetUserById(ctx, id)
+	if user == nil {
+		l.Infof("failed to get user for id %s.", id)
+		return
+	}
+	if err != nil {
+		l.Infof("error getting user for id %s.", id)
+		return
+	}
+
+	if user.Email == u.userAdm.GetDemoUserName() {
+		w.WriteHeader(http.StatusNoContent)
+		l.Infof("refusing to delete demo user %s.", user.Email)
+		return
+	}
+
+	err = u.userAdm.DeleteUser(ctx, id)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return

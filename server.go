@@ -64,8 +64,10 @@ func RunServer(c config.Reader) error {
 
 	ua := useradm.NewUserAdm(jwth, db, mongo.NewTenantStoreMongo(db),
 		useradm.Config{
-			Issuer:         c.GetString(SettingJWTIssuer),
-			ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+			Issuer:             c.GetString(SettingJWTIssuer),
+			ExpirationTime:     int64(c.GetInt(SettingJWTExpirationTimeout)),
+   DemoUserName:       c.GetString(SettingDemoUserName),
+   DemoUserPassword:   c.GetString(SettingDemoUserPass),
 		})
 
 	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {

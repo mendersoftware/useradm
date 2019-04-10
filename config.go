@@ -33,6 +33,11 @@ const (
 	SettingJWTExpirationTimeout        = "jwt_exp_timeout"
 	SettingJWTExpirationTimeoutDefault = "604800" //one week
 
+	SettingDemoUserName = "demo_user_name"
+	SettingDemoUserNameDefault = "demo@mender.io"
+	SettingDemoUserPass = "demo_user_password"
+	SettingDemoUserPassDefault = "demo"
+
 	SettingDb        = "mongo"
 	SettingDbDefault = "mongo-useradm"
 
@@ -56,6 +61,8 @@ var (
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
+		{Key: SettingDemoUserName, Value: SettingDemoUserNameDefault},
+		{Key: SettingDemoUserPass, Value: SettingDemoUserPassDefault},
 		{Key: SettingDb, Value: SettingDbDefault},
 		{Key: SettingTenantAdmAddr, Value: SettingTenantAdmAddrDefault},
 		{Key: SettingDbSSL, Value: SettingDbSSLDefault},
