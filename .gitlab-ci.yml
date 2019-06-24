@@ -65,7 +65,7 @@ test:prepare_acceptance:
       - /go/src/github.com/mendersoftware/useradm/useradm-test
     policy: pull
   artifacts:
-    expire_in: 30min
+    expire_in: 2w
     paths:
       - tests_image.tar
       - acceptance_testing_image.tar
@@ -89,7 +89,7 @@ test:acceptance_tests:
     - TESTS_DIR=$(pwd)/tests $(pwd)/tests/run-test-environment acceptance $(pwd)/integration $(pwd)/tests/docker-compose-acceptance.yml ;
     - TESTS_DIR=$(pwd)/tests $(pwd)/tests/run-test-environment acceptance $(pwd)/integration $(pwd)/tests/docker-compose-acceptance-multitenant.yml ;
   artifacts:
-    expire_in: 30min
+    expire_in: 2w
     paths:
       - tests/coverage-acceptance.txt
   tags:
@@ -131,7 +131,7 @@ test:unit:
     - mkdir -p tests/unit-coverage && find . -name 'coverage.txt' -exec cp --parents {} ./tests/unit-coverage \;
     - tar -cvf $CI_PROJECT_DIR/unit-coverage.tar tests/unit-coverage
   artifacts:
-    expire_in: 30min
+    expire_in: 2w
     paths:
       - unit-coverage.tar
 
@@ -158,7 +158,7 @@ build:
     - docker build -t $DOCKER_REPOSITORY:pr .
     - docker save $DOCKER_REPOSITORY:pr > image.tar
   artifacts:
-    expire_in: 1h
+    expire_in: 2w
     paths:
       - image.tar
   tags:
