@@ -19,39 +19,24 @@ services:
   - mongo
 
 stages:
-  - test_prep_build
   - test_prep
   - test
   - build
   - publish
 
-before_script:
-  - mkdir -p /go/src/github.com/mendersoftware /go/src/_/builds
-  - cp -r $CI_PROJECT_DIR /go/src/github.com/mendersoftware/useradm
-  - ln -s /go/src/github.com/mendersoftware /go/src/_/builds/mendersoftware
-  - cd /go/src/github.com/mendersoftware/useradm
-  # Install code coverage tooling
-  - go get -u github.com/axw/gocov/gocov
-  - go get -u golang.org/x/tools/cmd/cover
-  # Install cyclomatic dependency analysis tool
-  - go get -u github.com/fzipp/gocyclo
-
-test:build_acceptance:
-  stage: test_prep_build
-  script:
-    - CGO_ENABLED=0 go test -c -o /go/src/github.com/mendersoftware/useradm/useradm-test -coverpkg $(go list ./... | grep -v vendor | grep -v mock | grep -v test | tr  '\n' ,);
-    - cp /go/src/github.com/mendersoftware/useradm/useradm-test $CI_PROJECT_DIR
-  artifacts:
-    untracked: true
-    paths:
-      - useradm-test
+.template_prep_tests: &test_tool_setup
+  before_script:
+    - mkdir -p /go/src/github.com/mendersoftware /go/src/_/builds
+    - cp -r $CI_PROJECT_DIR /go/src/github.com/mendersoftware/useradm
+    - ln -s /go/src/github.com/mendersoftware /go/src/_/builds/mendersoftware
+    - cd /go/src/github.com/mendersoftware/useradm
+    # Install code coverage tooling & cyclomatic dependency analysis tool
+    - go get -u github.com/axw/gocov/gocov golang.org/x/tools/cmd/cover github.com/fzipp/gocyclo
 
 test:prepare_acceptance:
   image: docker
   before_script: []
   stage: test_prep
-  dependencies:
-    - test:build_acceptance
   script:
     - docker build -f Dockerfile.acceptance-testing -t $DOCKER_REPOSITORY:prtest .;
     - docker save $DOCKER_REPOSITORY:prtest > tests_image.tar
@@ -59,11 +44,6 @@ test:prepare_acceptance:
     - docker run --rm --entrypoint "/bin/sh" -v $(pwd):/binary $DOCKER_REPOSITORY:pr -c "cp /usr/bin/useradm /binary"
     - docker build -t testing -f tests/Dockerfile tests
     - docker save testing > acceptance_testing_image.tar
-  cache:
-    key: "$CI_COMMIT_REF_SLUG"
-    paths:
-      - /go/src/github.com/mendersoftware/useradm/useradm-test
-    policy: pull
   artifacts:
     expire_in: 2w
     paths:
@@ -78,7 +58,6 @@ test:acceptance_tests:
     - docker:dind
   stage: test
   dependencies:
-    - test:build_acceptance
     - test:prepare_acceptance
   script:
     - apk add git bash
@@ -97,6 +76,7 @@ test:acceptance_tests:
 
 test:static:
   stage: test
+  <<: *test_tool_setup
   dependencies: []
   script:
     - curl -sL https://deb.nodesource.com/setup_11.x | bash -
@@ -121,6 +101,7 @@ test:static:
 
 test:unit:
   stage: test
+  <<: *test_tool_setup
   dependencies: []
   script:
     - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
@@ -137,7 +118,6 @@ test:unit:
 
 build:
   image: docker
-  before_script: []
   stage: build
   script:
     - docker build -t $DOCKER_REPOSITORY:pr .
@@ -150,14 +130,12 @@ build:
     - docker
 
 publish:docs:
-  before_script: []
   stage: publish
   script:
     - echo "publishing docs"
 
 publish:tests:
   stage: publish
-  before_script: []  
   dependencies:
     - test:acceptance_tests
     - test:unit
@@ -168,7 +146,6 @@ publish:tests:
 
 publish:build:
   image: docker
-  before_script: []
   stage: publish
   dependencies:
     - build
@@ -186,7 +163,6 @@ publish:build:
 
 publish:build:master:
   image: docker
-  before_script: []
   stage: publish
   dependencies:
     - build
