@@ -146,6 +146,10 @@ func ExtractIdentityFromHeaders(headers http.Header) (Identity, error) {
 		return Identity{}, errors.Errorf("malformed authorization data")
 	}
 
+	if auth[0] == "Basic" {
+		return Identity{}, nil
+	}
+
 	if auth[0] != "Bearer" {
 		return Identity{}, errors.Errorf("unknown authorization method %v", auth[0])
 	}
