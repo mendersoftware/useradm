@@ -42,7 +42,7 @@ class TestInternalApiTenantCreate:
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
 
-class TestInternalApiUserForTenantCreateMultitenant:
+class TestInternalApiUserForTenantCreateEnterprise:
     def test_ok(self, api_client_int,api_client_mgmt, clean_db, ):
         user = {"email":"stefan@example.com", "password":"secret12345"}
 

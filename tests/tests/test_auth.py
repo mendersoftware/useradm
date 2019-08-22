@@ -48,7 +48,7 @@ class TestAuthLogin:
         assert 'mender.user' in claims and claims['mender.user'] == True
 
 
-class TestAuthLoginMultitenant:
+class TestAuthLoginEnterprise:
     def test_ok(self, api_client_mgmt, init_users_mt):
         password = "correcthorsebatterystaple"
 

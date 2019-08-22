@@ -8,8 +8,8 @@ services:
             - "${TESTS_DIR}:/testing"
         depends_on:
             - mender-useradm
-        # run multi tenant tests only
-        command: -k Multitenant
+        # run enterprise tests only
+        command: -k Enterprise
         environment:
             FAKE_TENANTADM_ADDR: "0.0.0.0:9997"
     mender-useradm:

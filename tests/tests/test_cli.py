@@ -101,7 +101,7 @@ class TestCli:
                                    Migration.DB_VERSION)
 
 
-class TestCliMultitenant:
+class TestCliEnterprise:
     def test_create_user(self, api_client_mgmt, cli):
         cli.create_user('foo-tenant1id@bar.com', '1234youseeme',
                         tenant_id='tenant1id')

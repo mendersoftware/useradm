@@ -62,7 +62,7 @@ def user_tokens_mt_f(init_users_mt_f, api_client_mgmt):
 
     yield tokens
 
-class TestDeleteTokensMultitenant:
+class TestDeleteTokensEnterprise:
 
     def test_delete_by_user_ok(self, api_client_int, user_tokens_mt_f):
         tokens = user_tokens_mt_f
