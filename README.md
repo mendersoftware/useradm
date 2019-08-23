@@ -3,6 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/mendersoftware/useradm)](https://goreportcard.com/report/github.com/mendersoftware/useradm)
 [![Docker pulls](https://img.shields.io/docker/pulls/mendersoftware/useradm.svg?maxAge=3600)](https://hub.docker.com/r/mendersoftware/useradm/)
 
+
 Mender: User Administration Service
 ==============================================
 
