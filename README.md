@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/mendersoftware/useradm.svg?branch=master)](https://travis-ci.org/mendersoftware/useradm)
+[![Build Status](https://gitlab.com/Northern.tech/Mender/useradm/badges/master/pipeline.svg)](https://gitlab.com/Northern.tech/Mender/useradm/pipelines)
 [![codecov](https://codecov.io/gh/mendersoftware/useradm/branch/master/graph/badge.svg)](https://codecov.io/gh/mendersoftware/useradm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mendersoftware/useradm)](https://goreportcard.com/report/github.com/mendersoftware/useradm)
 [![Docker pulls](https://img.shields.io/docker/pulls/mendersoftware/useradm.svg?maxAge=3600)](https://hub.docker.com/r/mendersoftware/useradm/)
