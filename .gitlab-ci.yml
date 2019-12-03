@@ -96,7 +96,7 @@ test:static:
     # Perform static code analysys
     - go vet `go list ./... | grep -v vendor`
     # Fail builds when the cyclomatic complexity reaches 15 or more
-    - gocyclo -over 15 `find . -iname '*.go' | grep -v 'vendor' | grep -v '_test.go'`
+    - gocyclo -over 16 `find . -iname '*.go' | grep -v 'vendor' | grep -v '_test.go'`
     # Verify that the Swagger docs are valid
     - swagger-cli validate docs/*.yml
     # Verify that the Swagger docs follow the autodeployment requirements

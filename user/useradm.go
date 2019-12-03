@@ -145,7 +145,10 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	}
 
 	//generate and save token
-	t := u.generateToken(user.ID, scope.All, ident.Tenant)
+	t, err := u.generateToken(user.ID, scope.All, ident.Tenant)
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to generate token")
+	}
 
 	err = u.db.SaveToken(ctx, t)
 	if err != nil {
@@ -155,13 +158,16 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
-	id := uuid.NewV4().String()
+func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
+	id, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
 
 	return &jwt.Token{
-		Id: id,
+		Id: id.String(),
 		Claims: jwt.Claims{
-			ID:        id,
+			ID:        id.String(),
 			Issuer:    u.config.Issuer,
 			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
 			Subject:   subject,
@@ -169,7 +175,7 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) *jwt.Token {
 			Tenant:    tenant,
 			User:      true,
 		},
-	}
+	}, nil
 }
 
 func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
@@ -204,7 +210,12 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 	var tenantErr error
 
 	if u.ID == "" {
-		u.ID = uuid.NewV4().String()
+		id, err := uuid.NewV4()
+		if err != nil {
+			return errors.New("failed to generate user id")
+		}
+
+		u.ID = id.String()
 	}
 
 	id := identity.FromContext(ctx)

@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2019 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,17 +17,18 @@ package mongo
 import (
 	"context"
 	"crypto/tls"
-	"net"
-	"sync"
+	"strings"
 	"time"
 
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	mopts "go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mendersoftware/useradm/jwt"
@@ -46,15 +47,6 @@ const (
 	DbUserPass  = "password"
 )
 
-var (
-	// masterSession is a master session to be copied on demand
-	// This is the preferred pattern with mgo (for common conn pool management, etc.)
-	masterSession *mgo.Session
-
-	// once ensures mgoMaster is created only once
-	once sync.Once
-)
-
 type DataStoreMongoConfig struct {
 	// MGO connection string
 	ConnectionString string
@@ -69,7 +61,7 @@ type DataStoreMongoConfig struct {
 }
 
 type DataStoreMongo struct {
-	session     *mgo.Session
+	client      *mongo.Client
 	automigrate bool
 	multitenant bool
 }
@@ -82,71 +74,60 @@ func GetDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
 	return d, nil
 }
 
-func NewDataStoreMongoWithSession(session *mgo.Session) (*DataStoreMongo, error) {
+func NewDataStoreMongoWithClient(client *mongo.Client) (*DataStoreMongo, error) {
 
 	db := &DataStoreMongo{
-		session: session,
+		client: client,
 	}
 
 	return db, nil
 }
 
-// NewDataStoreMongo expects mongodb connection url.
 func NewDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
-	//init master session
 	var err error
-	once.Do(func() {
+	var mongoURL string
 
-		var dialInfo *mgo.DialInfo
-		dialInfo, err = mgo.ParseURL(config.ConnectionString)
-		if err != nil {
-			return
-		}
+	clientOptions := mopts.Client()
+	if !strings.Contains(config.ConnectionString, "://") {
+		mongoURL = "mongodb://" + config.ConnectionString
+	} else {
+		mongoURL = config.ConnectionString
 
-		// Set 10s timeout - same as set by Dial
-		dialInfo.Timeout = 10 * time.Second
+	}
+	clientOptions.ApplyURI(mongoURL)
 
-		if config.Username != "" {
-			dialInfo.Username = config.Username
+	if config.Username != "" {
+		credentials := mopts.Credential{
+			Username: config.Username,
 		}
 		if config.Password != "" {
-			dialInfo.Password = config.Password
+			credentials.Password = config.Password
+			credentials.PasswordSet = true
 		}
-
-		if config.SSL {
-			dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-
-				// Setup TLS
-				tlsConfig := &tls.Config{}
-				tlsConfig.InsecureSkipVerify = config.SSLSkipVerify
-
-				conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
-				return conn, err
-			}
-		}
-
-		masterSession, err = mgo.DialWithInfo(dialInfo)
-		if err != nil {
-			return
-		}
-
-		// Validate connection
-		if err = masterSession.Ping(); err != nil {
-			return
-		}
-
-		// force write ack with immediate journal file fsync
-		masterSession.SetSafe(&mgo.Safe{
-			W: 1,
-			J: true,
-		})
-	})
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open mgo session")
+		clientOptions.SetAuth(credentials)
 	}
 
-	db, err := NewDataStoreMongoWithSession(masterSession)
+	if config.SSL {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: config.SSLSkipVerify,
+		}
+		clientOptions.SetTLSConfig(tlsConfig)
+	}
+
+	wc := writeconcern.New()
+	wc.WithOptions(writeconcern.W(1), writeconcern.J(true))
+	clientOptions.SetWriteConcern(wc)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, err := mongo.Connect(ctx, clientOptions)
+
+	// Validate connection
+	if err = c.Ping(ctx, nil); err != nil {
+		return nil, err
+	}
+
+	db, err := NewDataStoreMongoWithClient(c)
 	if err != nil {
 		return nil, err
 	}
@@ -155,10 +136,7 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
 }
 
 func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
-	s := db.session.Copy()
-	defer s.Close()
-
-	if err := db.EnsureIndexes(ctx, s); err != nil {
+	if err := db.EnsureIndexes(ctx); err != nil {
 		return err
 	}
 
@@ -167,9 +145,13 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	u.CreatedTs = &now
 	u.UpdatedTs = &now
 
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Insert(u)
+	_, err := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl).
+		InsertOne(ctx, u)
+
 	if err != nil {
-		if mgo.IsDup(err) {
+		if strings.Contains(err.Error(), "duplicate key error") {
 			return store.ErrDuplicateEmail
 		}
 
@@ -180,9 +162,6 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 }
 
 func (db *DataStoreMongo) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
-	s := db.session.Copy()
-	defer s.Close()
-
 	//compute/set password hash
 	if u.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -195,32 +174,39 @@ func (db *DataStoreMongo) UpdateUser(ctx context.Context, id string, u *model.Us
 	now := time.Now().UTC()
 	u.UpdatedTs = &now
 
-	c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl)
-	err := c.UpdateId(id, bson.M{"$set": u})
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return store.ErrUserNotFound
-		}
-		if mgo.IsDup(err) {
-			return store.ErrDuplicateEmail
-		}
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl)
 
-		return errors.Wrap(err, "failed to update user")
+	f := bson.M{"_id": id}
+	up := bson.M{"$set": u}
+
+	res, err := c.UpdateOne(ctx, f, up)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key error") {
+			return store.ErrDuplicateEmail
+		} else {
+			return errors.Wrap(err, "failed to update user")
+		}
+	}
+
+	if res.MatchedCount == 0 {
+		return store.ErrUserNotFound
 	}
 
 	return nil
 }
 
 func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
-	s := db.session.Copy()
-	defer s.Close()
-
 	var user model.User
 
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).Find(bson.M{DbUserEmail: email}).One(&user)
+	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl).
+		FindOne(ctx, bson.M{DbUserEmail: email}).
+		Decode(&user)
 
 	if err != nil {
-		if err == mgo.ErrNotFound {
+		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		} else {
 			return nil, errors.Wrap(err, "failed to fetch user")
@@ -231,18 +217,18 @@ func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*mo
 }
 
 func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.User, error) {
-	s := db.session.Copy()
-	defer s.Close()
-
 	var user model.User
 
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).
-		FindId(id).
-		Select(bson.M{DbUserPass: 0}).
-		One(&user)
+	o := mopts.FindOne()
+	o.SetProjection(bson.M{DbUserPass: 0})
+
+	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl).
+		FindOne(ctx, bson.M{"_id": id}, o).
+		Decode(&user)
 
 	if err != nil {
-		if err == mgo.ErrNotFound {
+		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		} else {
 			return nil, errors.Wrap(err, "failed to fetch user")
@@ -253,17 +239,15 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 }
 
 func (db *DataStoreMongo) GetTokenById(ctx context.Context, id string) (*jwt.Token, error) {
-	s := db.session.Copy()
-	defer s.Close()
-
 	var token jwt.Token
 
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl).
-		FindId(id).
-		One(&token)
+	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl).
+		FindOne(ctx, bson.M{"_id": id}).
+		Decode(&token)
 
 	if err != nil {
-		if err == mgo.ErrNotFound {
+		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		} else {
 			return nil, errors.Wrap(err, "failed to fetch token")
@@ -274,44 +258,45 @@ func (db *DataStoreMongo) GetTokenById(ctx context.Context, id string) (*jwt.Tok
 }
 
 func (db *DataStoreMongo) GetUsers(ctx context.Context) ([]model.User, error) {
-	s := db.session.Copy()
-	defer s.Close()
+	o := mopts.Find()
+	o.SetProjection(bson.M{DbUserPass: 0})
 
-	users := []model.User{}
-
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).
-		Find(nil).
-		Select(bson.M{DbUserPass: 0}).
-		All(&users)
+	c, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl).
+		Find(ctx, bson.M{}, o)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch users")
 	}
 
-	return users, nil
-}
-
-func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
-	s := db.session.Copy()
-	defer s.Close()
-
-	err := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbUsersColl).RemoveId(id)
-
+	users := []model.User{}
+	err = c.All(ctx, &users)
 	switch err {
-	case nil, mgo.ErrNotFound:
-		return nil
+	case nil, mongo.ErrNoDocuments:
+		return users, nil
 	default:
-		return err
+		return nil, errors.Wrap(err, "failed to fetch users")
 	}
 }
 
+func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
+	_, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl).
+		DeleteOne(ctx, bson.M{"_id": id})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error {
-	s := db.session.Copy()
-	defer s.Close()
+	_, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl).
+		InsertOne(ctx, token)
 
-	c := s.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl)
-
-	if err := c.Insert(token); err != nil {
+	if err != nil {
 		return errors.Wrap(err, "failed to store token")
 	}
 
@@ -329,7 +314,7 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 	})
 
 	m := migrate.DummyMigrator{
-		Session:     db.session,
+		Client:      db.client,
 		Db:          mstore.DbFromContext(tenantCtx, DbName),
 		Automigrate: db.automigrate,
 	}
@@ -349,7 +334,7 @@ func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migration
 	if db.multitenant {
 		l.Infof("running migrations in multitenant mode")
 
-		tdbs, err := migrate.GetTenantDbs(db.session, mstore.IsTenantDb(DbName))
+		tdbs, err := migrate.GetTenantDbs(ctx, db.client, mstore.IsTenantDb(DbName))
 		if err != nil {
 			return errors.Wrap(err, "failed go retrieve tenant DBs")
 		}
@@ -379,24 +364,31 @@ func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migration
 	return nil
 }
 
-func (db *DataStoreMongo) EnsureIndexes(ctx context.Context, s *mgo.Session) error {
+func (db *DataStoreMongo) EnsureIndexes(ctx context.Context) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl)
 
-	uniqueEmailIndex := mgo.Index{
-		Key:        []string{"email"},
-		Unique:     true,
-		Name:       "uniqueEmail",
-		Background: false,
+	idxUsers := c.Indexes()
+
+	indexOptions := mopts.Index()
+	indexOptions.SetUnique(true)
+	indexOptions.SetBackground(false)
+
+	uniqueEmailIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: DbUserEmail, Value: 1}},
+		Options: indexOptions,
 	}
 
-	return s.DB(mstore.DbFromContext(ctx, DbName)).
-		C(DbUsersColl).EnsureIndex(uniqueEmailIndex)
+	_, err := idxUsers.CreateOne(ctx, uniqueEmailIndex)
+
+	return err
 }
 
 // WithMultitenant enables multitenant support and returns a new datastore based
 // on current one
 func (db *DataStoreMongo) WithMultitenant() *DataStoreMongo {
 	return &DataStoreMongo{
-		session:     db.session,
+		client:      db.client,
 		automigrate: db.automigrate,
 		multitenant: true,
 	}
@@ -406,7 +398,7 @@ func (db *DataStoreMongo) WithMultitenant() *DataStoreMongo {
 // on current one
 func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
 	return &DataStoreMongo{
-		session:     db.session,
+		client:      db.client,
 		automigrate: true,
 		multitenant: db.multitenant,
 	}
@@ -414,13 +406,16 @@ func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
 
 // deletes all tenant's tokens (identity in context)
 func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
-	s := db.session.Copy()
-	defer s.Close()
+	d, err := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl).
+		DeleteMany(ctx, bson.M{})
 
-	c := db.session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl)
-	ci, err := c.RemoveAll(nil)
+	if err != nil {
+		return err
+	}
 
-	if ci.Removed == 0 {
+	if d.DeletedCount == 0 {
 		return store.ErrTokenNotFound
 	}
 
@@ -429,34 +424,37 @@ func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
 
 // deletes all user's tokens
 func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId string) error {
-	s := db.session.Copy()
-	defer s.Close()
+	c := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl)
 
-	c := db.session.DB(mstore.DbFromContext(ctx, DbName)).C(DbTokensColl)
 	filter := bson.M{
 		"claims.sub": userId,
 	}
-	ci, err := c.RemoveAll(filter)
 
-	if ci.Removed == 0 {
-		return store.ErrTokenNotFound
-	}
+	ci, err := c.DeleteMany(ctx, filter)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to remove tokens")
+	}
+
+	if ci.DeletedCount == 0 {
+		return store.ErrTokenNotFound
 	}
 
 	return nil
 }
 
 func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interface{}) error {
-	sess := db.session.Copy()
-	defer sess.Close()
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbSettingsColl)
 
-	c := sess.DB(mstore.DbFromContext(ctx, DbName)).C(DbSettingsColl)
+	o := mopts.FindOneAndReplace()
+	o.SetUpsert(true)
 
-	_, err := c.Upsert(bson.M{}, s)
-	if err != nil {
+	var res interface{}
+	err := c.FindOneAndReplace(ctx, bson.M{}, s, o).Decode(&res)
+	if err != nil && err != mongo.ErrNoDocuments {
 		return errors.Wrapf(err, "failed to store settings %v", s)
 	}
 
@@ -464,21 +462,21 @@ func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interfa
 }
 
 func (db *DataStoreMongo) GetSettings(ctx context.Context) (map[string]interface{}, error) {
-	sess := db.session.Copy()
-	defer sess.Close()
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbSettingsColl)
 
-	c := sess.DB(mstore.DbFromContext(ctx, DbName)).C(DbSettingsColl)
+	o := mopts.FindOne()
+	o.SetProjection(bson.M{"_id": 0})
 
 	var settings map[string]interface{}
 
-	err := c.Find(nil).
-		Select(bson.M{"_id": 0}).
-		One(&settings)
+	err := c.FindOne(ctx, bson.M{}, o).
+		Decode(&settings)
 
 	switch err {
 	case nil:
 		return settings, nil
-	case mgo.ErrNotFound:
+	case mongo.ErrNoDocuments:
 		return map[string]interface{}{}, nil
 	default:
 		return nil, errors.Wrapf(err, "failed to get settings")
