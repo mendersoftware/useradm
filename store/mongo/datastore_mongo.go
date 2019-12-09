@@ -121,6 +121,9 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	c, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		return nil, err
+	}
 
 	// Validate connection
 	if err = c.Ping(ctx, nil); err != nil {
