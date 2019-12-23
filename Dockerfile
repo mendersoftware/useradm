@@ -11,4 +11,5 @@ RUN mkdir -p /etc/useradm/rsa
 ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
 COPY ./config.yaml /etc/useradm/
 COPY --from=builder /go/src/github.com/mendersoftware/useradm/useradm /usr/bin/
-RUN apk add --update ca-certificates && update-ca-certificates
+RUN apk add --update ca-certificates curl && update-ca-certificates
+HEALTHCHECK --interval=8s --timeout=15s --start-period=120s --retries=128 CMD curl -f -s -o /dev/null 127.0.0.1:8080/api/management/v1/useradm/settings
