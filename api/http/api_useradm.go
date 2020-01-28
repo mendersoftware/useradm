@@ -64,6 +64,7 @@ func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore) ApiHandler {
 
 func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
+		rest.Get(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
 		rest.Post(uriInternalTenantUser, i.CreateTenantUserHandler),
