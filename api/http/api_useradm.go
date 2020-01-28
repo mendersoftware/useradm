@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -64,6 +64,7 @@ func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore) ApiHandler {
 
 func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
+		rest.Get(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
 		rest.Post(uriInternalTenantUser, i.CreateTenantUserHandler),
