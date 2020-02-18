@@ -14,7 +14,7 @@ variables:
    DOCKER_DRIVER: overlay2
 
 services:
-  - docker:dind
+  - docker:19.03.5-dind
   - mongo
 
 stages:
@@ -39,7 +39,7 @@ before_script:
     - go get -u github.com/axw/gocov/gocov golang.org/x/tools/cmd/cover github.com/fzipp/gocyclo
 
 test:prepare_acceptance:
-  image: docker
+  image: docker:19.03.5-dind
   stage: test_prep
   script:
     - docker build -f Dockerfile.acceptance-testing -t $DOCKER_REPOSITORY:prtest .;
@@ -58,7 +58,7 @@ test:prepare_acceptance:
 test:acceptance_tests:
   image: tiangolo/docker-with-compose
   services:
-    - docker:dind
+    - docker:19.03.5-dind
   stage: test
   dependencies:
     - test:prepare_acceptance
@@ -160,7 +160,7 @@ publish:build:
   image: docker:git
   stage: publish
   services:
-    - docker:dind
+    - docker:19.03.5-dind
   dependencies:
     - build
   script:
