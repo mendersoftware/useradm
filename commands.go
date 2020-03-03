@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ func commandMigrate(c config.Reader, tenantId string) error {
 	if tenantId != "" {
 		l.Printf("migrating tenant %v", tenantId)
 	} else {
-		l.Printf("migrating default tenant")
+		l.Printf("migrating all the tenants")
 	}
 
 	db, err := mongo.NewDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
@@ -137,7 +137,11 @@ func commandMigrate(c config.Reader, tenantId string) error {
 
 	ctx := context.Background()
 
-	err = db.MigrateTenant(ctx, mongo.DbVersion, tenantId)
+	if tenantId != "" {
+		err = db.MigrateTenant(ctx, mongo.DbVersion, tenantId)
+	} else {
+		err = db.Migrate(ctx, mongo.DbVersion, nil)
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to run migrations")
 	}
