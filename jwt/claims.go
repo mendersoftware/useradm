@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -14,41 +14,70 @@
 package jwt
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 )
 
 type Claims struct {
-	Audience  string `json:"aud,omitempty" bson:"aud,omitempty"`
-	ExpiresAt int64  `json:"exp,omitempty" bson:"exp,omitempty"`
-	ID        string `json:"jti,omitempty" bson:"jti,omitempty"`
-	IssuedAt  int64  `json:"iat,omitempty" bson:"iat,omitempty"`
-	Issuer    string `json:"iss,omitempty" bson:"iss,omitempty"`
-	NotBefore int64  `json:"nbf,omitempty" bson:"nbf,omitempty"`
-	Subject   string `json:"sub,omitempty" bson:"sub,omitempty"`
+	// ID is the unique token UUID.
+	ID uuid.UUID `json:"jti,omitempty" bson:"_id,omitempty"`
+	// Subject holds the UUID associated with the user's account.
+	Subject uuid.UUID `json:"sub,omitempty" bson:"sub,omitempty"`
+	// ExpiresAt is the absolute time when the token expires.
+	ExpiresAt Time `json:"exp,omitempty" bson:"exp,omitempty"`
+	// IssuedAt is the absolute time the token was created.
+	IssuedAt Time `json:"iat,omitempty" bson:"iat,omitempty"`
+	// Tenant holds the tenant ID claim
+	Tenant string `json:"mender.tenant,omitempty" bson:"tenant,omitempty"`
+	// User claims that this token is for the management API.
+	User bool `json:"mender.user,omitempty" bson:"user,omitempty"`
+	// Issuer contains the configured Issuer claim (defaults to "Mender")
+	Issuer string `json:"iss,omitempty" bson:"iss,omitempty"`
+	// Scope determines the API scope of the token (defaults to "mender.*")
 	Scope     string `json:"scp,omitempty" bson:"scp,omitempty"`
-	Tenant    string `json:"mender.tenant,omitempty" bson:"tenant,omitempty"`
-	User      bool   `json:"mender.user,omitempty" bson:"user,omitempty"`
+	Audience  string `json:"aud,omitempty" bson:"aud,omitempty"`
+	NotBefore Time   `json:"nbf,omitempty" bson:"nbf,omitempty"`
+}
+
+// Time is a simple wrapper of time.Time that marshals/unmarshals JSON
+// to/from UNIX time.
+type Time struct {
+	time.Time
+}
+
+func (t Time) MarshalJSON() ([]byte, error) {
+	timeUnix := t.Unix()
+	return json.Marshal(timeUnix)
+}
+
+func (t *Time) UnmarshalJSON(b []byte) error {
+	var timeUnix int64
+	err := json.Unmarshal(b, &timeUnix)
+	if err != nil {
+		return err
+	}
+	t.Time = time.Unix(timeUnix, 0)
+	return nil
 }
 
 // Valid checks if claims are valid. Returns error if validation fails.
 // Note that for now we're only using iss, exp, sub, scp.
 // Basic checks are done here, field correctness (e.g. issuer) - at the service level, where this info is available.
 func (c *Claims) Valid() error {
+	var uuidNil uuid.UUID
 	if c.Issuer == "" ||
-		c.ExpiresAt == 0 ||
-		c.Subject == "" ||
+		c.Subject == uuidNil ||
+		c.ID == uuidNil ||
 		c.Scope == "" {
 		return ErrTokenInvalid
 	}
 
-	if !verifyExp(c.ExpiresAt) {
+	now := time.Now()
+	if now.After(c.ExpiresAt.Time) {
 		return ErrTokenExpired
 	}
 
 	return nil
-}
-
-func verifyExp(exp int64) bool {
-	now := time.Now().Unix()
-	return now <= exp
 }

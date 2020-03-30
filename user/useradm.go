@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
+
 package useradm
 
 import (
@@ -20,8 +21,8 @@ import (
 	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mendersoftware/useradm/client/tenant"
@@ -37,6 +38,7 @@ var (
 	ErrAuthInvalid            = errors.New("token is invalid")
 	ErrUserNotFound           = errors.New("user not found")
 	ErrTenantAccountSuspended = errors.New("tenant account suspended")
+	ErrInvalidTenantID        = errors.New("invalid tenant id")
 )
 
 const (
@@ -159,23 +161,26 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 }
 
 func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
-	id, err := uuid.NewV4()
+	id := uuid.NewRandom()
+	subjectID, err := uuid.FromString(subject)
 	if err != nil {
 		return nil, err
 	}
-
-	return &jwt.Token{
-		Id: id.String(),
-		Claims: jwt.Claims{
-			ID:        id.String(),
-			Issuer:    u.config.Issuer,
-			ExpiresAt: time.Now().Unix() + u.config.ExpirationTime,
-			Subject:   subject,
-			Scope:     scope,
-			Tenant:    tenant,
-			User:      true,
+	now := jwt.Time{Time: time.Now()}
+	ret := &jwt.Token{Claims: jwt.Claims{
+		ID:       id,
+		Subject:  subjectID,
+		Issuer:   u.config.Issuer,
+		IssuedAt: now,
+		ExpiresAt: jwt.Time{
+			Time: now.Add(time.Second *
+				time.Duration(u.config.ExpirationTime)),
 		},
-	}, nil
+		Tenant: tenant,
+		Scope:  scope,
+		User:   true,
+	}}
+	return ret, nil
 }
 
 func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
@@ -210,11 +215,7 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 	var tenantErr error
 
 	if u.ID == "" {
-		id, err := uuid.NewV4()
-		if err != nil {
-			return errors.New("failed to generate user id")
-		}
-
+		id := uuid.NewSHA1(u.Email)
 		u.ID = id.String()
 	}
 
@@ -337,7 +338,7 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 		return ErrUnauthorized
 	}
 
-	user, err := ua.db.GetUserById(ctx, token.Claims.Subject)
+	user, err := ua.db.GetUserById(ctx, token.Claims.Subject.String())
 	if user == nil && err == nil {
 		return ErrUnauthorized
 	}
@@ -345,7 +346,7 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 		return errors.Wrap(err, "useradm: failed to get user")
 	}
 
-	dbToken, err := ua.db.GetTokenById(ctx, token.Id)
+	dbToken, err := ua.db.GetTokenById(ctx, token.ID)
 	if dbToken == nil && err == nil {
 		return ErrUnauthorized
 	}

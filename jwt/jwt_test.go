@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,17 +36,18 @@ func TestNewJWTHandlerRS256(t *testing.T) {
 
 func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 	testCases := map[string]struct {
-		privKey      *rsa.PrivateKey
-		claims       Claims
-		expiresInSec int64
+		privKey *rsa.PrivateKey
+		claims  Claims
 	}{
 		"ok": {
 			privKey: loadPrivKey("../crypto/private.pem", t),
 			claims: Claims{
 				Issuer:  "Mender",
-				Subject: "foo",
+				Subject: uuid.NewSHA1("foo"),
+				ExpiresAt: Time{
+					Time: time.Now().Add(time.Hour),
+				},
 			},
-			expiresInSec: 3600,
 		},
 	}
 
@@ -73,85 +76,104 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 		"ok (all claims)": {
 			privKey: loadPrivKey("../crypto/private.pem", t),
 
-			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJhdWQiOiJNZW5kZXIiLCJleHAiOjIxNDc0ODM2NDcsImp" +
-				"0aSI6InNvbWVpZCIsImlhdCI6MTIzNDU2NywiaXNzIjoiTW" +
-				"VuZGVyIiwibmJmIjoxMjM0NTY3OCwic3ViIjoiZm9vIiwic" +
-				"2NwIjoibWVuZGVyLioifQ.TqIWTOA6VE0dEGkjX3ilv0vhK" +
-				"YdSDvnK5E9qKL8uDyheVOvDRXse4OnDhyaEuAQVfQhh2DMW" +
-				"S-B3bGfWP8-tKvrbmGxHw1-B6vz_QePBmEq4RPGYPxUFxN2" +
-				"69blmAV9_56FhKa1Tl1CyqA9riHAtxFXYZW5RvpaQd7Q5Ja" +
-				"SvN_csRsEWFwD8ZC_kzUfBosfiVJLll0KH0EGlpezzBYilT" +
-				"wB8C92CAY9s916kIfXHWn9lPsESGW5uURL7Fbj9-G5OT7WO" +
-				"DDU0bYwLpBbtdw5hNUi9ExnX2SfW3HpD7wuxM3J_q_aEu6Q" +
-				"efs-sTDG1iKG4KFCszfmEV8p0HqPNC3VpEw",
+			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleH" +
+				"AiOjQ0ODE4OTM5MDAsImlzcyI6Ik1lbmRlciIsImF1ZC" +
+				"I6Ik1lbmRlciIsInN1YiI6ImJjYTk1YWRiLWI1ZjEtNT" +
+				"Y0Zi05NmE3LTYzNTVjNTJkMWZhNyIsInNjcCI6Im1lbm" +
+				"Rlci4qIiwiaWF0IjoxMjM0NTY3LCJqdGkiOiJiOTQ3NT" +
+				"MzNi1kZGU2LTU0OTctODA0NC01MWFhOWRkYzAyZjgifQ" +
+				".xkL2V6nzPsJaLUezrZg-lSCqH5yrG0ee-79TuaDC7u9" +
+				"ty3btT1VhoGdgEmrGUkLRdOAxnY_KI9rNHAkxzuTj8ef" +
+				"p6hss8PKC6DHM_Ke_cZH0xRt2V0QjhhZT5QkGFjb60me" +
+				"iY5oMQdhXY1rtaFuAvMvPMSZ0Rs4Twy3tuWvws9sekIY" +
+				"GWyVV-EGOtheI8_lGXlPSUXc5_0aUJuUNoKyIDFK4Chp" +
+				"eYxjyL20U0GPtGPAEKQQkCBqlliBsu1Rdww3a7ephIIs" +
+				"Fu6A8BWJpT5hGpiQlKK2hu2MZ9wh94wbcZXJRtlE_BWz" +
+				"NLKjV0L1oiaeWKuMGOTQ4TYgKeifWRCm_nw",
 
 			outToken: Token{
 				Claims: Claims{
-					Audience:  "Mender",
-					ExpiresAt: 2147483647,
-					ID:        "someid",
-					IssuedAt:  1234567,
-					Issuer:    "Mender",
-					NotBefore: 12345678,
-					Subject:   "foo",
-					Scope:     "mender.*",
+					ID:      uuid.NewSHA1("someid"),
+					Subject: uuid.NewSHA1("foo"),
+					ExpiresAt: Time{
+						Time: time.Unix(4481893900, 0),
+					},
+					IssuedAt: Time{
+						Time: time.Unix(1234567, 0),
+					},
+					Audience: "Mender",
+					Issuer:   "Mender",
+					Scope:    "mender.*",
 				},
 			},
 		},
 		"ok (some claims)": {
 			privKey: loadPrivKey("../crypto/private.pem", t),
 
-			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJle" +
-				"HAiOjIxNDc0ODM2NDcsImp0aSI6InNvbWVpZCIsIml" +
-				"hdCI6MTIzNDU2NywiaXNzIjoiTWVuZGVyIiwic3ViI" +
-				"joiZm9vIiwic2NwIjoibWVuZGVyLnVzZXJzLmluaXR" +
-				"pYWwuY3JlYXRlIn0.xkcfTeUui66Cib1c0bO27I_LD" +
-				"C60WlxzB8v6PuH8EGqgCeU3RG6nW5tf-YcS9w17-Qt" +
-				"1jWs-RSpQip3VWQqncSbfzUjmwKuTgrMRllILb5hMP" +
-				"8trVSl4r035WxPd1Gk8chtbZra9dh7Wf9LsOCjamrX" +
-				"baSE-w64iFFShHrgW_e9TqRcnb8c37XLeHnxRHSYkL" +
-				"QGwPWm6jaxr08mR6-vYxgEIFpTUxVbxe1AN8hMZq43" +
-				"x-KQb3su4EoGMT6KM_ku3P8Tmk8l3yewZdgEuZc-T7" +
-				"tsSlEMgLwcrQSF2jyfHewBsc40iHIxmO3ibNFITzw_CwaDidlHSLkSMk3EMCis1gA",
+			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW" +
+				"IiOiJiY2E5NWFkYi1iNWYxLTU2NGYtOTZhNy02MzU1Yz" +
+				"UyZDFmYTciLCJqdGkiOiJiOTQ3NTMzNi1kZGU2LTU0OT" +
+				"ctODA0NC01MWFhOWRkYzAyZjgiLCJleHAiOjQ0ODE4OT" +
+				"M5MDAsImlzcyI6Ik1lbmRlciIsImF1ZCI6Ik1lbmRlci" +
+				"IsInNjcCI6Im1lbmRlci51c2Vycy5pbml0aWFsLmNyZW" +
+				"F0ZSIsImlhdCI6MTIzNDU2N30.rzvPALb8-p8PUblS1Q" +
+				"LdgWuhVXrZw_kv0xl_qY3OhbKaV1aN2sB8kEea5jdLX0" +
+				"ukrKqXD2v9rmqcGNi3pvXqy2zj1EJslHxtSx1BCxzLCB" +
+				"l5pu3MhFwTjSlhkyOSL_TTlexcWvw3WCFCnj7D1irwym" +
+				"idZPPTvYrq7Zw5WTb_3VcCzf8xrPaXNlaHhIBH265RMW" +
+				"_s-9W8R20aFeMHLCNYvsF358sJAXrLI2_NhQlIW_PHy9" +
+				"08Tx8F8-GxXqK2vMxa1XPHi_Wr9HScsfz0_6dNtaq8AS" +
+				"TCaIibmnTUGe2UYg4xeO66bjKQbsuDXZP_ChOLNzYNmw" +
+				"mNfRHRHDT-nnsOWg",
 
 			outToken: Token{
 				Claims: Claims{
-					ExpiresAt: 2147483647,
-					ID:        "someid",
-					IssuedAt:  1234567,
-					Issuer:    "Mender",
-					Subject:   "foo",
-					Scope:     "mender.users.initial.create",
+					ID:      uuid.NewSHA1("someid"),
+					Subject: uuid.NewSHA1("foo"),
+					ExpiresAt: Time{
+						Time: time.Unix(4481893900, 0),
+					},
+					IssuedAt: Time{
+						Time: time.Unix(1234567, 0),
+					},
+					Issuer:   "Mender",
+					Audience: "Mender",
+					Scope:    "mender.users.initial.create",
 				},
 			},
 		},
 		"ok (some claims w. tenant_token)": {
 			privKey: loadPrivKey("../crypto/private.pem", t),
-			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJleHAiOjIxNDc0ODM2NDcsImp0aSI6InNvb" +
-				"WVpZCIsImlhdCI6MTIzNDU2NzgsImlzcyI6Ik" +
-				"1lbmRlciIsInN1YiI6ImZvbyIsInNjcCI6Im1" +
-				"lbmRlci4qIiwibWVuZGVyLnRlbmFudCI6InRl" +
-				"bmFudDEyMyJ9.We9uVvO-JMfo8ac9xoWux8Jc" +
-				"nDMfJoBQslZzEW1K6GkMe23qvdIaimKfDGKAq" +
-				"H-bHyyts4cvEWYirbPcKzoxIFOeBn4kN14juL" +
-				"2Rv06CjsWZtCFHlJHkeB2XvSnTxaaZcCs0-E2" +
-				"hJk9F9domBX4dxQsrzcZHNfb8ZBDsbvQgWqKA" +
-				"j5vSV25pfC5QtLcUyRvOZvtnBvXq6Y9erY56u" +
-				"GHKoxj6_77CnBNezWXGpTrV40TNBQqvW39vpQ" +
-				"n6TMqRG686vlFGu60h1tpAls0Un8hfgWTdzMg" +
-				"Z7l70MKsRWaJjEqqY8sBiSY7ifjXpLgI8Wtbr" +
-				"kA58uboGav-yVCCMa-_CIw",
+
+			inToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdW" +
+				"IiOiJiY2E5NWFkYi1iNWYxLTU2NGYtOTZhNy02MzU1Yz" +
+				"UyZDFmYTciLCJqdGkiOiJiOTQ3NTMzNi1kZGU2LTU0OT" +
+				"ctODA0NC01MWFhOWRkYzAyZjgiLCJleHAiOjQ0ODE4OT" +
+				"M5MDAsImlzcyI6Ik1lbmRlciIsInNjcCI6Im1lbmRlci" +
+				"4qIiwiaWF0IjoxMjM0NTY3LCJtZW5kZXIudGVuYW50Ij" +
+				"oiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0.GHw6EC" +
+				"1kfeAuB7UkwqwZ6yt25US7lhWXhCG6HYTvXhY1MSaPrL" +
+				"0QMQWnAwWYbM7T9o8CEBhKUumJCZ1JiRiC8cKwd9SytL" +
+				"UWxuxE4f2qGSyhMpku1yPXQ-mq6s58wrbAf1s0cEU0vT" +
+				"gygncp7fnfKcCpg9A3kYZaDnTmqgA63sXlaiSSnPHd-y" +
+				"MO5duFb8xqZeoRzkJrKiI2Bh5pMDPNIJkGkGyF37w_8i" +
+				"vjKiGB5ph_vm0LyeVjlzEGU7nri5qARE7oJqN1lICgXX" +
+				"MzKZXxUB6h-v2vnkIJC0uZR35ddXhXUrpnRWwHn2xSdz" +
+				"5QAKAgnr12OlK1fPWrn2xy0cK2Mw",
+
 			outToken: Token{
 				Claims: Claims{
-					ExpiresAt: 2147483647,
-					ID:        "someid",
-					IssuedAt:  12345678,
-					Issuer:    "Mender",
-					Subject:   "foo",
-					Scope:     "mender.*",
-					Tenant:    "tenant123",
+					ID:      uuid.NewSHA1("someid"),
+					Subject: uuid.NewSHA1("foo"),
+					ExpiresAt: Time{
+						Time: time.Unix(4481893900, 0),
+					},
+					IssuedAt: Time{
+						Time: time.Unix(1234567, 0),
+					},
+					Issuer: "Mender",
+					Scope:  "mender.*",
+					Tenant: "000000000000000000000000",
 				},
 			},
 		},
@@ -166,17 +188,18 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerRS256(tc.privKey)
+		t.Run(name, func(t *testing.T) {
+			jwtHandler := NewJWTHandlerRS256(tc.privKey)
 
-		token, err := jwtHandler.FromJWT(tc.inToken)
-		if tc.outErr == nil {
-			assert.NoError(t, err)
-			assert.Equal(t, tc.outToken.Claims, (*token).Claims)
-			assert.NotEmpty(t, token.Id)
-		} else {
-			assert.EqualError(t, tc.outErr, err.Error())
-		}
+			token, err := jwtHandler.FromJWT(tc.inToken)
+			if tc.outErr == nil {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.outToken.Claims, (*token).Claims)
+				assert.NotEmpty(t, token.ID)
+			} else {
+				assert.EqualError(t, tc.outErr, err.Error())
+			}
+		})
 	}
 }
 

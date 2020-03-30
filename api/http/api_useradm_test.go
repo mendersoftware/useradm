@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -636,18 +636,16 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 	t.Parallel()
 
 	// we setup authz, so a real token is needed
-	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-		"eyJleHAiOjQ0ODE4OTM5MDAsImlzcyI6Im1lb" +
-		"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
-		"NwIjoibWVuZGVyLioifQ.NzXNhh_59_03mal_" +
-		"-KImArI8sfvnNFyCW0dEqmnW1gYojmTjWBBEJK" +
-		"xCnh8hbHhY2mfv6Jk9wk1dEnT8_8mCACrBrw97" +
-		"7oRUzlogu8yV2z1m65jpvDBGK_IsJz_GfZA2w" +
-		"SBz55hkqiMEzFqswIEC46xW5RMY0vfMMSVIO7f" +
-		"ncOlmTgJTdCVtr9RVDREBJIoWoC-OLGYat9ivx" +
-		"yA_N_mRvu5iFPZI3FniYaBjY9k_jR62I-QPIVk" +
-		"j3zWev8zKVH0Sef0lB6SAapVs1GS3rK3-oy6wk" +
-		"ACNbKY1tB7Ox6CKiJ9F8Hhvh_icOtfvjCuiY-HkJL55T4wziFQNv2xU_2W7Lw"
+	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ0ODE4OTM5MD" +
+		"AsImlzcyI6Im1lbmRlciIsInN1YiI6Ijc4MWVjMmMzLTM2YTYtNGMxNC05Mj" +
+		"E1LTc1Y2ZjZmQ4MzEzNiIsInNjcCI6Im1lbmRlci4qIiwiaWF0IjoxNDQ1Mj" +
+		"EyODAwLCJqdGkiOiI5NzM0Zjc1Mi0wOWZkLTQ2NmItYmNjYS04ZTFmNDQwN2" +
+		"JmNjUifQ.HRff3mxlygPl4ZlCA0uEalcEUrSb_xi_dnp6uDZWwAGVp-AL7NW" +
+		"MhVfRw9mVNXeM2nUom7z0JUgIDGxB-24gejssiZSuZPCDJ01oyutm2xqdQKW" +
+		"2LlHR5zD0m8KbNHtbHO9dPGUJATa7lHi3_QxGAqqXQYf-Jg7LwXRNqHT1EvY" +
+		"gZMffuqx5i5pwpoCm9a7bTlfKxYkwuMVps3zjuliJxgqbMP3zFN9IlNB0Atb" +
+		"4hEu7REd3s-2TpoIl6ztbbFDYUwz6lg1jD_q0Sbx89gw1R-auZPPZOH49szk" +
+		"8bb75uaEce4BQfgIwvVyVN0NXhfN7bq6ucObZdUbNhuXmN1R6MQ"
 
 	testCases := map[string]struct {
 		uaVerifyError error

@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 )
@@ -29,6 +30,8 @@ var (
 	ErrTokenNotFound = errors.New("token not found")
 	// duplicated email address
 	ErrDuplicateEmail = errors.New("user with a given email already exists")
+	// ErrInvalidUUID is returned when string is not a valid uuid
+	ErrInvalidUUID = errors.New("invalid UUID")
 )
 
 type DataStore interface {
@@ -42,7 +45,7 @@ type DataStore interface {
 	GetUsers(ctx context.Context) ([]model.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	SaveToken(ctx context.Context, token *jwt.Token) error
-	GetTokenById(ctx context.Context, id string) (*jwt.Token, error)
+	GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token, error)
 
 	// deletes all tenant's tokens (identity in context)
 	DeleteTokens(ctx context.Context) error
