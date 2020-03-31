@@ -12,18 +12,23 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import cli, api_client_mgmt, mongo, clean_db, \
-    make_auth, explode_jwt
+from common import (
+    cli,
+    api_client_mgmt,
+    mongo,
+    clean_db,
+    make_auth,
+    explode_jwt,
+)
 import bravado
 import pytest
 import tenantadm
 
 
-
 class Migration:
     DB_NAME = "useradm"
     MIGRATION_COLLECTION = "migration_info"
-    DB_VERSION = "0.1.0"
+    DB_VERSION = "1.0.0"
 
     @staticmethod
     def verify_db_and_collections(client, dbname):
@@ -35,7 +40,7 @@ class Migration:
 
     @staticmethod
     def verify_migration(db, expected_version):
-        major, minor, patch = [int(x) for x in expected_version.split('.')]
+        major, minor, patch = [int(x) for x in expected_version.split(".")]
         version = {
             "version.major": major,
             "version.minor": minor,
@@ -43,19 +48,19 @@ class Migration:
         }
 
         mi = db[Migration.MIGRATION_COLLECTION].find_one(version)
-        print('found migration:', mi)
+        print("found migration:", mi)
         assert mi
 
 
 class TestCli:
     def test_create_user(self, api_client_mgmt, cli, clean_db):
-        cli.create_user('foo@bar.com', '1234youseeme')
+        cli.create_user("foo@bar.com", "1234youseeme")
         users = api_client_mgmt.get_users()
-        assert [user for user in users if user.email == 'foo@bar.com']
+        assert [user for user in users if user.email == "foo@bar.com"]
 
     def test_create_user_login(self, api_client_mgmt, cli, clean_db):
-        email = 'foo@bar.com'
-        password = '1234youseeme'
+        email = "foo@bar.com"
+        password = "1234youseeme"
         cli.create_user(email, password)
         _, r = api_client_mgmt.login(email, password)
         assert r.status_code == 200
@@ -64,21 +69,27 @@ class TestCli:
         assert token
 
     def test_create_user_with_id(self, api_client_mgmt, cli, clean_db):
-        cli.create_user('foo@bar.com', '1234youseeme', user_id='123456')
+        cli.create_user("foo@bar.com", "1234youseeme", user_id="123456")
         users = api_client_mgmt.get_users()
-        assert [user for user in users \
-                if user.email == 'foo@bar.com' and user.id == '123456']
+        assert [
+            user
+            for user in users
+            if user.email == "foo@bar.com" and user.id == "123456"
+        ]
 
     def test_create_user_with_id(self, api_client_mgmt, cli, clean_db):
-        cli.create_user('foo@bar.com', '1234youseeme', user_id='123456')
+        cli.create_user("foo@bar.com", "1234youseeme", user_id="123456")
         users = api_client_mgmt.get_users()
-        assert [user for user in users \
-                if user.email == 'foo@bar.com' and user.id == '123456']
+        assert [
+            user
+            for user in users
+            if user.email == "foo@bar.com" and user.id == "123456"
+        ]
 
     def test_set_password(self, api_client_mgmt, cli, clean_db):
-        password = '1234youseeme'
-        new_password = '5678youseeme'
-        email = 'foo@bar.com'
+        password = "1234youseeme"
+        new_password = "5678youseeme"
+        email = "foo@bar.com"
         cli.create_user(email, password)
         _, r = api_client_mgmt.login(email, password)
         assert r.status_code == 200
@@ -97,26 +108,31 @@ class TestCli:
         cli.migrate()
 
         Migration.verify_db_and_collections(mongo, Migration.DB_NAME)
-        Migration.verify_migration(mongo[Migration.DB_NAME],
-                                   Migration.DB_VERSION)
+        Migration.verify_migration(
+            mongo[Migration.DB_NAME], Migration.DB_VERSION
+        )
 
 
 class TestCliEnterprise:
     def test_create_user(self, api_client_mgmt, cli):
-        cli.create_user('foo-tenant1id@bar.com', '1234youseeme',
-                        tenant_id='tenant1id')
+        cli.create_user(
+            "foo-tenant1id@bar.com", "1234youseeme", tenant_id="tenant1id"
+        )
 
-        users = api_client_mgmt.get_users(make_auth('foo', tenant='tenant1id'))
-        assert [user for user in users if user.email == 'foo-tenant1id@bar.com']
+        users = api_client_mgmt.get_users(make_auth("foo", tenant="tenant1id"))
+        assert [
+            user for user in users if user.email == "foo-tenant1id@bar.com"
+        ]
 
-        other_tenant_users = api_client_mgmt.get_users(make_auth('foo',
-                                                                 tenant='tenant2id'))
+        other_tenant_users = api_client_mgmt.get_users(
+            make_auth("foo", tenant="tenant2id")
+        )
         assert not other_tenant_users
 
     def test_create_user_login(self, api_client_mgmt, cli, clean_db):
-        email = 'foo@bar.com'
-        password = '1234youseeme'
-        tenant = 'tenant1id'
+        email = "foo@bar.com"
+        password = "1234youseeme"
+        tenant = "tenant1id"
 
         users_db = {tenant: [email]}
 
@@ -129,13 +145,13 @@ class TestCliEnterprise:
             token = r.text
             assert token
             _, claims, _ = explode_jwt(token)
-            assert claims['mender.tenant'] == tenant
+            assert claims["mender.tenant"] == tenant
 
     def test_set_password(self, api_client_mgmt, cli, clean_db):
-        password = '1234youseeme'
-        new_password = '5678youseeme'
-        email = 'foo@bar.com'
-        tenant = 'tenant1id'
+        password = "1234youseeme"
+        new_password = "5678youseeme"
+        email = "foo@bar.com"
+        tenant = "tenant1id"
 
         users_db = {tenant: [email]}
 
@@ -159,11 +175,11 @@ class TestCliEnterprise:
             token = r.text
             assert token
             _, claims, _ = explode_jwt(token)
-            assert claims['mender.tenant'] == tenant
+            assert claims["mender.tenant"] == tenant
 
     def test_migrate(self, cli, clean_db, mongo):
-        cli.migrate(tenant_id="foobar")
+        cli.migrate(tenant_id="0000000000000000000000")
 
-        tenant_db = Migration.DB_NAME + '-foobar'
+        tenant_db = Migration.DB_NAME + "-0000000000000000000000"
         Migration.verify_db_and_collections(mongo, tenant_db)
         Migration.verify_migration(mongo[tenant_db], Migration.DB_VERSION)
