@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/scope"
 )
@@ -40,10 +42,12 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			inAction:   "POST",
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Issuer:    "mender",
-					ExpiresAt: 2147483647,
-					Subject:   "testsubject",
-					Scope:     scope.All,
+					Subject: uuid.NewSHA1("testsubject"),
+					Issuer:  "mender",
+					ExpiresAt: jwt.Time{
+						Time: time.Now().Add(time.Hour),
+					},
+					Scope: scope.All,
 				},
 			},
 		},
@@ -52,10 +56,12 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			inAction:   "POST",
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Issuer:    "mender",
-					ExpiresAt: 2147483647,
-					Subject:   "testsubject",
-					Scope:     scope.All,
+					Issuer: "mender",
+					ExpiresAt: jwt.Time{
+						Time: time.Now().Add(time.Hour),
+					},
+					Subject: uuid.NewSHA1("testsubject"),
+					Scope:   scope.All,
 				},
 			},
 		},
@@ -64,10 +70,12 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			inAction:   "POST",
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Issuer:    "mender",
-					ExpiresAt: 2147483647,
-					Subject:   "testsubject",
-					Scope:     "foobar",
+					Issuer: "mender",
+					ExpiresAt: jwt.Time{
+						Time: time.Now().Add(time.Hour),
+					},
+					Subject: uuid.NewSHA1("testsubject"),
+					Scope:   "foobar",
 				},
 			},
 			outErr: "unauthorized",

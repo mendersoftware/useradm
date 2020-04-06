@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,6 +15,5 @@ package jwt
 
 // Token wrapper
 type Token struct {
-	Id     string `bson:"_id"`
-	Claims Claims
+	Claims `bson:"inline"`
 }

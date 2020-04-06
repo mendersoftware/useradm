@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
@@ -31,6 +32,26 @@ import (
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store"
 )
+
+func assertEqualTokens(t *testing.T, expected, actual *jwt.Token) bool {
+	var ret bool
+	ret = assert.Equal(t, expected.ID, actual.ID)
+	ret = ret && assert.Equal(t, expected.Subject, actual.Subject)
+	ret = ret && assert.Equal(t, expected.Audience, actual.Audience)
+	ret = ret && assert.WithinDuration(t,
+		expected.ExpiresAt.Time,
+		actual.ExpiresAt.Time, time.Second)
+	ret = ret && assert.WithinDuration(t,
+		expected.IssuedAt.Time,
+		actual.IssuedAt.Time, time.Second)
+	ret = ret && assert.WithinDuration(t,
+		expected.NotBefore.Time,
+		actual.NotBefore.Time, time.Second)
+	ret = ret && assert.Equal(t, expected.Issuer, actual.Issuer)
+	ret = ret && assert.Equal(t, expected.Scope, actual.Scope)
+	ret = ret && assert.Equal(t, expected.Tenant, actual.Tenant)
+	return ret && assert.Equal(t, expected.User, actual.User)
+}
 
 func TestMongoCreateUser(t *testing.T) {
 	if testing.Short() {
@@ -431,35 +452,32 @@ func TestMongoGetTokenById(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode.")
 	}
-
-	existing := []interface{}{
-		jwt.Token{
-			Id: "id-1",
+	existing := bson.A{
+		&jwt.Token{
 			Claims: jwt.Claims{
+				ID:        uuid.NewSHA1("id-1"),
+				Subject:   uuid.NewSHA1("sub-1"),
 				Audience:  "audience",
-				ExpiresAt: 1234,
-				ID:        "id-1",
-				IssuedAt:  5678,
+				ExpiresAt: jwt.Time{Time: time.Now().Add(time.Hour)},
+				IssuedAt:  jwt.Time{Time: time.Now()},
 				Issuer:    "iss-1",
-				NotBefore: 7890,
-				Subject:   "sub-1",
+				NotBefore: jwt.Time{Time: time.Unix(7890, 0)},
 				Scope:     "scope-1",
-				Tenant:    "tenant-1",
+				Tenant:    "tenantID1",
 				User:      true,
 			},
 		},
-		jwt.Token{
-			Id: "id-2",
+		&jwt.Token{
 			Claims: jwt.Claims{
+				ID:        uuid.NewSHA1("id-2"),
+				Subject:   uuid.NewSHA1("sub-2"),
 				Audience:  "audience",
-				ExpiresAt: 1234,
-				ID:        "id-2",
-				IssuedAt:  5678,
+				ExpiresAt: jwt.Time{Time: time.Now().Add(time.Hour)},
+				IssuedAt:  jwt.Time{Time: time.Now()},
 				Issuer:    "iss-2",
-				NotBefore: 7890,
-				Subject:   "sub-2",
+				NotBefore: jwt.Time{Time: time.Unix(7890, 0)},
 				Scope:     "scope-2",
-				Tenant:    "tenant-2",
+				Tenant:    "tenantID2",
 				User:      true,
 			},
 		},
@@ -471,59 +489,17 @@ func TestMongoGetTokenById(t *testing.T) {
 		outToken *jwt.Token
 	}{
 		"ok - found 1": {
-			id: "id-1",
-			outToken: &jwt.Token{
-				Id: "id-1",
-				Claims: jwt.Claims{
-					Audience:  "audience",
-					ExpiresAt: 1234,
-					ID:        "id-1",
-					IssuedAt:  5678,
-					Issuer:    "iss-1",
-					NotBefore: 7890,
-					Subject:   "sub-1",
-					Scope:     "scope-1",
-					Tenant:    "tenant-1",
-					User:      true,
-				},
-			},
+			id:       "id-1",
+			outToken: existing[0].(*jwt.Token),
 		},
 		"ok - found 1, MT": {
-			id:     "id-1",
-			tenant: "foo",
-			outToken: &jwt.Token{
-				Id: "id-1",
-				Claims: jwt.Claims{
-					Audience:  "audience",
-					ExpiresAt: 1234,
-					ID:        "id-1",
-					IssuedAt:  5678,
-					Issuer:    "iss-1",
-					NotBefore: 7890,
-					Subject:   "sub-1",
-					Scope:     "scope-1",
-					Tenant:    "tenant-1",
-					User:      true,
-				},
-			},
+			id:       "id-1",
+			tenant:   "tenantID1",
+			outToken: existing[0].(*jwt.Token),
 		},
 		"ok - found 2": {
-			id: "id-2",
-			outToken: &jwt.Token{
-				Id: "id-2",
-				Claims: jwt.Claims{
-					Audience:  "audience",
-					ExpiresAt: 1234,
-					ID:        "id-2",
-					IssuedAt:  5678,
-					Issuer:    "iss-2",
-					NotBefore: 7890,
-					Subject:   "sub-2",
-					Scope:     "scope-2",
-					Tenant:    "tenant-2",
-					User:      true,
-				},
-			},
+			id:       "id-2",
+			outToken: existing[1].(*jwt.Token),
 		},
 		"not found": {
 			id:       "id-3",
@@ -531,7 +507,7 @@ func TestMongoGetTokenById(t *testing.T) {
 		},
 		"not found, MT": {
 			id:       "id-3",
-			tenant:   "foo",
+			tenant:   "tenantID1",
 			outToken: nil,
 		},
 	}
@@ -558,10 +534,10 @@ func TestMongoGetTokenById(t *testing.T) {
 			InsertMany(ctx, existing)
 		assert.NoError(t, err)
 
-		token, err := store.GetTokenById(ctx, tc.id)
+		token, err := store.GetTokenById(ctx, uuid.NewSHA1(tc.id))
 
 		if tc.outToken != nil {
-			assert.Equal(t, *tc.outToken, *token)
+			assertEqualTokens(t, tc.outToken, token)
 		} else {
 			assert.Nil(t, token)
 			assert.Nil(t, err)
@@ -777,58 +753,64 @@ func TestMongoSaveToken(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode.")
 	}
-
 	testCases := map[string]struct {
 		token  *jwt.Token
 		tenant string
 	}{
 		"ok 1": {
 			token: &jwt.Token{
-				Id: "id-3",
 				Claims: jwt.Claims{
-					Audience:  "audience",
-					ExpiresAt: 1234,
-					ID:        "id-3",
-					IssuedAt:  5678,
-					Issuer:    "iss-3",
-					NotBefore: 7890,
-					Subject:   "sub-3",
-					Scope:     "scope-3",
-					Tenant:    "tenant-3",
-					User:      true,
+					ID:       uuid.NewSHA1("id-3"),
+					Subject:  uuid.NewSHA1("sub-3"),
+					Audience: "audience",
+					ExpiresAt: jwt.Time{
+						Time: time.Now().Add(time.Hour),
+					},
+					IssuedAt: jwt.Time{Time: time.Now()},
+					Issuer:   "iss-3",
+					NotBefore: jwt.Time{
+						Time: time.Unix(7890, 0),
+					},
+					Scope:  "scope-3",
+					Tenant: "tenantID3",
+					User:   true,
 				},
 			},
 		},
 		"ok 2": {
 			token: &jwt.Token{
-				Id: "id-4",
 				Claims: jwt.Claims{
-					ExpiresAt: 1234,
-					ID:        "id-4",
-					IssuedAt:  5678,
-					Subject:   "sub-4",
-					Tenant:    "tenant-4",
-					User:      true,
+					ID:      uuid.NewSHA1("id-4"),
+					Subject: uuid.NewSHA1("sub-4"),
+					ExpiresAt: jwt.Time{
+						Time: time.Now().Add(time.Hour),
+					},
+					IssuedAt: jwt.Time{Time: time.Now()},
+					Tenant:   "tenantID4",
+					User:     true,
 				},
 			},
 		},
 		"ok 3, MT": {
 			token: &jwt.Token{
-				Id: "id-3",
 				Claims: jwt.Claims{
-					Audience:  "audience",
-					ExpiresAt: 1234,
-					ID:        "id-3",
-					IssuedAt:  5678,
-					Issuer:    "iss-3",
-					NotBefore: 7890,
-					Subject:   "sub-3",
-					Scope:     "scope-3",
-					Tenant:    "tenant-3",
-					User:      true,
+					ID:       uuid.NewSHA1("id-3"),
+					Subject:  uuid.NewSHA1("sub-3"),
+					Audience: "audience",
+					ExpiresAt: jwt.Time{
+						Time: time.Now().Add(time.Hour),
+					},
+					IssuedAt: jwt.Time{Time: time.Now()},
+					Issuer:   "iss-3",
+					NotBefore: jwt.Time{
+						Time: time.Unix(7890, 0),
+					},
+					Scope:  "scope-3",
+					Tenant: "tenantID3",
+					User:   true,
 				},
 			},
-			tenant: "tenant-1",
+			tenant: "tenantID1",
 		},
 	}
 
@@ -862,7 +844,7 @@ func TestMongoSaveToken(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		assert.Equal(t, *tc.token, token)
+		assertEqualTokens(t, tc.token, &token)
 	}
 }
 
@@ -878,19 +860,14 @@ func TestMigrate(t *testing.T) {
 		version string
 		err     string
 	}{
-		"0.1.0": {
+		DbVersion: {
 			automigrate: true,
-			version:     "0.1.0",
+			version:     DbVersion,
 			err:         "",
 		},
-		"0.1.0, no automigrate": {
+		DbVersion + ", no automigrate": {
 			automigrate: false,
-			version:     "0.1.0",
-			err:         "",
-		},
-		"1.2.3": {
-			automigrate: true,
-			version:     "1.2.3",
+			version:     DbVersion,
 			err:         "",
 		},
 		"0.1 error": {
@@ -898,16 +875,16 @@ func TestMigrate(t *testing.T) {
 			version:     "0.1",
 			err:         "failed to parse service version: failed to parse Version: unexpected EOF",
 		},
-		"0.1.0, automigrate, multitenant": {
+		DbVersion + ", automigrate, multitenant": {
 			tenantDbs:   []string{"useradm-tenant1", "useradm-tenant2"},
 			automigrate: true,
-			version:     "0.1.0",
+			version:     DbVersion,
 			err:         "",
 		},
-		"0.1.0, no automigrate, multitenant": {
+		DbVersion + ", no automigrate, multitenant": {
 			tenantDbs:   []string{"useradm-tenant1", "useradm-tenant2"},
 			automigrate: true,
-			version:     "0.1.0",
+			version:     DbVersion,
 			err:         "",
 		},
 	}
@@ -939,7 +916,7 @@ func TestMigrate(t *testing.T) {
 
 		ctx := context.Background()
 
-		err = store.Migrate(ctx, tc.version, nil)
+		err = store.Migrate(ctx, tc.version)
 
 		if tc.err != "" {
 			assert.EqualError(t, err, tc.err)
@@ -1017,45 +994,63 @@ func TestMongoDeleteTokens(t *testing.T) {
 		"ok": {
 			inTokens: []interface{}{
 				jwt.Token{
-					Id: "id-1",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "sub-1",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-1"),
+						Subject:  uuid.NewSHA1("sub-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 				jwt.Token{
-					Id: "id-2",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-2",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "sub-1",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-2"),
+						Subject:  uuid.NewSHA1("sub-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 				jwt.Token{
-					Id: "id-3",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-2",
-						IssuedAt:  5678,
-						Issuer:    "iss-2",
-						NotBefore: 7890,
-						Subject:   "sub-2",
-						Scope:     "scope-2",
-						User:      true,
+						ID:       uuid.NewSHA1("id-3"),
+						Subject:  uuid.NewSHA1("sub-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-2",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-2",
+						User:  true,
 					},
 				},
 			},
@@ -1064,39 +1059,51 @@ func TestMongoDeleteTokens(t *testing.T) {
 			tenant: "tenant-1",
 			inTokens: []interface{}{
 				jwt.Token{
-					Id: "id-1",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "sub-1",
-						Scope:     "scope-1",
-						Tenant:    "tenant-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-1"),
+						Subject:  uuid.NewSHA1("sub-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-1",
+						Tenant: "tenantID1",
+						User:   true,
 					},
 				},
 				jwt.Token{
-					Id: "id-2",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-2",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "sub-1",
-						Scope:     "scope-1",
-						Tenant:    "tenant-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-2"),
+						Subject:  uuid.NewSHA1("sub-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-1",
+						Tenant: "tenantID1",
+						User:   true,
 					},
 				},
 			},
 		},
 		"tenant, no tokens": {
-			tenant:   "tenant-2",
+			tenant:   "tenantID2",
 			outError: store.ErrTokenNotFound.Error(),
 		},
 	}
@@ -1160,134 +1167,182 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 		outError  string
 	}{
 		"ok": {
-			user: "user-1",
+			user: uuid.NewSHA1("user-1").String(),
 			inTokens: []interface{}{
 				jwt.Token{
-					Id: "id-1",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-1",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-1"),
+						Subject:  uuid.NewSHA1("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 				jwt.Token{
-					Id: "id-2",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-2",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-1",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-2"),
+						Subject:  uuid.NewSHA1("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 				jwt.Token{
-					Id: "id-3",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-2",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-3"),
+						Subject:  uuid.NewSHA1("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 			},
 			outTokens: []jwt.Token{
 				jwt.Token{
-					Id: "id-3",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-2",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-3"),
+						Subject:  uuid.NewSHA1("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 			},
 		},
 		"ok - tenant": {
-			user:   "user-1",
+			user:   uuid.NewSHA1("user-1").String(),
 			tenant: "tenant-1",
 			inTokens: []interface{}{
 				jwt.Token{
-					Id: "id-1",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-1",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-1"),
+						Subject:  uuid.NewSHA1("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 				jwt.Token{
-					Id: "id-2",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-2",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-1",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-2"),
+						Subject:  uuid.NewSHA1("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 				jwt.Token{
-					Id: "id-3",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-2",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-3"),
+						Subject:  uuid.NewSHA1("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 			},
 			outTokens: []jwt.Token{
 				jwt.Token{
-					Id: "id-3",
 					Claims: jwt.Claims{
-						Audience:  "audience",
-						ExpiresAt: 1234,
-						ID:        "id-1",
-						IssuedAt:  5678,
-						Issuer:    "iss-1",
-						NotBefore: 7890,
-						Subject:   "user-2",
-						Scope:     "scope-1",
-						User:      true,
+						ID:       uuid.NewSHA1("id-3"),
+						Subject:  uuid.NewSHA1("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
 					},
 				},
 			},
 		},
 		"ok - no tokens": {
-			user:     "user2",
+			user:     uuid.NewSHA1("user2").String(),
 			outError: store.ErrTokenNotFound.Error(),
 		},
 	}
@@ -1335,7 +1390,11 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		assert.Equal(t, tc.outTokens, tokens)
+		if assert.Len(t, tokens, len(tc.outTokens)) {
+			for i, token := range tokens {
+				assertEqualTokens(t, &tc.outTokens[i], &token)
+			}
+		}
 	}
 }
 

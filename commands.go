@@ -140,7 +140,7 @@ func commandMigrate(c config.Reader, tenantId string) error {
 	if tenantId != "" {
 		err = db.MigrateTenant(ctx, mongo.DbVersion, tenantId)
 	} else {
-		err = db.Migrate(ctx, mongo.DbVersion, nil)
+		err = db.Migrate(ctx, mongo.DbVersion)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to run migrations")

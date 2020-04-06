@@ -14,6 +14,8 @@
 #    limitations under the License.
 import json
 import pytest
+import uuid
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 from base64 import b64encode, urlsafe_b64decode
 from client import CliClient, ManagementApiClient, InternalApiClient
@@ -30,7 +32,17 @@ def make_auth(sub, tenant=None):
 
         If 'tenant' is specified, the 'mender.tenant' claim is added.
     """
-    payload = {"sub": sub}
+    try:
+        sub_id = uuid.UUID(sub)
+    except ValueError:
+        sub_id = uuid.uuid5(uuid.NAMESPACE_OID, sub)
+
+    payload = {
+        "jti": str(uuid.uuid4()),
+        "sub": str(sub_id),
+        "iss": "Mender",
+        "exp": int((datetime.now() + timedelta(days=7)).timestamp()),
+    }
     if tenant is not None:
         payload["mender.tenant"] = tenant
     payload = json.dumps(payload)
@@ -39,6 +51,7 @@ def make_auth(sub, tenant=None):
     jwt = "bogus_header." + payloadb64.decode() + ".bogus_sign"
 
     return {"Authorization": "Bearer " + jwt}
+
 
 def make_basic_auth(username, password):
     """
@@ -51,33 +64,41 @@ def make_basic_auth(username, password):
 
 @pytest.fixture(scope="session")
 def mongo():
-    return MongoClient('mender-mongo:27017')
+    return MongoClient("mender-mongo:27017")
+
 
 def mongo_cleanup(mongo):
     dbs = mongo.database_names()
-    dbs = [d for d in dbs if d not in ['local', 'admin', 'config']]
+    dbs = [d for d in dbs if d not in ["local", "admin", "config"]]
     for d in dbs:
         mongo.drop_database(d)
+
 
 @pytest.fixture(scope="session")
 def cli():
     return CliClient()
 
+
 @pytest.fixture(scope="session")
 def api_client_mgmt():
     return ManagementApiClient()
+
 
 @pytest.fixture(scope="session")
 def api_client_int():
     return InternalApiClient()
 
+
 @pytest.yield_fixture(scope="class")
 def init_users(cli, api_client_mgmt, mongo):
     for i in range(5):
-        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
+        cli.create_user(
+            "user-{}@foo.com".format(i), "correcthorsebatterystaple"
+        )
 
     yield api_client_mgmt.get_users()
     mongo_cleanup(mongo)
+
 
 @pytest.yield_fixture(scope="function")
 def init_users_f(cli, api_client_mgmt, mongo):
@@ -85,30 +106,44 @@ def init_users_f(cli, api_client_mgmt, mongo):
     Function-scoped version of 'init_users'.
     """
     for i in range(5):
-        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
+        cli.create_user(
+            "user-{}@foo.com".format(i), "correcthorsebatterystaple"
+        )
 
     yield api_client_mgmt.get_users()
     mongo_cleanup(mongo)
 
+
 @pytest.yield_fixture(scope="class")
 def init_users_mt(cli, api_client_mgmt, mongo):
-    tenant_users = {'tenant1id':[], 'tenant2id':[]}
+    tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
         for i in range(5):
-            cli.create_user("user-{}-{}@foo.com".format(i,t), "correcthorsebatterystaple", None, t)
+            cli.create_user(
+                "user-{}-{}@foo.com".format(i, t),
+                "correcthorsebatterystaple",
+                None,
+                t,
+            )
         tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
+
 
 @pytest.yield_fixture(scope="function")
 def init_users_mt_f(cli, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users_mt'.
     """
-    tenant_users = {'tenant1id':[], 'tenant2id':[]}
+    tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
         for i in range(5):
-            cli.create_user("user-{}-{}@foo.com".format(i,t), "correcthorsebatterystaple", None, t)
+            cli.create_user(
+                "user-{}-{}@foo.com".format(i, t),
+                "correcthorsebatterystaple",
+                None,
+                t,
+            )
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
@@ -124,7 +159,7 @@ def user_tokens(init_users, api_client_mgmt):
     yield tokens
 
 
-@pytest.yield_fixture(scope='function')
+@pytest.yield_fixture(scope="function")
 def clean_db(mongo):
     mongo_cleanup(mongo)
     yield mongo
@@ -134,11 +169,11 @@ def clean_db(mongo):
 def b64pad(b64data):
     """Pad base64 string with '=' to achieve a length that is a multiple of 4
     """
-    return b64data + '=' * (4 - (len(b64data) % 4))
+    return b64data + "=" * (4 - (len(b64data) % 4))
 
 
 def explode_jwt(token):
-    parts = token.split('.')
+    parts = token.split(".")
     assert len(parts) == 3
 
     # JWT fields are passed in a header and use URL safe encoding, which

@@ -42,7 +42,7 @@ type rawClaims map[string]interface{}
 func decodeClaims(token string) (rawClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return nil, errors.New("incorrect token format")
+		return nil, errors.Errorf("incorrect token format: %v", token)
 	}
 
 	b64claims := parts[1]

@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/mendersoftware/go-lib-micro/identity"
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -100,7 +101,7 @@ func TestUserAdmLogin(t *testing.T) {
 			inPassword: "correcthorsebatterystaple",
 
 			dbUser: &model.User{
-				ID:       "1234",
+				ID:       uuid.NewSHA1("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -109,7 +110,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr: nil,
 			outToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Subject: "1234",
+					Subject: uuid.NewSHA1("1234"),
 					Scope:   scope.All,
 				},
 			},
@@ -125,13 +126,13 @@ func TestUserAdmLogin(t *testing.T) {
 
 			verifyTenant: true,
 			tenant: &ct.Tenant{
-				ID:   "tenant1id",
+				ID:   "TenantID1",
 				Name: "tenant1",
 			},
 			tenantErr: nil,
 
 			dbUser: &model.User{
-				ID:       "1234",
+				ID:       uuid.NewSHA1("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -140,9 +141,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr: nil,
 			outToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Subject: "1234",
+					Subject: uuid.NewSHA1("1234"),
 					Scope:   scope.All,
-					Tenant:  "tenant1id",
+					Tenant:  "TenantID1",
 				},
 			},
 
@@ -179,14 +180,14 @@ func TestUserAdmLogin(t *testing.T) {
 
 			verifyTenant: true,
 			tenant: &ct.Tenant{
-				ID:     "tenant1id",
+				ID:     "TenantID1",
 				Name:   "tenant1",
 				Status: "suspended",
 			},
 			tenantErr: nil,
 
 			dbUser: &model.User{
-				ID:       "1234",
+				ID:       uuid.NewSHA1("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -253,7 +254,7 @@ func TestUserAdmLogin(t *testing.T) {
 			inPassword: "correcthorsebatterystaple",
 
 			dbUser: &model.User{
-				ID:       "1234",
+				ID:       uuid.NewSHA1("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -297,13 +298,13 @@ func TestUserAdmLogin(t *testing.T) {
 		} else {
 			if tc.outToken != nil && assert.NotNil(t, token) {
 				assert.NoError(t, err)
-				assert.NotEmpty(t, token.Id)
+				assert.NotEmpty(t, token.ID)
 				assert.NotEmpty(t, token.Claims.ID)
 				assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
 				assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)
 				assert.WithinDuration(t,
 					time.Now().Add(time.Duration(tc.config.ExpirationTime)*time.Second),
-					time.Unix(token.Claims.ExpiresAt, 0),
+					token.Claims.ExpiresAt.Time,
 					time.Second)
 
 			}
@@ -699,20 +700,20 @@ func TestUserAdmVerify(t *testing.T) {
 	}{
 		"ok": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
 			dbUser: &model.User{
-				ID: "1234",
+				ID: uuid.NewSHA1("1234").String(),
 			},
 			dbToken: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -720,9 +721,9 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: invalid token issuer": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "foo",
 					User:    true,
 				},
@@ -731,9 +732,9 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: not a user token": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 				},
 			},
@@ -741,9 +742,9 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: user not found": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -752,15 +753,15 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: token not found": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
 			dbUser: &model.User{
-				ID: "1234",
+				ID: uuid.NewSHA1("1234").String(),
 			},
 
 			dbToken:    nil,
@@ -770,9 +771,9 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: db user": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -783,9 +784,9 @@ func TestUserAdmVerify(t *testing.T) {
 		},
 		"error: db token": {
 			token: &jwt.Token{
-				Id: "token-1",
 				Claims: jwt.Claims{
-					Subject: "1234",
+					ID:      uuid.NewSHA1("token-1"),
+					Subject: uuid.NewSHA1("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -810,9 +811,10 @@ func TestUserAdmVerify(t *testing.T) {
 
 			db := &mstore.DataStore{}
 			db.On("GetUserById", ctx,
-				tc.token.Claims.Subject).Return(tc.dbUser, tc.dbUserErr)
-			db.On("GetTokenById", ctx,
-				tc.token.Id).Return(tc.dbToken, tc.dbTokenErr)
+				tc.token.Claims.Subject.String()).
+				Return(tc.dbUser, tc.dbUserErr)
+			db.On("GetTokenById", ctx, tc.token.ID).
+				Return(tc.dbToken, tc.dbTokenErr)
 
 			useradm := NewUserAdm(nil, db, nil, config)
 

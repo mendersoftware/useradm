@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -69,18 +69,15 @@ func (j *JWTHandlerRS256) FromJWT(tokstr string) (*Token, error) {
 		err, ok := err.(*jwtgo.ValidationError)
 		if ok && err.Inner != nil {
 			return nil, err.Inner
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 	token := Token{}
 
 	if claims, ok := jwttoken.Claims.(*Claims); ok && jwttoken.Valid {
 		token.Claims = *claims
-		token.Id = claims.ID
 		return &token, nil
-	} else {
-		return nil, ErrTokenInvalid
 	}
+	return nil, ErrTokenInvalid
 }

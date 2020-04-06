@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,9 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mendersoftware/go-lib-micro/identity"
-	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -37,8 +35,6 @@ import (
 )
 
 const (
-	DbVersion      = "0.1.0"
-	DbName         = "useradm"
 	DbUsersColl    = "users"
 	DbTokensColl   = "tokens"
 	DbSettingsColl = "settings"
@@ -241,7 +237,7 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 	return &user, nil
 }
 
-func (db *DataStoreMongo) GetTokenById(ctx context.Context, id string) (*jwt.Token, error) {
+func (db *DataStoreMongo) GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token, error) {
 	var token jwt.Token
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
@@ -301,67 +297,6 @@ func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error
 
 	if err != nil {
 		return errors.Wrap(err, "failed to store token")
-	}
-
-	return nil
-}
-
-func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, tenant string) error {
-	ver, err := migrate.NewVersion(version)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse service version")
-	}
-
-	tenantCtx := identity.WithContext(ctx, &identity.Identity{
-		Tenant: tenant,
-	})
-
-	m := migrate.DummyMigrator{
-		Client:      db.client,
-		Db:          mstore.DbFromContext(tenantCtx, DbName),
-		Automigrate: db.automigrate,
-	}
-
-	err = m.Apply(tenantCtx, *ver, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to apply migrations")
-	}
-	return nil
-}
-
-func (db *DataStoreMongo) Migrate(ctx context.Context, version string, migrations []migrate.Migration) error {
-	l := log.FromContext(ctx)
-
-	dbs := []string{DbName}
-
-	if db.multitenant {
-		l.Infof("running migrations in multitenant mode")
-
-		tdbs, err := migrate.GetTenantDbs(ctx, db.client, mstore.IsTenantDb(DbName))
-		if err != nil {
-			return errors.Wrap(err, "failed go retrieve tenant DBs")
-		}
-		dbs = tdbs
-	} else {
-		l.Infof("running migrations in single tenant mode")
-	}
-
-	if db.automigrate {
-		l.Infof("automigrate is ON, will apply migrations")
-	} else {
-		l.Infof("automigrate is OFF, will check db version compatibility")
-	}
-
-	for _, d := range dbs {
-		l.Infof("migrating %s", d)
-
-		// if not in multi tenant, then tenant will be "" and identity
-		// will be the same as default
-		tenant := mstore.TenantFromDbName(d, DbName)
-
-		if err := db.MigrateTenant(ctx, version, tenant); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -431,8 +366,12 @@ func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId strin
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl)
 
+	id, err := uuid.FromString(userId)
+	if err != nil {
+		return store.ErrInvalidUUID
+	}
 	filter := bson.M{
-		"claims.sub": userId,
+		"sub": id,
 	}
 
 	ci, err := c.DeleteMany(ctx, filter)

@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
+	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
@@ -50,19 +52,19 @@ func TestAuthzMiddleware(t *testing.T) {
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
-				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
-				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
-				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
-				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
-				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
-				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
-				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
-				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
-				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
-				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
-				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
+				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
+				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
+				"MTRkLWJlMzE0MzEyMjMwZSIsInNjcCI6Im1lbmRlci5m" +
+				"b28ifQ.KsL6UqOwqE1sdVqHWUj1DNlagv_Gk9AI76zBt" +
+				"vlSH8cP-8EV24bD6xdHowoN1TPHdPnvwYsCP6u0KOdRw" +
+				"MDHVkJojNEUyMNAZAAKNvyjdEBlKNIbLIrPvFZY4zIyP" +
+				"wOljmFhdACahVtPsn3x8g4fkCcd29Bpy21jWs5Y8N4nA" +
+				"yJdfCNOaXyQwhY6mAGodAyKy0YKUqJicbpU4rmYUzGGc" +
+				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
+				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
+				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
 			action: &Action{
 				Resource: "foo:bar",
 				Method:   "GET",
@@ -98,19 +100,19 @@ func TestAuthzMiddleware(t *testing.T) {
 		},
 
 		"error: resource id error": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
-				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
-				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
-				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
-				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
-				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
-				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
-				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
-				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
-				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
-				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
-				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
+				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
+				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
+				"MTRkLWJlMzE0MzEyMjMwZSIsInNjcCI6Im1lbmRlci5m" +
+				"b28ifQ.KsL6UqOwqE1sdVqHWUj1DNlagv_Gk9AI76zBt" +
+				"vlSH8cP-8EV24bD6xdHowoN1TPHdPnvwYsCP6u0KOdRw" +
+				"MDHVkJojNEUyMNAZAAKNvyjdEBlKNIbLIrPvFZY4zIyP" +
+				"wOljmFhdACahVtPsn3x8g4fkCcd29Bpy21jWs5Y8N4nA" +
+				"yJdfCNOaXyQwhY6mAGodAyKy0YKUqJicbpU4rmYUzGGc" +
+				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
+				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
+				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
 			action: &Action{
 				Resource: "",
 				Method:   "GET",
@@ -142,19 +144,19 @@ func TestAuthzMiddleware(t *testing.T) {
 			),
 		},
 		"error: unauthorized token": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
-				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
-				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
-				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
-				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
-				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
-				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
-				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
-				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
-				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
-				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
-				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
+				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
+				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
+				"MTRkLWJlMzE0MzEyMjMwZSIsInNjcCI6Im1lbmRlci5m" +
+				"b28ifQ.KsL6UqOwqE1sdVqHWUj1DNlagv_Gk9AI76zBt" +
+				"vlSH8cP-8EV24bD6xdHowoN1TPHdPnvwYsCP6u0KOdRw" +
+				"MDHVkJojNEUyMNAZAAKNvyjdEBlKNIbLIrPvFZY4zIyP" +
+				"wOljmFhdACahVtPsn3x8g4fkCcd29Bpy21jWs5Y8N4nA" +
+				"yJdfCNOaXyQwhY6mAGodAyKy0YKUqJicbpU4rmYUzGGc" +
+				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
+				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
+				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
 			action: &Action{
 				Resource: "foo:bar",
 				Method:   "GET",
@@ -170,19 +172,19 @@ func TestAuthzMiddleware(t *testing.T) {
 			),
 		},
 		"error: authorizer internal error": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJleHAiOjQxMDExMDQwNjksImlzcyI6Im1lb" +
-				"mRlciIsInN1YiI6InRlc3RzdWJqZWN0Iiwic2" +
-				"NwIjoibWVuZGVyLmZvbyJ9.I6av5-kQdw5iBT" +
-				"gZmOs4iBzfVRbdWWmGPfQCoI7CpPcXmQhtRNw" +
-				"05kbueWnpZbpPvniu-AfU6fURFWcCN5Xa_fNY" +
-				"iuQhYABAAu3SHjfURrmaobr-I4G3MdXT1M-NH" +
-				"k1z64uTr8fvQeRePvvYQyLXp6PHVzpHjbPvy4" +
-				"9FapKzbG6bWPlRy9AeFaL6bksC2ov9g9iJsaW" +
-				"fWUIC-iqAKe7JePtlWK9GS8bzcNraJE6QG1eT" +
-				"ifQbf3I25dyjkOFy3yRaGNSpPCo-AYGtF6qOA" +
-				"7fQk9deTbWo2KNeXvLKz9TptghF2V5GRsNrig" +
-				"vEGfcnVpexPZsx7edgsN_J2XPJV1crRQ",
+			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
+				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
+				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
+				"MTRkLWJlMzE0MzEyMjMwZSIsInNjcCI6Im1lbmRlci5m" +
+				"b28ifQ.KsL6UqOwqE1sdVqHWUj1DNlagv_Gk9AI76zBt" +
+				"vlSH8cP-8EV24bD6xdHowoN1TPHdPnvwYsCP6u0KOdRw" +
+				"MDHVkJojNEUyMNAZAAKNvyjdEBlKNIbLIrPvFZY4zIyP" +
+				"wOljmFhdACahVtPsn3x8g4fkCcd29Bpy21jWs5Y8N4nA" +
+				"yJdfCNOaXyQwhY6mAGodAyKy0YKUqJicbpU4rmYUzGGc" +
+				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
+				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
+				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
 			action: &Action{
 				Resource: "foo:bar",
 				Method:   "GET",
@@ -300,9 +302,9 @@ func loadPrivKey(path string, t *testing.T) *rsa.PrivateKey {
 func TestGetRequestToken(t *testing.T) {
 	token := &jwt.Token{
 		Claims: jwt.Claims{
-			Subject:   "foo",
+			Subject:   uuid.NewSHA1("foo"),
 			Issuer:    "bar",
-			ExpiresAt: 12345,
+			ExpiresAt: jwt.Time{Time: time.Unix(12345, 0)},
 		},
 	}
 

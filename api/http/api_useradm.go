@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -138,6 +138,8 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	if err != nil {
 		if err == useradm.ErrUnauthorized {
 			rest_utils.RestErrWithLog(w, r, l, useradm.ErrUnauthorized, http.StatusUnauthorized)
+		} else if cause := errors.Cause(err); cause == store.ErrInvalidUUID {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
 		} else {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 		}
