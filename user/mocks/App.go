@@ -65,6 +65,39 @@ func (_m *App) CreateUserInternal(ctx context.Context, u *model.UserInternal) er
 	return r0
 }
 
+func (_m *App) CreateAPIToken(
+	ctx context.Context, rawToken string,
+) (*jwt.Token, error) {
+	ret := _m.Called(ctx, rawToken)
+
+	var r0 *jwt.Token
+	if rf, ok := ret.Get(0).(func(context.Context, string) *jwt.Token); ok {
+		r0 = rf(ctx, rawToken)
+	} else {
+		r0 = ret.Get(0).(*jwt.Token)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, rawToken)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+func (_m *App) DeleteAPIToken(ctx context.Context, rawToken string) error {
+	ret := _m.Called(ctx, rawToken)
+
+	var r0 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, rawToken)
+	} else {
+		r0 = ret.Error(1)
+	}
+	return r0
+}
+
 // DeleteTokens provides a mock function with given fields: ctx, tenantId, userId
 func (_m *App) DeleteTokens(ctx context.Context, tenantId string, userId string) error {
 	ret := _m.Called(ctx, tenantId, userId)

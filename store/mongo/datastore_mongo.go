@@ -360,6 +360,14 @@ func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
 	return err
 }
 
+func (db *DataStoreMongo) DeleteToken(ctx context.Context, jti uuid.UUID) error {
+	database := db.client.Database(mstore.DbFromContext(ctx, DbName))
+	collTkns := database.Collection(DbTokensColl)
+
+	_, err := collTkns.DeleteOne(ctx, bson.M{"_id": jti})
+	return err
+}
+
 // deletes all user's tokens
 func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId string) error {
 	c := db.client.

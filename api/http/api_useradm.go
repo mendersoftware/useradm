@@ -17,6 +17,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/asaskevich/govalidator"
@@ -37,6 +38,7 @@ const (
 	uriManagementUser      = "/api/management/v1/useradm/users/:id"
 	uriManagementUsers     = "/api/management/v1/useradm/users"
 	uriManagementSettings  = "/api/management/v1/useradm/settings"
+	uriManagementApiToken  = "/api/management/v1/useradm/tokens"
 
 	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
@@ -77,6 +79,8 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 		rest.Get(uriManagementSettings, i.GetSettingsHandler),
+		rest.Get(uriManagementApiToken, i.GetUserAPIToken),
+		rest.Delete(uriManagementApiToken, i.DeleteAPIToken),
 	}
 
 	routes = append(routes)
@@ -286,6 +290,45 @@ func (u *UserAdmApiHandlers) DeleteUserHandler(w rest.ResponseWriter, r *rest.Re
 		return
 	}
 
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (u *UserAdmApiHandlers) GetUserAPIToken(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+	rawJWT := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+
+	apiToken, err := u.userAdm.CreateAPIToken(ctx, rawJWT)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	raw, err := u.userAdm.SignToken(ctx, apiToken)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/jwt")
+	w.(http.ResponseWriter).Write([]byte(raw))
+	w.WriteHeader(http.StatusOK)
+}
+
+func (u *UserAdmApiHandlers) DeleteAPIToken(
+	w rest.ResponseWriter,
+	r *rest.Request,
+) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+	rawJWT := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	err := u.userAdm.DeleteAPIToken(ctx, rawJWT)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 

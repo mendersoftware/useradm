@@ -64,6 +64,9 @@ type App interface {
 	DeleteTokens(ctx context.Context, tenantId, userId string) error
 
 	CreateTenant(ctx context.Context, tenant model.NewTenant) error
+
+	CreateAPIToken(ctx context.Context, rawToken string) (*jwt.Token, error)
+	DeleteAPIToken(ctx context.Context, rawToken string) error
 }
 
 type Config struct {
@@ -161,6 +164,43 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	return t, nil
 }
 
+// CreateAPIToken creates a new JWT user token without an expiration time
+func (u *UserAdm) CreateAPIToken(
+	ctx context.Context,
+	rawToken string,
+) (*jwt.Token, error) {
+	userToken, err := u.jwtHandler.FromJWT(rawToken)
+	if err != nil {
+		return nil, err
+	}
+
+	apiToken, err := u.generateToken(
+		userToken.Subject.String(),
+		userToken.Scope, // TODO: Parameterize RBAC permissions
+		userToken.Tenant,
+		time.Duration(-1),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = u.db.SaveToken(ctx, apiToken)
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to save token")
+	}
+	return apiToken, err
+}
+
+// DeleteAPIToken deletes the token from the database effectively invalidating
+// the caller's API token.
+func (u *UserAdm) DeleteAPIToken(ctx context.Context, rawJWT string) error {
+	token, err := u.jwtHandler.FromJWT(rawJWT)
+	if err != nil {
+		return err
+	}
+	return u.db.DeleteToken(ctx, token.ID)
+}
+
 func (u *UserAdm) generateToken(
 	subject, scope, tenant string,
 	expireAfter time.Duration,
@@ -176,9 +216,9 @@ func (u *UserAdm) generateToken(
 		Subject:  subjectID,
 		Issuer:   u.config.Issuer,
 		IssuedAt: now,
-		Tenant: tenant,
-		Scope:  scope,
-		User:   true,
+		Tenant:   tenant,
+		Scope:    scope,
+		User:     true,
 	}}
 	if expireAfter > time.Duration(-1) {
 		ret.ExpiresAt = &jwt.Time{Time: now.Add(expireAfter)}
