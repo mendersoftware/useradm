@@ -303,6 +303,71 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
+  /tokens:
+    get:
+      summary: Create a new permanent API token.
+      description: |
+        Create a new API token that remains valid until explicitly deleted.
+        The generated token will be associated with the calling user, thus
+        inherit the user's permission scope.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        200:
+          description: API token generated and present in the payload.
+          examples:
+            application/jwt:
+              eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJNZW5kZXIiLCJzdWIiO
+              iI4NTRiMzEwOS00ODYyLTRhMjUtYTFmYi1mMTExNjFjZTdhODQiLCJzY3AiOlsibWV
+              uZGVyLioiXX0.XEToCrrn4ZIhIFpJO_i6NXixoMG0t5o0xgnlgTlhUGIFj_QEOuLkt
+              FeMaLH0RyK2jytTn1pvZ2WLl1QkKS9QwFSqD62tLWDVq-t6lIrjms_TgjilwlLNm8u
+              E29yow62LQF-Q_SZodTbRylZLdACZXqcd8bwSj0GgVKU7hu-JUViptbiSyVYwq-zpt
+              KEfc5F0yk6d4Tvv5r1JkTbSBPOqYexoKyPe4TQReZzxUTe3560jzXHIt-N6hiLTC1R
+              axlrDwMKAfdY-dAjoQBiYudJennlCyXp8seclVScJyn_1kyaTLgbfRp5jBZTQtr9TS
+              Va6s_VFCDWV1j8OCjYhEwFkIQ
+        401:
+          description: |
+            The user is not authenticated.
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
+    delete:
+      summary: Deletes the calling token.
+      description: |
+        Deletes the token carried in the request header, effectively
+        invalidating the token from future use. Applies to any token generated
+        by the GET /tokens and POST /auth/login endpoints.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        204:
+          description: |
+            JWToken successfully removed.
+        401:
+          description: |
+            Caller token is not authorized.
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
+
 definitions:
   UserNew:
     description: New user descriptor.
