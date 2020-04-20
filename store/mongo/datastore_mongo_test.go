@@ -38,18 +38,30 @@ func assertEqualTokens(t *testing.T, expected, actual *jwt.Token) bool {
 	ret = assert.Equal(t, expected.ID, actual.ID)
 	ret = ret && assert.Equal(t, expected.Subject, actual.Subject)
 	ret = ret && assert.Equal(t, expected.Audience, actual.Audience)
-	ret = ret && assert.WithinDuration(t,
-		expected.ExpiresAt.Time,
-		actual.ExpiresAt.Time, time.Second)
-	ret = ret && assert.WithinDuration(t,
-		expected.IssuedAt.Time,
-		actual.IssuedAt.Time, time.Second)
-	ret = ret && assert.WithinDuration(t,
-		expected.NotBefore.Time,
-		actual.NotBefore.Time, time.Second)
 	ret = ret && assert.Equal(t, expected.Issuer, actual.Issuer)
 	ret = ret && assert.Equal(t, expected.Scope, actual.Scope)
 	ret = ret && assert.Equal(t, expected.Tenant, actual.Tenant)
+	if expected.ExpiresAt == nil {
+		ret = ret && assert.Equal(t, expected.ExpiresAt, actual.ExpiresAt.Time)
+	} else {
+		ret = ret && assert.WithinDuration(t,
+			expected.ExpiresAt.Time,
+			actual.ExpiresAt.Time, time.Second)
+	}
+	if expected.IssuedAt == nil {
+		ret = ret && assert.Equal(t, expected.IssuedAt, actual.IssuedAt)
+	} else {
+		ret = ret && assert.WithinDuration(t,
+			expected.IssuedAt.Time,
+			actual.IssuedAt.Time, time.Second)
+	}
+	if expected.NotBefore == nil {
+		ret = ret && assert.Equal(t, expected.NotBefore, actual.NotBefore)
+	} else {
+		ret = ret && assert.WithinDuration(t,
+			expected.NotBefore.Time,
+			actual.NotBefore.Time, time.Second)
+	}
 	return ret && assert.Equal(t, expected.User, actual.User)
 }
 
@@ -458,10 +470,10 @@ func TestMongoGetTokenById(t *testing.T) {
 				ID:        uuid.NewSHA1("id-1"),
 				Subject:   uuid.NewSHA1("sub-1"),
 				Audience:  "audience",
-				ExpiresAt: jwt.Time{Time: time.Now().Add(time.Hour)},
-				IssuedAt:  jwt.Time{Time: time.Now()},
+				ExpiresAt: &jwt.Time{Time: time.Now().Add(time.Hour)},
+				IssuedAt:  &jwt.Time{Time: time.Now()},
 				Issuer:    "iss-1",
-				NotBefore: jwt.Time{Time: time.Unix(7890, 0)},
+				NotBefore: &jwt.Time{Time: time.Unix(7890, 0)},
 				Scope:     "scope-1",
 				Tenant:    "tenantID1",
 				User:      true,
@@ -472,10 +484,10 @@ func TestMongoGetTokenById(t *testing.T) {
 				ID:        uuid.NewSHA1("id-2"),
 				Subject:   uuid.NewSHA1("sub-2"),
 				Audience:  "audience",
-				ExpiresAt: jwt.Time{Time: time.Now().Add(time.Hour)},
-				IssuedAt:  jwt.Time{Time: time.Now()},
+				ExpiresAt: &jwt.Time{Time: time.Now().Add(time.Hour)},
+				IssuedAt:  &jwt.Time{Time: time.Now()},
 				Issuer:    "iss-2",
-				NotBefore: jwt.Time{Time: time.Unix(7890, 0)},
+				NotBefore: &jwt.Time{Time: time.Unix(7890, 0)},
 				Scope:     "scope-2",
 				Tenant:    "tenantID2",
 				User:      true,
@@ -763,12 +775,12 @@ func TestMongoSaveToken(t *testing.T) {
 					ID:       uuid.NewSHA1("id-3"),
 					Subject:  uuid.NewSHA1("sub-3"),
 					Audience: "audience",
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
-					IssuedAt: jwt.Time{Time: time.Now()},
+					IssuedAt: &jwt.Time{Time: time.Now()},
 					Issuer:   "iss-3",
-					NotBefore: jwt.Time{
+					NotBefore: &jwt.Time{
 						Time: time.Unix(7890, 0),
 					},
 					Scope:  "scope-3",
@@ -782,10 +794,10 @@ func TestMongoSaveToken(t *testing.T) {
 				Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("id-4"),
 					Subject: uuid.NewSHA1("sub-4"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
-					IssuedAt: jwt.Time{Time: time.Now()},
+					IssuedAt: &jwt.Time{Time: time.Now()},
 					Tenant:   "tenantID4",
 					User:     true,
 				},
@@ -797,12 +809,12 @@ func TestMongoSaveToken(t *testing.T) {
 					ID:       uuid.NewSHA1("id-3"),
 					Subject:  uuid.NewSHA1("sub-3"),
 					Audience: "audience",
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
-					IssuedAt: jwt.Time{Time: time.Now()},
+					IssuedAt: &jwt.Time{Time: time.Now()},
 					Issuer:   "iss-3",
-					NotBefore: jwt.Time{
+					NotBefore: &jwt.Time{
 						Time: time.Unix(7890, 0),
 					},
 					Scope:  "scope-3",
@@ -998,15 +1010,15 @@ func TestMongoDeleteTokens(t *testing.T) {
 						ID:       uuid.NewSHA1("id-1"),
 						Subject:  uuid.NewSHA1("sub-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1018,15 +1030,15 @@ func TestMongoDeleteTokens(t *testing.T) {
 						ID:       uuid.NewSHA1("id-2"),
 						Subject:  uuid.NewSHA1("sub-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1038,15 +1050,15 @@ func TestMongoDeleteTokens(t *testing.T) {
 						ID:       uuid.NewSHA1("id-3"),
 						Subject:  uuid.NewSHA1("sub-2"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-2",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-2",
@@ -1063,15 +1075,15 @@ func TestMongoDeleteTokens(t *testing.T) {
 						ID:       uuid.NewSHA1("id-1"),
 						Subject:  uuid.NewSHA1("sub-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope:  "scope-1",
@@ -1084,15 +1096,15 @@ func TestMongoDeleteTokens(t *testing.T) {
 						ID:       uuid.NewSHA1("id-2"),
 						Subject:  uuid.NewSHA1("sub-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope:  "scope-1",
@@ -1174,15 +1186,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-1"),
 						Subject:  uuid.NewSHA1("user-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1194,15 +1206,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-2"),
 						Subject:  uuid.NewSHA1("user-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1214,15 +1226,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-3"),
 						Subject:  uuid.NewSHA1("user-2"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1236,15 +1248,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-3"),
 						Subject:  uuid.NewSHA1("user-2"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1262,15 +1274,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-1"),
 						Subject:  uuid.NewSHA1("user-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1282,15 +1294,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-2"),
 						Subject:  uuid.NewSHA1("user-1"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1302,15 +1314,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-3"),
 						Subject:  uuid.NewSHA1("user-2"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",
@@ -1324,15 +1336,15 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 						ID:       uuid.NewSHA1("id-3"),
 						Subject:  uuid.NewSHA1("user-2"),
 						Audience: "audience",
-						ExpiresAt: jwt.Time{
+						ExpiresAt: &jwt.Time{
 							Time: time.Now().
 								Add(time.Hour),
 						},
-						IssuedAt: jwt.Time{
+						IssuedAt: &jwt.Time{
 							Time: time.Now(),
 						},
 						Issuer: "iss-1",
-						NotBefore: jwt.Time{
+						NotBefore: &jwt.Time{
 							Time: time.Unix(7890, 0),
 						},
 						Scope: "scope-1",

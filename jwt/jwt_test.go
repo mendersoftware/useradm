@@ -44,7 +44,7 @@ func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 			claims: Claims{
 				Issuer:  "Mender",
 				Subject: uuid.NewSHA1("foo"),
-				ExpiresAt: Time{
+				ExpiresAt: &Time{
 					Time: time.Now().Add(time.Hour),
 				},
 			},
@@ -95,10 +95,10 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      uuid.NewSHA1("someid"),
 					Subject: uuid.NewSHA1("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
-					IssuedAt: Time{
+					IssuedAt: &Time{
 						Time: time.Unix(1234567, 0),
 					},
 					Audience: "Mender",
@@ -130,10 +130,10 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      uuid.NewSHA1("someid"),
 					Subject: uuid.NewSHA1("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
-					IssuedAt: Time{
+					IssuedAt: &Time{
 						Time: time.Unix(1234567, 0),
 					},
 					Issuer:   "Mender",
@@ -165,10 +165,10 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      uuid.NewSHA1("someid"),
 					Subject: uuid.NewSHA1("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
-					IssuedAt: Time{
+					IssuedAt: &Time{
 						Time: time.Unix(1234567, 0),
 					},
 					Issuer: "Mender",

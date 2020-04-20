@@ -147,7 +147,8 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	}
 
 	//generate and save token
-	t, err := u.generateToken(user.ID, scope.All, ident.Tenant)
+	exp := time.Second * time.Duration(u.config.ExpirationTime)
+	t, err := u.generateToken(user.ID, scope.All, ident.Tenant, exp)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -160,26 +161,28 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
+func (u *UserAdm) generateToken(
+	subject, scope, tenant string,
+	expireAfter time.Duration,
+) (*jwt.Token, error) {
 	id := uuid.NewRandom()
 	subjectID, err := uuid.FromString(subject)
 	if err != nil {
 		return nil, err
 	}
-	now := jwt.Time{Time: time.Now()}
+	now := &jwt.Time{Time: time.Now()}
 	ret := &jwt.Token{Claims: jwt.Claims{
 		ID:       id,
 		Subject:  subjectID,
 		Issuer:   u.config.Issuer,
 		IssuedAt: now,
-		ExpiresAt: jwt.Time{
-			Time: now.Add(time.Second *
-				time.Duration(u.config.ExpirationTime)),
-		},
 		Tenant: tenant,
 		Scope:  scope,
 		User:   true,
 	}}
+	if expireAfter > time.Duration(-1) {
+		ret.ExpiresAt = &jwt.Time{Time: now.Add(expireAfter)}
+	}
 	return ret, nil
 }
 

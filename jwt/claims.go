@@ -26,9 +26,9 @@ type Claims struct {
 	// Subject holds the UUID associated with the user's account.
 	Subject uuid.UUID `json:"sub,omitempty" bson:"sub,omitempty"`
 	// ExpiresAt is the absolute time when the token expires.
-	ExpiresAt Time `json:"exp,omitempty" bson:"exp,omitempty"`
+	ExpiresAt *Time `json:"exp,omitempty" bson:"exp,omitempty"`
 	// IssuedAt is the absolute time the token was created.
-	IssuedAt Time `json:"iat,omitempty" bson:"iat,omitempty"`
+	IssuedAt *Time `json:"iat,omitempty" bson:"iat,omitempty"`
 	// Tenant holds the tenant ID claim
 	Tenant string `json:"mender.tenant,omitempty" bson:"tenant,omitempty"`
 	// User claims that this token is for the management API.
@@ -38,7 +38,7 @@ type Claims struct {
 	// Scope determines the API scope of the token (defaults to "mender.*")
 	Scope     string `json:"scp,omitempty" bson:"scp,omitempty"`
 	Audience  string `json:"aud,omitempty" bson:"aud,omitempty"`
-	NotBefore Time   `json:"nbf,omitempty" bson:"nbf,omitempty"`
+	NotBefore *Time  `json:"nbf,omitempty" bson:"nbf,omitempty"`
 }
 
 // Time is a simple wrapper of time.Time that marshals/unmarshals JSON
@@ -73,10 +73,11 @@ func (c *Claims) Valid() error {
 		c.Scope == "" {
 		return ErrTokenInvalid
 	}
-
-	now := time.Now()
-	if now.After(c.ExpiresAt.Time) {
-		return ErrTokenExpired
+	if c.ExpiresAt != nil {
+		now := time.Now()
+		if now.After(c.ExpiresAt.Time) {
+			return ErrTokenExpired
+		}
 	}
 
 	return nil

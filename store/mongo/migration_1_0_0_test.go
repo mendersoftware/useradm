@@ -47,7 +47,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("foo"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
 							Round(time.Second),
@@ -58,7 +58,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("baz"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
 							Round(time.Second),
@@ -71,7 +71,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("foo"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
 							Round(time.Second),
@@ -82,7 +82,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("baz"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
 							Round(time.Second),
@@ -100,7 +100,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("foo"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
 							Round(time.Second),
@@ -111,7 +111,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("baz"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(-time.Hour).
 							Round(time.Second),
@@ -124,7 +124,7 @@ func TestMigration_1_0_0(t *testing.T) {
 				jwt.Token{Claims: jwt.Claims{
 					ID:      uuid.NewSHA1("foo"),
 					Subject: uuid.NewSHA1("bar"),
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
 							Round(time.Second),
