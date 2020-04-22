@@ -79,7 +79,8 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 		rest.Get(uriManagementSettings, i.GetSettingsHandler),
-		rest.Get(uriManagementApiToken, i.GetUserAPIToken),
+		rest.Post(uriManagementApiToken, i.PostAPIToken),
+		rest.Get(uriManagementApiToken, i.GetAPITokens),
 		rest.Delete(uriManagementApiToken, i.DeleteAPIToken),
 	}
 
@@ -293,11 +294,26 @@ func (u *UserAdmApiHandlers) DeleteUserHandler(w rest.ResponseWriter, r *rest.Re
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (u *UserAdmApiHandlers) GetUserAPIToken(w rest.ResponseWriter, r *rest.Request) {
+func (u *UserAdmApiHandlers) PostAPIToken(w rest.ResponseWriter, r *rest.Request) {
+	var rawJWT string
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
-	rawJWT := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	jwtForm := strings.Fields(r.Header.Get("Authorization"))
+	switch len(jwtForm) {
+	case 2:
+		rawJWT = jwtForm[1]
+	case 0:
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header not present in request",
+		))
+		return
+	default:
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header malformed",
+		))
+		return
+	}
 
 	apiToken, err := u.userAdm.CreateAPIToken(ctx, rawJWT)
 	if err != nil {
@@ -316,14 +332,61 @@ func (u *UserAdmApiHandlers) GetUserAPIToken(w rest.ResponseWriter, r *rest.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
+func (u *UserAdmApiHandlers) GetAPITokens(w rest.ResponseWriter, r *rest.Request) {
+	var rawJWT string
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+	// jwtForm = []string{(Bearer|Basic), [token]}
+	jwtForm := strings.Fields(r.Header.Get("Authorization"))
+	switch len(jwtForm) {
+	case 2:
+		rawJWT = jwtForm[1]
+	case 0:
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header not present in request",
+		))
+		return
+	default:
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header malformed",
+		))
+		return
+	}
+	tokens, err := u.userAdm.GetActiveUserTokens(ctx, rawJWT)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header not present in request",
+		))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.WriteJson(tokens)
+}
+
 func (u *UserAdmApiHandlers) DeleteAPIToken(
 	w rest.ResponseWriter,
 	r *rest.Request,
 ) {
+	var rawJWT string
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
-	rawJWT := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	jwtForm := strings.Fields(r.Header.Get("Authorization"))
+	switch len(jwtForm) {
+	case 2:
+		rawJWT = jwtForm[1]
+	case 0:
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header not present in request",
+		))
+		return
+	default:
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New(
+			"Authorization header malformed",
+		))
+		return
+	}
 	err := u.userAdm.DeleteAPIToken(ctx, rawJWT)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)

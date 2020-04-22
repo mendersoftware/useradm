@@ -305,6 +305,38 @@ paths:
 
   /tokens:
     get:
+      summary: Get all active tokens for user
+      description: |
+        Retrieves a list of all valid JWT tokens assigned to this user.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          type: string
+          format: Bearer [token]
+          description: Contains the JWT token issued by the User Administration and Authentication Service.
+      responses:
+        200:
+          description: All valid API tokens issued for the requesting user.
+          content:
+            application/json:
+              schema:
+                type: array
+                description: String-type list of JWT tokens.
+                name: Tokens
+                items:
+                  string
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
+    post:
       summary: Create a new permanent API token.
       description: |
         Create a new API token that remains valid until explicitly deleted.

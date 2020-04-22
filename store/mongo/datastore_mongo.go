@@ -256,6 +256,25 @@ func (db *DataStoreMongo) GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.
 	return &token, nil
 }
 
+func (db *DataStoreMongo) GetTokensByUserID(
+	ctx context.Context,
+	uid uuid.UUID,
+) ([]*jwt.Token, error) {
+	var ret []*jwt.Token
+
+	database := db.client.Database(mstore.DbFromContext(ctx, DbName))
+	collTkns := database.Collection(DbTokensColl)
+	cur, err := collTkns.Find(ctx, bson.M{"sub": uid})
+	if err != nil {
+		return nil, err
+	}
+	err = cur.All(ctx, &ret)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
 func (db *DataStoreMongo) GetUsers(ctx context.Context) ([]model.User, error) {
 	o := mopts.Find()
 	o.SetProjection(bson.M{DbUserPass: 0})

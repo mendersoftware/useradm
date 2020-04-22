@@ -67,6 +67,7 @@ type App interface {
 
 	CreateAPIToken(ctx context.Context, rawToken string) (*jwt.Token, error)
 	DeleteAPIToken(ctx context.Context, rawToken string) error
+	GetActiveUserTokens(ctx context.Context, rawToken string) ([]string, error)
 }
 
 type Config struct {
@@ -189,6 +190,32 @@ func (u *UserAdm) CreateAPIToken(
 		return nil, errors.Wrap(err, "useradm: failed to save token")
 	}
 	return apiToken, err
+}
+
+// GetActiveUserTokens retrieves all valid user JWT tokens present in the DB.
+// TODO: add paging and expire after parameters.
+func (u *UserAdm) GetActiveUserTokens(
+	ctx context.Context,
+	rawToken string,
+) ([]string, error) {
+	var ret []string
+	userToken, err := u.jwtHandler.FromJWT(rawToken)
+	if err != nil {
+		return nil, err
+	}
+
+	tokens, err := u.db.GetTokensByUserID(ctx, userToken.Subject)
+	if err != nil {
+		return nil, err
+	}
+	ret = make([]string, len(tokens))
+	for i, token := range tokens {
+		ret[i], err = u.jwtHandler.ToJWT(token)
+		if err != nil {
+			return ret, err
+		}
+	}
+	return ret, nil
 }
 
 // DeleteAPIToken deletes the token from the database effectively invalidating

@@ -46,6 +46,7 @@ type DataStore interface {
 	DeleteUser(ctx context.Context, id string) error
 	SaveToken(ctx context.Context, token *jwt.Token) error
 	GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token, error)
+	GetTokensByUserID(ctx context.Context, id uuid.UUID) ([]*jwt.Token, error)
 
 	// deletes all tenant's tokens (identity in context)
 	DeleteTokens(ctx context.Context) error
