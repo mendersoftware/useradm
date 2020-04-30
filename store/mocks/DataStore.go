@@ -141,6 +141,32 @@ func (_m *DataStore) GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token
 	return r0, r1
 }
 
+func (_m *DataStore) GetTokensByUserID(
+	ctx context.Context, id uuid.UUID,
+) ([]*jwt.Token, error) {
+	ret := _m.Called(ctx, id)
+
+	var r0 []*jwt.Token
+	if rf, ok := ret.Get(0).(func(
+		context.Context, uuid.UUID,
+	) []*jwt.Token); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*jwt.Token)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUserByEmail provides a mock function with given fields: ctx, email
 func (_m *DataStore) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	ret := _m.Called(ctx, email)

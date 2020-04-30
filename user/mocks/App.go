@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -96,6 +96,29 @@ func (_m *App) DeleteAPIToken(ctx context.Context, rawToken string) error {
 		r0 = ret.Error(1)
 	}
 	return r0
+}
+
+func (_m *App) GetActiveUserTokens(
+	ctx context.Context,
+	rawToken string,
+) ([]string, error) {
+	ret := _m.Called(ctx, rawToken)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func(context.Context, string) []string); ok {
+		r0 = rf(ctx, rawToken)
+	} else {
+		r0 = ret.Get(0).([]string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, rawToken)
+	} else {
+		r1 = ret.Error(0)
+	}
+
+	return r0, r1
 }
 
 // DeleteTokens provides a mock function with given fields: ctx, tenantId, userId
