@@ -24,7 +24,7 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
@@ -302,7 +302,7 @@ func loadPrivKey(path string, t *testing.T) *rsa.PrivateKey {
 func TestGetRequestToken(t *testing.T) {
 	token := &jwt.Token{
 		Claims: jwt.Claims{
-			Subject:   uuid.NewSHA1("foo"),
+			Subject:   oid.NewUUIDv5("foo"),
 			Issuer:    "bar",
 			ExpiresAt: jwt.Time{Time: time.Unix(12345, 0)},
 		},

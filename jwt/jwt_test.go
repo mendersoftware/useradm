@@ -22,7 +22,7 @@ import (
 	"time"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +43,7 @@ func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 			privKey: loadPrivKey("../crypto/private.pem", t),
 			claims: Claims{
 				Issuer:  "Mender",
-				Subject: uuid.NewSHA1("foo"),
+				Subject: oid.NewUUIDv5("foo"),
 				ExpiresAt: Time{
 					Time: time.Now().Add(time.Hour),
 				},
@@ -93,8 +93,8 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 
 			outToken: Token{
 				Claims: Claims{
-					ID:      uuid.NewSHA1("someid"),
-					Subject: uuid.NewSHA1("foo"),
+					ID:      oid.NewUUIDv5("someid"),
+					Subject: oid.NewUUIDv5("foo"),
 					ExpiresAt: Time{
 						Time: time.Unix(4481893900, 0),
 					},
@@ -128,8 +128,8 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 
 			outToken: Token{
 				Claims: Claims{
-					ID:      uuid.NewSHA1("someid"),
-					Subject: uuid.NewSHA1("foo"),
+					ID:      oid.NewUUIDv5("someid"),
+					Subject: oid.NewUUIDv5("foo"),
 					ExpiresAt: Time{
 						Time: time.Unix(4481893900, 0),
 					},
@@ -163,8 +163,8 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 
 			outToken: Token{
 				Claims: Claims{
-					ID:      uuid.NewSHA1("someid"),
-					Subject: uuid.NewSHA1("foo"),
+					ID:      oid.NewUUIDv5("someid"),
+					Subject: oid.NewUUIDv5("foo"),
 					ExpiresAt: Time{
 						Time: time.Unix(4481893900, 0),
 					},

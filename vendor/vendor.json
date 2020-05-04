@@ -219,16 +219,16 @@
 			"revisionTime": "2019-11-14T14:54:31Z"
 		},
 		{
+			"checksumSHA1": "XFnYHAihhu6t9OjcPlKk590bD74=",
+			"path": "github.com/mendersoftware/go-lib-micro/mongo/oid",
+			"revision": "88f4beee758cbdbc82fe59c9c3ac6ed35db8ecf3",
+			"revisionTime": "2020-05-04T07:31:01Z"
+		},
+		{
 			"checksumSHA1": "sieXjK4uGibGjwVjk174Fas3jW8=",
 			"path": "github.com/mendersoftware/go-lib-micro/mongo/testing",
 			"revision": "5a5063e96c7a1d457f1f268a9777c00286a9638e",
 			"revisionTime": "2019-11-14T14:54:31Z"
-		},
-		{
-			"checksumSHA1": "jUHMJwyF0q9T1V9WFmaSuQHVrRs=",
-			"path": "github.com/mendersoftware/go-lib-micro/mongo/uuid",
-			"revision": "b2558c652499c089646c0cf5eab935c20e8d14f6",
-			"revisionTime": "2020-03-30T11:28:08Z"
 		},
 		{
 			"checksumSHA1": "GOcwzKtxOTwK2sJ9fCST2/qR4fU=",
@@ -655,7 +655,7 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "eb3733d160e74a9c7e442f435eb3bea458e1d19f",
 			"revisionTime": "2017-08-12T16:00:11Z"
-		},
+		}
 	],
 	"rootPath": "github.com/mendersoftware/useradm"
 }

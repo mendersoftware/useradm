@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/identity"
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	ctxstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
@@ -45,8 +45,8 @@ func TestMigration_1_0_0(t *testing.T) {
 
 			TokensIn: bson.A{
 				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("foo"),
-					Subject: uuid.NewSHA1("bar"),
+					ID:      oid.NewUUIDv5("foo"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
@@ -56,8 +56,8 @@ func TestMigration_1_0_0(t *testing.T) {
 					Scope:  "mender.*",
 				}},
 				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("baz"),
-					Subject: uuid.NewSHA1("bar"),
+					ID:      oid.NewUUIDv5("baz"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
@@ -68,9 +68,9 @@ func TestMigration_1_0_0(t *testing.T) {
 				}},
 			},
 			TokensOut: []jwt.Token{
-				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("foo"),
-					Subject: uuid.NewSHA1("bar"),
+				{Claims: jwt.Claims{
+					ID:      oid.NewUUIDv5("foo"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
@@ -79,9 +79,9 @@ func TestMigration_1_0_0(t *testing.T) {
 					Issuer: "Mender",
 					Scope:  "mender.*",
 				}},
-				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("baz"),
-					Subject: uuid.NewSHA1("bar"),
+				{Claims: jwt.Claims{
+					ID:      oid.NewUUIDv5("baz"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
@@ -98,8 +98,8 @@ func TestMigration_1_0_0(t *testing.T) {
 
 			TokensIn: bson.A{
 				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("foo"),
-					Subject: uuid.NewSHA1("bar"),
+					ID:      oid.NewUUIDv5("foo"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).
@@ -109,8 +109,8 @@ func TestMigration_1_0_0(t *testing.T) {
 					Scope:  "mender.*",
 				}},
 				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("baz"),
-					Subject: uuid.NewSHA1("bar"),
+					ID:      oid.NewUUIDv5("baz"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(-time.Hour).
@@ -121,9 +121,9 @@ func TestMigration_1_0_0(t *testing.T) {
 				}},
 			},
 			TokensOut: []jwt.Token{
-				jwt.Token{Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("foo"),
-					Subject: uuid.NewSHA1("bar"),
+				{Claims: jwt.Claims{
+					ID:      oid.NewUUIDv5("foo"),
+					Subject: oid.NewUUIDv5("bar"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().
 							Add(time.Hour).

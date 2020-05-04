@@ -21,7 +21,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 
@@ -161,11 +161,8 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 }
 
 func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
-	id := uuid.NewRandom()
-	subjectID, err := uuid.FromString(subject)
-	if err != nil {
-		return nil, err
-	}
+	id := oid.NewUUIDv4()
+	subjectID := oid.FromString(subject)
 	now := jwt.Time{Time: time.Now()}
 	ret := &jwt.Token{Claims: jwt.Claims{
 		ID:       id,
@@ -180,7 +177,7 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 		Scope:  scope,
 		User:   true,
 	}}
-	return ret, nil
+	return ret, ret.Claims.Valid()
 }
 
 func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
@@ -215,7 +212,7 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 	var tenantErr error
 
 	if u.ID == "" {
-		id := uuid.NewSHA1(u.Email)
+		id := oid.NewUUIDv5(u.Email)
 		u.ID = id.String()
 	}
 

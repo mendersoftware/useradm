@@ -138,8 +138,6 @@ func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Re
 	if err != nil {
 		if err == useradm.ErrUnauthorized {
 			rest_utils.RestErrWithLog(w, r, l, useradm.ErrUnauthorized, http.StatusUnauthorized)
-		} else if cause := errors.Cause(err); cause == store.ErrInvalidUUID {
-			rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
 		} else {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 		}
