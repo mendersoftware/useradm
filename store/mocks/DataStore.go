@@ -16,7 +16,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/stretchr/testify/mock"
@@ -107,11 +107,14 @@ func (_m *DataStore) GetSettings(ctx context.Context) (map[string]interface{}, e
 }
 
 // GetTokenById provides a mock function with given fields: ctx, id
-func (_m *DataStore) GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token, error) {
+func (_m *DataStore) GetTokenById(
+	ctx context.Context,
+	id oid.ObjectID,
+) (*jwt.Token, error) {
 	ret := _m.Called(ctx, id)
 
 	var r0 *jwt.Token
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *jwt.Token); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID) *jwt.Token); ok {
 		r0 = rf(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
@@ -120,7 +123,7 @@ func (_m *DataStore) GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, oid.ObjectID) error); ok {
 		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)

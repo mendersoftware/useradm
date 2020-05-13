@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -237,7 +237,7 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 	return &user, nil
 }
 
-func (db *DataStoreMongo) GetTokenById(ctx context.Context, id uuid.UUID) (*jwt.Token, error) {
+func (db *DataStoreMongo) GetTokenById(ctx context.Context, id oid.ObjectID) (*jwt.Token, error) {
 	var token jwt.Token
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
@@ -366,10 +366,7 @@ func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId strin
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl)
 
-	id, err := uuid.FromString(userId)
-	if err != nil {
-		return store.ErrInvalidUUID
-	}
+	id := oid.FromString(userId)
 	filter := bson.M{
 		"sub": id,
 	}

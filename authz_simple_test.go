@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/scope"
 )
@@ -42,7 +42,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			inAction:   "POST",
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Subject: uuid.NewSHA1("testsubject"),
+					Subject: oid.NewUUIDv5("testsubject"),
 					Issuer:  "mender",
 					ExpiresAt: jwt.Time{
 						Time: time.Now().Add(time.Hour),
@@ -60,7 +60,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					ExpiresAt: jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
-					Subject: uuid.NewSHA1("testsubject"),
+					Subject: oid.NewUUIDv5("testsubject"),
 					Scope:   scope.All,
 				},
 			},
@@ -74,7 +74,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 					ExpiresAt: jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
-					Subject: uuid.NewSHA1("testsubject"),
+					Subject: oid.NewUUIDv5("testsubject"),
 					Scope:   "foobar",
 				},
 			},

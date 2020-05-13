@@ -17,14 +17,14 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 )
 
 type Claims struct {
 	// ID is the unique token UUID.
-	ID uuid.UUID `json:"jti,omitempty" bson:"_id,omitempty"`
+	ID oid.ObjectID `json:"jti,omitempty" bson:"_id,omitempty"`
 	// Subject holds the UUID associated with the user's account.
-	Subject uuid.UUID `json:"sub,omitempty" bson:"sub,omitempty"`
+	Subject oid.ObjectID `json:"sub,omitempty" bson:"sub,omitempty"`
 	// ExpiresAt is the absolute time when the token expires.
 	ExpiresAt Time `json:"exp,omitempty" bson:"exp,omitempty"`
 	// IssuedAt is the absolute time the token was created.
@@ -66,10 +66,9 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 // Note that for now we're only using iss, exp, sub, scp.
 // Basic checks are done here, field correctness (e.g. issuer) - at the service level, where this info is available.
 func (c *Claims) Valid() error {
-	var uuidNil uuid.UUID
 	if c.Issuer == "" ||
-		c.Subject == uuidNil ||
-		c.ID == uuidNil ||
+		c.Subject.Type() == oid.TypeNil ||
+		c.ID.Type() == oid.TypeNil ||
 		c.Scope == "" {
 		return ErrTokenInvalid
 	}

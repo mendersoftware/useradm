@@ -21,7 +21,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
 	"github.com/mendersoftware/go-lib-micro/identity"
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -101,7 +101,7 @@ func TestUserAdmLogin(t *testing.T) {
 			inPassword: "correcthorsebatterystaple",
 
 			dbUser: &model.User{
-				ID:       uuid.NewSHA1("1234").String(),
+				ID:       oid.NewUUIDv5("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -110,7 +110,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr: nil,
 			outToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Subject: uuid.NewSHA1("1234"),
+					Subject: oid.NewUUIDv5("1234"),
 					Scope:   scope.All,
 				},
 			},
@@ -132,7 +132,7 @@ func TestUserAdmLogin(t *testing.T) {
 			tenantErr: nil,
 
 			dbUser: &model.User{
-				ID:       uuid.NewSHA1("1234").String(),
+				ID:       oid.NewUUIDv5("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -141,7 +141,7 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr: nil,
 			outToken: &jwt.Token{
 				Claims: jwt.Claims{
-					Subject: uuid.NewSHA1("1234"),
+					Subject: oid.NewUUIDv5("1234"),
 					Scope:   scope.All,
 					Tenant:  "TenantID1",
 				},
@@ -187,7 +187,7 @@ func TestUserAdmLogin(t *testing.T) {
 			tenantErr: nil,
 
 			dbUser: &model.User{
-				ID:       uuid.NewSHA1("1234").String(),
+				ID:       oid.NewUUIDv5("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -254,7 +254,7 @@ func TestUserAdmLogin(t *testing.T) {
 			inPassword: "correcthorsebatterystaple",
 
 			dbUser: &model.User{
-				ID:       uuid.NewSHA1("1234").String(),
+				ID:       oid.NewUUIDv5("1234").String(),
 				Email:    "foo@bar.com",
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
@@ -701,19 +701,19 @@ func TestUserAdmVerify(t *testing.T) {
 		"ok": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
 			dbUser: &model.User{
-				ID: uuid.NewSHA1("1234").String(),
+				ID: oid.NewUUIDv5("1234").String(),
 			},
 			dbToken: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -722,8 +722,8 @@ func TestUserAdmVerify(t *testing.T) {
 		"error: invalid token issuer": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "foo",
 					User:    true,
 				},
@@ -733,8 +733,8 @@ func TestUserAdmVerify(t *testing.T) {
 		"error: not a user token": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 				},
 			},
@@ -743,8 +743,8 @@ func TestUserAdmVerify(t *testing.T) {
 		"error: user not found": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -754,14 +754,14 @@ func TestUserAdmVerify(t *testing.T) {
 		"error: token not found": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
 			},
 			dbUser: &model.User{
-				ID: uuid.NewSHA1("1234").String(),
+				ID: oid.NewUUIDv5("1234").String(),
 			},
 
 			dbToken:    nil,
@@ -772,8 +772,8 @@ func TestUserAdmVerify(t *testing.T) {
 		"error: db user": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},
@@ -785,8 +785,8 @@ func TestUserAdmVerify(t *testing.T) {
 		"error: db token": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("token-1"),
-					Subject: uuid.NewSHA1("1234"),
+					ID:      oid.NewUUIDv5("token-1"),
+					Subject: oid.NewUUIDv5("1234"),
 					Issuer:  "mender",
 					User:    true,
 				},

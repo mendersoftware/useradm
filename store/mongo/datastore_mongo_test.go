@@ -22,7 +22,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
-	"github.com/mendersoftware/go-lib-micro/mongo/uuid"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
@@ -455,8 +455,8 @@ func TestMongoGetTokenById(t *testing.T) {
 	existing := bson.A{
 		&jwt.Token{
 			Claims: jwt.Claims{
-				ID:        uuid.NewSHA1("id-1"),
-				Subject:   uuid.NewSHA1("sub-1"),
+				ID:        oid.NewUUIDv5("id-1"),
+				Subject:   oid.NewUUIDv5("sub-1"),
 				Audience:  "audience",
 				ExpiresAt: jwt.Time{Time: time.Now().Add(time.Hour)},
 				IssuedAt:  jwt.Time{Time: time.Now()},
@@ -469,8 +469,8 @@ func TestMongoGetTokenById(t *testing.T) {
 		},
 		&jwt.Token{
 			Claims: jwt.Claims{
-				ID:        uuid.NewSHA1("id-2"),
-				Subject:   uuid.NewSHA1("sub-2"),
+				ID:        oid.NewUUIDv5("id-2"),
+				Subject:   oid.NewUUIDv5("sub-2"),
 				Audience:  "audience",
 				ExpiresAt: jwt.Time{Time: time.Now().Add(time.Hour)},
 				IssuedAt:  jwt.Time{Time: time.Now()},
@@ -528,13 +528,14 @@ func TestMongoGetTokenById(t *testing.T) {
 		store, err := NewDataStoreMongoWithClient(client)
 		assert.NoError(t, err)
 
+		t.Log(existing[0])
 		_, err = client.
 			Database(mstore.DbFromContext(ctx, DbName)).
 			Collection(DbTokensColl).
 			InsertMany(ctx, existing)
 		assert.NoError(t, err)
 
-		token, err := store.GetTokenById(ctx, uuid.NewSHA1(tc.id))
+		token, err := store.GetTokenById(ctx, oid.NewUUIDv5(tc.id))
 
 		if tc.outToken != nil {
 			assertEqualTokens(t, tc.outToken, token)
@@ -632,7 +633,7 @@ func TestMongoGetUsers(t *testing.T) {
 			// transform times to utc
 			// bson encoder uses time.Local before writing to mongo, which can be e.g. 'CET'
 			// this won't match with assert.Equal
-			for i, _ := range users {
+			for i := range users {
 				if users[i].CreatedTs != nil {
 					t := users[i].CreatedTs.UTC()
 					users[i].CreatedTs = &t
@@ -760,8 +761,8 @@ func TestMongoSaveToken(t *testing.T) {
 		"ok 1": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:       uuid.NewSHA1("id-3"),
-					Subject:  uuid.NewSHA1("sub-3"),
+					ID:       oid.NewUUIDv5("id-3"),
+					Subject:  oid.NewUUIDv5("sub-3"),
 					Audience: "audience",
 					ExpiresAt: jwt.Time{
 						Time: time.Now().Add(time.Hour),
@@ -780,8 +781,8 @@ func TestMongoSaveToken(t *testing.T) {
 		"ok 2": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:      uuid.NewSHA1("id-4"),
-					Subject: uuid.NewSHA1("sub-4"),
+					ID:      oid.NewUUIDv5("id-4"),
+					Subject: oid.NewUUIDv5("sub-4"),
 					ExpiresAt: jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
@@ -794,8 +795,8 @@ func TestMongoSaveToken(t *testing.T) {
 		"ok 3, MT": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID:       uuid.NewSHA1("id-3"),
-					Subject:  uuid.NewSHA1("sub-3"),
+					ID:       oid.NewUUIDv5("id-3"),
+					Subject:  oid.NewUUIDv5("sub-3"),
 					Audience: "audience",
 					ExpiresAt: jwt.Time{
 						Time: time.Now().Add(time.Hour),
@@ -995,8 +996,8 @@ func TestMongoDeleteTokens(t *testing.T) {
 			inTokens: []interface{}{
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-1"),
-						Subject:  uuid.NewSHA1("sub-1"),
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("sub-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1015,8 +1016,8 @@ func TestMongoDeleteTokens(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-2"),
-						Subject:  uuid.NewSHA1("sub-1"),
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("sub-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1035,8 +1036,8 @@ func TestMongoDeleteTokens(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-3"),
-						Subject:  uuid.NewSHA1("sub-2"),
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("sub-2"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1060,8 +1061,8 @@ func TestMongoDeleteTokens(t *testing.T) {
 			inTokens: []interface{}{
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-1"),
-						Subject:  uuid.NewSHA1("sub-1"),
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("sub-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1081,8 +1082,8 @@ func TestMongoDeleteTokens(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-2"),
-						Subject:  uuid.NewSHA1("sub-1"),
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("sub-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1167,12 +1168,12 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 		outError  string
 	}{
 		"ok": {
-			user: uuid.NewSHA1("user-1").String(),
+			user: oid.NewUUIDv5("user-1").String(),
 			inTokens: []interface{}{
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-1"),
-						Subject:  uuid.NewSHA1("user-1"),
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("user-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1191,8 +1192,8 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-2"),
-						Subject:  uuid.NewSHA1("user-1"),
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("user-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1211,8 +1212,8 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-3"),
-						Subject:  uuid.NewSHA1("user-2"),
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1231,10 +1232,10 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				},
 			},
 			outTokens: []jwt.Token{
-				jwt.Token{
+				{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-3"),
-						Subject:  uuid.NewSHA1("user-2"),
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1254,13 +1255,13 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 			},
 		},
 		"ok - tenant": {
-			user:   uuid.NewSHA1("user-1").String(),
+			user:   oid.NewUUIDv5("user-1").String(),
 			tenant: "tenant-1",
 			inTokens: []interface{}{
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-1"),
-						Subject:  uuid.NewSHA1("user-1"),
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("user-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1279,8 +1280,8 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-2"),
-						Subject:  uuid.NewSHA1("user-1"),
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("user-1"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1299,8 +1300,8 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				},
 				jwt.Token{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-3"),
-						Subject:  uuid.NewSHA1("user-2"),
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1319,10 +1320,10 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				},
 			},
 			outTokens: []jwt.Token{
-				jwt.Token{
+				{
 					Claims: jwt.Claims{
-						ID:       uuid.NewSHA1("id-3"),
-						Subject:  uuid.NewSHA1("user-2"),
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1342,7 +1343,7 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 			},
 		},
 		"ok - no tokens": {
-			user:     uuid.NewSHA1("user2").String(),
+			user:     oid.NewUUIDv5("user2").String(),
 			outError: store.ErrTokenNotFound.Error(),
 		},
 	}
