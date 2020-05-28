@@ -713,6 +713,20 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		//test
 		recorded := test.RunRequest(t, api, req)
 		mt.CheckResponse(t, tc.checker, recorded)
+
+		//make request
+		req := makeReq("GET",
+			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
+			"Bearer "+token,
+			nil)
+
+		// set these to make the middleware happy
+		req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
+		req.Header.Add("X-Original-Method", "GET")
+
+		//test
+		recorded := test.RunRequest(t, api, req)
+		mt.CheckResponse(t, tc.checker, recorded)
 	}
 }
 
