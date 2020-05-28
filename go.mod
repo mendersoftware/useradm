@@ -1,41 +1,19 @@
 module github.com/mendersoftware/useradm
 
+go 1.14
+
 require (
-	github.com/DataDog/zstd v0.0.0-20160706220725-2bf71ec48360
-	github.com/Sirupsen/logrus v0.0.0-20170822132746-89742aefa4b2
-	github.com/ant0ine/go-json-rest v0.0.0-20161106000515-709bbe395d7f
+	github.com/ant0ine/go-json-rest v3.3.3-0.20170913041208-ebb33769ae01+incompatible
 	github.com/asaskevich/govalidator v0.0.0-20170903095215-73945b6115bf
-	github.com/dgrijalva/jwt-go v0.0.0-20170608005149-a539ee1a749a
-	github.com/fsnotify/fsnotify v0.0.0-20170329110642-4da3e2cfbabc
-	github.com/globalsign/mgo v0.0.0-20180615134936-113d3961e731
-	github.com/go-stack/stack v1.8.0
-	github.com/golang/snappy v0.0.0-20190904063534-ff6b7dc882cf
-	github.com/hashicorp/hcl v0.0.0-20170825171336-8f6b1344a92f
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2
-	github.com/magiconair/properties v0.0.0-20170902060319-8d7837e64d3c
-	github.com/mendersoftware/go-lib-micro v0.0.0-20191114145431-5a5063e96c7a
-	github.com/mendersoftware/mendertesting v0.0.0-20191030103815-c1cfa6a171dd
-	github.com/mitchellh/mapstructure v0.0.0-20170523030023-d0303fe80992
-	github.com/pelletier/go-buffruneio v0.1.0
-	github.com/pelletier/go-toml v0.0.0-20170904195809-1d6b12b7cb29
-	github.com/pkg/errors v0.0.0-20170910134614-2b3a18b5f0fb
-	github.com/satori/go.uuid v0.0.0-20181028125025-b2ce2384e17b
-	github.com/sirupsen/logrus v0.0.0-20191026113918-67a7fdcf741f
-	github.com/spf13/afero v0.0.0-20170901052352-ee1bd8ee15a1
-	github.com/spf13/cast v1.1.0
-	github.com/spf13/jwalterweatherman v0.0.0-20170901151539-12bd96e66386
-	github.com/spf13/pflag v0.0.0-20170901120850-7aff26db30c1
-	github.com/spf13/viper v1.0.0
-	github.com/stretchr/objx v0.0.0-20150928122152-1a9d0bb9f541
-	github.com/stretchr/testify v1.2.2
-	github.com/urfave/cli v0.0.0-20170329013517-8ba6f23b6e36
-	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
-	github.com/xdg/stringprep v0.0.0-20180714160509-73f8eece6fdc
-	go.mongodb.org/mongo-driver v0.0.0-20191122214930-4bdff2e4151b
-	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20190422165155-953cdadca894
-	golang.org/x/text v0.3.0
-	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
-	gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/mendersoftware/go-lib-micro v0.0.0-20200529072844-ecc6d0b89fa6
+	github.com/mendersoftware/mendertesting v0.0.0-20200528113222-083aca144cb7
+	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.6.0
+	github.com/stretchr/testify v1.6.0
+	github.com/urfave/cli v1.22.4
+	go.mongodb.org/mongo-driver v1.3.3
+	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 )
+
+replace github.com/ant0ine/go-json-rest v3.3.3-0.20170913041208-ebb33769ae01+incompatible => github.com/ant0ine/go-json-rest v3.3.2-0.20161106000515-709bbe395d7f+incompatible
