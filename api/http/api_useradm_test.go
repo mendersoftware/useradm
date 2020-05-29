@@ -715,7 +715,7 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		mt.CheckResponse(t, tc.checker, recorded)
 
 		//make request
-		req := makeReq("GET",
+		req = makeReq("GET",
 			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
 			"Bearer "+token,
 			nil)
@@ -725,7 +725,21 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 		req.Header.Add("X-Original-Method", "GET")
 
 		//test
-		recorded := test.RunRequest(t, api, req)
+		recorded = test.RunRequest(t, api, req)
+		mt.CheckResponse(t, tc.checker, recorded)
+
+		//make request for forwarded request
+		req = makeReq("GET",
+			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
+			"Bearer "+token,
+			nil)
+
+		// set these to make the middleware happy
+		req.Header.Add("X-Forwarded-URI", "/api/mgmt/0.1/someservice/some/resource")
+		req.Header.Add("X-Forwarded-Method", "POST")
+
+		//test
+		recorded = test.RunRequest(t, api, req)
 		mt.CheckResponse(t, tc.checker, recorded)
 	}
 }
