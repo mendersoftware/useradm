@@ -22,7 +22,7 @@ include:
     file: '.gitlab-ci-github-status-updates.yml'
 
 test:unit:
-  image: golang:1.11
+  image: golang:1.14
 
 test:acceptance_tests:
   variables:
