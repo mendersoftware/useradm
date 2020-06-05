@@ -22,6 +22,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/urfave/cli"
 
+	. "github.com/mendersoftware/useradm/config"
 	"github.com/mendersoftware/useradm/store/mongo"
 )
 
@@ -125,7 +126,7 @@ func doMain(args []string) {
 	app.Before = func(args *cli.Context) error {
 		log.Setup(debug)
 
-		err := config.FromConfigFile(configPath, configDefaults)
+		err := config.FromConfigFile(configPath, ConfigDefaults)
 		if err != nil {
 			return cli.NewExitError(
 				fmt.Sprintf("error loading configuration: %s", err),

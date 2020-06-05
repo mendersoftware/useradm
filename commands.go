@@ -25,6 +25,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/mendersoftware/useradm/client/tenant"
+	. "github.com/mendersoftware/useradm/config"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store/mongo"
 	"github.com/mendersoftware/useradm/user"
