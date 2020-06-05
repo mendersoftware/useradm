@@ -34,7 +34,6 @@ func init() {
 
 	flag.BoolVar(&runAcceptanceTests, "acceptance-tests", false, "set flag when running acceptance tests")
 	flag.StringVar(&cliArgsRaw, "cli-args", "", "for passing urfave/cli args (single string) when golang flags are specified (avoids conflict)")
-
 }
 
 func TestRunMain(t *testing.T) {
