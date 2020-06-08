@@ -26,7 +26,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mendersoftware/useradm/jwt"
@@ -109,10 +108,6 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
 		}
 		clientOptions.SetTLSConfig(tlsConfig)
 	}
-
-	wc := writeconcern.New()
-	wc.WithOptions(writeconcern.W(1), writeconcern.J(true))
-	clientOptions.SetWriteConcern(wc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
