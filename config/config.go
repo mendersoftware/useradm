@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package main
+package config
 
 import (
 	"github.com/mendersoftware/go-lib-micro/config"
@@ -23,7 +23,7 @@ const (
 	SettingListenDefault = ":8080"
 
 	SettingMiddleware        = "middleware"
-	SettingMiddlewareDefault = EnvProd
+	SettingMiddlewareDefault = "prod"
 
 	SettingPrivKeyPath        = "server_priv_key_path"
 	SettingPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	configDefaults = []config.Default{
+	ConfigDefaults = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},

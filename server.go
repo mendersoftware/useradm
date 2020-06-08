@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	api_http "github.com/mendersoftware/useradm/api/http"
 	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/client/tenant"
+	. "github.com/mendersoftware/useradm/config"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/store/mongo"
