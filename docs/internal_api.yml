@@ -6,7 +6,7 @@ info:
     An API for user administration and user authentication handling. Not exposed via the API Gateway - intended for internal use only.
 
 basePath: '/api/internal/v1/useradm'
-host: 'mender-device-auth:8080'
+host: 'mender-useradm:8080'
 schemes:
   - http
 
