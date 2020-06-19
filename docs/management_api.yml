@@ -7,7 +7,7 @@ info:
     All responses from the API will contain 'X-MEN-RequestID' header with server-side generated request ID.
 
 basePath: '/api/management/v1/useradm'
-host: 'docker.mender.io'
+host: 'hosted.mender.io'
 schemes:
   - https
 
