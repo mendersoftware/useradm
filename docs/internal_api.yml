@@ -13,54 +13,64 @@ schemes:
 paths:
   /auth/verify:
     post:
-     summary: Check the validity of a token
-     description: |
+      operationId: Verify JWT
+      tags:
+        - Internal API
+      summary: Check the validity of a token
+      description: |
         Besides the basic validity check, checks the token expiration time and user-initiated token revocation.
 
         Services which intend to use it should be correctly set up in the gateway's configuration.
-     parameters:
-       - name: Authorization
-         in: header
-         description: The token in base64-encoded form.
-         required: true
-         type: string
-         format: Bearer [token]
-       - name: X-Original-URI
-         in: header
-         description: |
-           URI the original request was sent to, the URI is expected to have
-           at least 4 components, eg. /api/management/1.0/foo/bar
-         required: true
-         type: string
-         format: HTTP path
-       - name: X-Original-Method
-         in: header
-         description: HTTP method used when accessing the original URI
-         required: true
-         type: string
-         enum:
-           - GET
-           - PUT
-           - POST
-           - DELETE
-     responses:
+      parameters:
+        - name: Authorization
+          in: header
+          description: The token in base64-encoded form.
+          required: true
+          type: string
+          format: Bearer [token]
+        - name: X-Original-URI
+          in: header
+          description: |
+            URI the original request was sent to, the URI is expected to have
+            at least 4 components, eg. /api/management/1.0/foo/bar
+          required: true
+          type: string
+          format: HTTP path
+        - name: X-Original-Method
+          in: header
+          description: HTTP method used when accessing the original URI
+          required: true
+          type: string
+          enum:
+            - GET
+            - PUT
+            - POST
+            - DELETE
+      responses:
         200:
-            description: The token is valid.
+          description: The token is valid.
         400:
-            description: Missing or malformed request parameters.
+          description: Missing or malformed request parameters.
+          schema:
+            $ref: '#/definitions/Error'
         401:
-            description: Verification failed, authentication should not be granted.
+          description: Verification failed, authentication should not be granted.
+          schema:
+            $ref: '#/definitions/Error'
         403:
-            description: Token has expired - apply for a new one.
+          description: Token has expired - apply for a new one.
+          schema:
+            $ref: '#/definitions/Error'
         500:
-            description: Unexpected error.
-            schema:
-              $ref: '#/definitions/Error'
+          description: Unexpected error.
+          schema:
+            $ref: '#/definitions/Error'
   /tenants:
     post:
-      summary: Create tenant
-      description: |
-        Create a tenant with provided configuration.
+      operationId: Create Tenant
+      tags:
+        - Internal API
+      summary: Create a tenant with provided configuration.
       parameters:
         - name: tenant
           in: body
@@ -78,6 +88,9 @@ paths:
             $ref: '#/definitions/Error'
   /tenants/{tenant_id}/users:
     post:
+      operationId: Create User
+      tags:
+        - Internal API
       summary: Create user
       parameters:
         - name: tenant_id
@@ -115,6 +128,9 @@ paths:
             $ref: "#/definitions/Error"
   /tokens:
     delete:
+      operationId: Revoke User Tokens
+      tags:
+        - Internal API
       summary: Delete all user tokens
       description: |
          This endpoint is designed to be used for tenant account suspension purpose.
@@ -153,8 +169,7 @@ definitions:
         description: Description of the error.
         type: string
     example:
-      application/json:
-        error: "missing Authorization header"
+      error: "missing Authorization header"
   TenantNew:
     description: Tenant configuration.
     type: object
@@ -163,8 +178,7 @@ definitions:
         description: ID of given tenant.
         type: string
     example:
-      application/json:
-        tenant_id: "1234"
+      tenant_id: "1234"
   UserNew:
     description: New user descriptor.
     type: object
@@ -186,8 +200,7 @@ definitions:
       - email
       - password
     example:
-      application/json:
-        email: 'user@acme.com'
-        password: 'secret'
-        propagate: false
+      email: 'user@acme.com'
+      password: 'secret'
+      propagate: false
 
