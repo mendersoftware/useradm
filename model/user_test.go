@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -39,12 +39,12 @@ func TestValidateNew(t *testing.T) {
 			},
 			outErr: "email: foobar does not validate as email;",
 		},
-		"email invalid(+) pass ok": {
+		"email ok (+), pass ok": {
 			inUser: User{
 				Email:    "foobar+org@org.com",
 				Password: "correcthorsebatterystaple",
 			},
-			outErr: "email: invalid character '+' in email address",
+			outErr: "",
 		},
 		"email invalid(non-ascii), pass ok": {
 			inUser: User{

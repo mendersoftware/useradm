@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -93,7 +94,7 @@ func NewClient(conf Config) *Client {
 
 func (c *Client) GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error) {
 	req, err := http.NewRequest(http.MethodGet,
-		JoinURL(c.conf.TenantAdmAddr, GetTenantsUri+"?username="+username),
+		JoinURL(c.conf.TenantAdmAddr, GetTenantsUri+"?username="+url.QueryEscape(username)),
 		nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request to tenantadm")
