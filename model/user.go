@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package model
 
 import (
-	"strings"
 	"time"
 
 	"github.com/asaskevich/govalidator"
@@ -149,9 +148,5 @@ func checkPwd(password string) error {
 }
 
 func checkEmail(email string) error {
-	if strings.Contains(email, "+") {
-		return errors.New("email: invalid character '+' in email address")
-	}
-
 	return nil
 }
