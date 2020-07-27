@@ -12,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli v1.22.4
-	go.mongodb.org/mongo-driver v1.3.3
+	go.mongodb.org/mongo-driver v1.3.5
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
