@@ -129,6 +129,11 @@ func NewDataStoreMongo(config DataStoreMongoConfig) (*DataStoreMongo, error) {
 	return db, nil
 }
 
+func (db *DataStoreMongo) Ping(ctx context.Context) error {
+	res := db.client.Database(DbName).RunCommand(ctx, bson.M{"ping": 1})
+	return res.Err()
+}
+
 func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	if err := db.EnsureIndexes(ctx); err != nil {
 		return err
