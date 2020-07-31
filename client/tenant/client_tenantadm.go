@@ -52,6 +52,7 @@ type Config struct {
 }
 
 // ClientRunner is an interface of tenantadm api client
+//go:generate ../../utils/mockgen.sh
 type ClientRunner interface {
 	CheckHealth(ctx context.Context) error
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)

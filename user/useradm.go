@@ -45,6 +45,7 @@ const (
 	TenantStatusSuspended = "suspended"
 )
 
+//go:generate ../utils/mockgen.sh
 type App interface {
 	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
