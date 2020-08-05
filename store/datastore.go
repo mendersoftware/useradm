@@ -32,7 +32,10 @@ var (
 	ErrDuplicateEmail = errors.New("user with a given email already exists")
 )
 
+//go:generate ../utils/mockgen.sh
 type DataStore interface {
+	// Ping the storage service - verifying network connection.
+	Ping(ctx context.Context) error
 	// CreateUser persists the user
 	CreateUser(ctx context.Context, u *model.User) error
 	// Update user information - password or/and email address

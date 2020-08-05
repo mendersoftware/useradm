@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
+	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/pkg/errors"
 )
 
@@ -32,6 +33,7 @@ const (
 	GetTenantsUri   = UriBase + "/tenants"
 	UsersUri        = UriBase + "/users"
 	TenantsUsersUri = UriBase + "/tenants/:tid/users/:uid"
+	URIHealth       = UriBase + "/health"
 	// default request timeout, 10s
 	defaultReqTimeout = time.Duration(10) * time.Second
 )
@@ -50,7 +52,9 @@ type Config struct {
 }
 
 // ClientRunner is an interface of tenantadm api client
+//go:generate ../../utils/mockgen.sh
 type ClientRunner interface {
+	CheckHealth(ctx context.Context) error
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)
 	CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error
 	UpdateUser(ctx context.Context, tenantId, userId string, u *UserUpdate, client apiclient.HttpRunner) error
@@ -90,6 +94,42 @@ func NewClient(conf Config) *Client {
 	return &Client{
 		conf: conf,
 	}
+}
+
+func (c *Client) CheckHealth(ctx context.Context) error {
+	var (
+		client http.Client
+		apiErr rest_utils.ApiError
+		cancel context.CancelFunc
+	)
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		ctx, cancel = context.WithTimeout(ctx, c.conf.Timeout)
+		defer cancel()
+	}
+
+	req, _ := http.NewRequestWithContext(
+		ctx, "GET",
+		JoinURL(c.conf.TenantAdmAddr, URIHealth), nil,
+	)
+
+	rsp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	if rsp.StatusCode >= 200 && rsp.StatusCode < 300 {
+		return nil
+	}
+	defer rsp.Body.Close()
+	decoder := json.NewDecoder(rsp.Body)
+	err = decoder.Decode(&apiErr)
+	if err != nil {
+		return errors.Errorf("service unhealthy: HTTP %s", rsp.Status)
+	}
+	return &apiErr
 }
 
 func (c *Client) GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error) {

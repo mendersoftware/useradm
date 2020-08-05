@@ -17,6 +17,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/asaskevich/govalidator"
@@ -38,10 +39,17 @@ const (
 	uriManagementUsers     = "/api/management/v1/useradm/users"
 	uriManagementSettings  = "/api/management/v1/useradm/settings"
 
+	uriInternalAlive  = "/api/internal/v1/useradm/alive"
+	uriInternalHealth = "/api/internal/v1/useradm/health"
+
 	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
 	uriInternalTenantUser = "/api/internal/v1/useradm/tenants/:id/users"
 	uriInternalTokens     = "/api/internal/v1/useradm/tokens"
+)
+
+const (
+	defaultTimeout = time.Second * 5
 )
 
 var (
@@ -64,6 +72,9 @@ func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore) ApiHandler {
 
 func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	routes := []*rest.Route{
+		rest.Get(uriInternalAlive, i.AliveHandler),
+		rest.Get(uriInternalHealth, i.HealthHandler),
+
 		rest.Get(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
@@ -91,6 +102,24 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 	}
 
 	return app, nil
+}
+
+func (u *UserAdmApiHandlers) AliveHandler(w rest.ResponseWriter, r *rest.Request) {
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (u *UserAdmApiHandlers) HealthHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	l := log.FromContext(ctx)
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	err := u.userAdm.HealthCheck(ctx)
+	if err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusServiceUnavailable)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Request) {

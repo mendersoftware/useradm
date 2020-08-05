@@ -15,6 +15,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest/test"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
+	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -54,6 +56,69 @@ func makeApi(router rest.App) *rest.Api {
 	)
 	api.SetApp(router)
 	return api
+}
+
+func TestAlive(t *testing.T) {
+	api := makeMockApiHandler(t, nil, nil)
+	req, _ := http.NewRequest("GET", "http://localhost/api/internal/v1/useradm/alive", nil)
+	recorded := test.RunRequest(t, api, req)
+	recorded.CodeIs(http.StatusNoContent)
+	recorded.BodyIs("")
+}
+
+func TestHealthCheck(t *testing.T) {
+	testCases := []struct {
+		Name string
+
+		AppError     error
+		ResponseCode int
+		ResponseBody interface{}
+	}{{
+		Name:         "ok",
+		ResponseCode: http.StatusNoContent,
+	}, {
+		Name: "error, service unhealthy",
+
+		AppError:     errors.New("connection error"),
+		ResponseCode: http.StatusServiceUnavailable,
+		ResponseBody: rest_utils.ApiError{
+			Err:   "connection error",
+			ReqId: "test",
+		},
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			uadm := &museradm.App{}
+			uadm.On("HealthCheck", mock.MatchedBy(
+				func(ctx interface{}) bool {
+					if _, ok := ctx.(context.Context); ok {
+						return true
+					}
+					return false
+				},
+			)).Return(tc.AppError)
+
+			api := makeMockApiHandler(t, uadm, nil)
+			req, _ := http.NewRequest(
+				"GET",
+				"http://localhost"+uriInternalHealth,
+				nil,
+			)
+			req.Header.Set("X-MEN-RequestID", "test")
+			recorded := test.RunRequest(t, api, req)
+			recorded.CodeIs(tc.ResponseCode)
+			if tc.ResponseBody != nil {
+				b, _ := json.Marshal(tc.ResponseBody)
+				assert.JSONEq(t,
+					recorded.Recorder.Body.String(),
+					string(b),
+				)
+			} else {
+				recorded.BodyIs("")
+			}
+		})
+	}
 }
 
 func TestUserAdmApiLogin(t *testing.T) {

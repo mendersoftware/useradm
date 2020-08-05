@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -14,14 +14,21 @@
 package tenant
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
+	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/stretchr/testify/assert"
 
 	ct "github.com/mendersoftware/useradm/client/testing"
@@ -32,6 +39,107 @@ func TestNewClient(t *testing.T) {
 
 	c := NewClient(Config{TenantAdmAddr: "http://foo"})
 	assert.NotNil(t, c)
+}
+
+func TestCheckHealth(t *testing.T) {
+	t.Parallel()
+
+	contextWithTimeout, cancel := context.WithTimeout(
+		context.TODO(), time.Second*5,
+	)
+	defer cancel()
+	expiredContext, cancel := context.WithDeadline(
+		context.TODO(),
+		time.Now().Add(-time.Second),
+	)
+	defer cancel()
+	testCases := []struct {
+		Name string
+
+		Ctx   context.Context
+		Error error
+
+		ResponseCode int
+		ResponseBody interface{}
+	}{{
+		Name: "ok",
+
+		Ctx:          contextWithTimeout,
+		ResponseCode: http.StatusNoContent,
+	}, {
+		Name: "ok, nil context",
+
+		ResponseCode: http.StatusNoContent,
+	}, {
+		Name: "error, deadline expired",
+
+		Ctx:   expiredContext,
+		Error: context.DeadlineExceeded,
+	}, {
+		Name: "error, Tenantadm unhealty",
+
+		Ctx:          context.Background(),
+		Error:        errors.New("*COUGH! COUGH!*"),
+		ResponseCode: http.StatusServiceUnavailable,
+		ResponseBody: rest_utils.ApiError{
+			Err: "*COUGH! COUGH!*",
+		},
+	}, {
+		Name: "error, unexpected response",
+
+		Ctx:          context.Background(),
+		Error:        errors.New("service unhealthy: HTTP 503 Service Unavailable"),
+		ResponseCode: http.StatusServiceUnavailable,
+		ResponseBody: "bleh!",
+	}}
+
+	responses := make(chan http.Response, 1)
+	serveHTTP := func(w http.ResponseWriter, r *http.Request) {
+		var rsp http.Response
+		select {
+		case rsp = <-responses:
+		default:
+			t.Log("[PROG ERR] I don't know what to respond")
+			t.FailNow()
+		}
+		w.WriteHeader(rsp.StatusCode)
+		if rsp.Body != nil {
+			io.Copy(w, rsp.Body)
+		}
+	}
+	srv := httptest.NewServer(http.HandlerFunc(serveHTTP))
+	defer srv.Close()
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			tadmClient := NewClient(Config{
+				TenantAdmAddr: srv.URL,
+			})
+
+			if tc.ResponseCode > 0 {
+				rsp := http.Response{
+					StatusCode: tc.ResponseCode,
+				}
+				if tc.ResponseBody != nil {
+					b, _ := json.Marshal(tc.ResponseBody)
+					rsp.Body = ioutil.NopCloser(bytes.NewReader(b))
+				}
+				responses <- rsp
+			}
+
+			err := tadmClient.CheckHealth(tc.Ctx)
+			if tc.Error != nil {
+				if assert.Error(t, err) {
+					assert.Contains(t,
+						err.Error(),
+						tc.Error.Error(),
+					)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestGetTenant(t *testing.T) {

@@ -36,6 +36,61 @@ import (
 	mstore "github.com/mendersoftware/useradm/store/mocks"
 )
 
+func TestHealthCheck(t *testing.T) {
+	testCases := []struct {
+		Name string
+
+		MultiTenant    bool
+		DataStoreError error
+		TenantAdmError error
+	}{{
+		Name: "ok",
+	}, {
+		Name:        "ok, multitenant",
+		MultiTenant: true,
+	}, {
+		Name:           "error, datastore unhealthy",
+		DataStoreError: errors.New("connection refused"),
+	}, {
+		Name:           "error, tenantadm unhealthy",
+		MultiTenant:    true,
+		TenantAdmError: errors.New("connection refused"),
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(
+				context.Background(), time.Second*5,
+			)
+			defer cancel()
+			db := &mstore.DataStore{}
+			db.On("Ping", ctx).Return(tc.DataStoreError)
+			useradm := NewUserAdm(nil, db, nil, Config{})
+			if tc.MultiTenant {
+				cTenant := &mct.ClientRunner{}
+				cTenant.On("CheckHealth", ctx).
+					Return(tc.TenantAdmError)
+				useradm = useradm.WithTenantVerification(cTenant)
+			}
+			err := useradm.HealthCheck(ctx)
+			switch {
+			case tc.DataStoreError != nil:
+				assert.EqualError(t, err,
+					"error reaching MongoDB: "+
+						tc.DataStoreError.Error(),
+				)
+			case tc.TenantAdmError != nil && tc.MultiTenant:
+				assert.EqualError(t, err,
+					"Tenantadm service unhealthy: "+
+						tc.TenantAdmError.Error(),
+				)
+			default:
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestUserAdmSignToken(t *testing.T) {
 	//cases: handler err, no handler err
 	testCases := map[string]struct {

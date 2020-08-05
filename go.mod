@@ -6,7 +6,7 @@ require (
 	github.com/ant0ine/go-json-rest v3.3.3-0.20170913041208-ebb33769ae01+incompatible
 	github.com/asaskevich/govalidator v0.0.0-20170903095215-73945b6115bf
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/mendersoftware/go-lib-micro v0.0.0-20200529072844-ecc6d0b89fa6
+	github.com/mendersoftware/go-lib-micro v0.0.0-20200731125022-f9ec108d29b7
 	github.com/mendersoftware/mendertesting v0.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0

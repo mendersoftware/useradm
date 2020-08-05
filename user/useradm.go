@@ -45,7 +45,9 @@ const (
 	TenantStatusSuspended = "suspended"
 )
 
+//go:generate ../utils/mockgen.sh
 type App interface {
+	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
 	CreateUser(ctx context.Context, u *model.User) error
@@ -100,6 +102,22 @@ func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore,
 		clientGetter: simpleApiClientGetter,
 		tenantKeeper: tenantKeeper,
 	}
+}
+
+func (u *UserAdm) HealthCheck(ctx context.Context) error {
+	err := u.db.Ping(ctx)
+	if err != nil {
+		return errors.Wrap(err, "error reaching MongoDB")
+	}
+
+	if u.verifyTenant {
+		err = u.cTenant.CheckHealth(ctx)
+		if err != nil {
+			return errors.Wrap(err, "Tenantadm service unhealthy")
+		}
+	}
+
+	return nil
 }
 
 func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {

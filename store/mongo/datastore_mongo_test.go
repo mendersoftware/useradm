@@ -53,6 +53,17 @@ func assertEqualTokens(t *testing.T, expected, actual *jwt.Token) bool {
 	return ret && assert.Equal(t, expected.User, actual.User)
 }
 
+func TestPing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping TestPing in short mode")
+	}
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*10)
+	defer cancel()
+	store, _ := NewDataStoreMongoWithClient(db.Client())
+	err := store.Ping(ctx)
+	assert.NoError(t, err)
+}
+
 func TestMongoCreateUser(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode.")
