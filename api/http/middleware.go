@@ -36,10 +36,7 @@ func ExtractResourceAction(r *rest.Request) (*authz.Action, error) {
 	action := authz.Action{}
 
 	// extract original uri
-	uri := r.Header.Get("X-Original-URI")
-	if uri == "" {
-		uri = r.Header.Get("X-Forwarded-URI")
-	}
+	uri := r.Header.Get("X-Forwarded-Uri")
 	uriItems := strings.Split(uri, "/")
 
 	if uri == "" || len(uriItems) < 4 {
@@ -49,10 +46,7 @@ func ExtractResourceAction(r *rest.Request) (*authz.Action, error) {
 	action.Resource = strings.Join(uriItems[4:], ":")
 
 	// extract original http method
-	action.Method = r.Header.Get("X-Original-Method")
-	if action.Method == "" {
-		action.Method = r.Header.Get("X-Forwarded-Method")
-	}
+	action.Method = r.Header.Get("X-Forwarded-Method")
 	if action.Method == "" {
 		return nil, errors.New("can't parse original request method")
 	}

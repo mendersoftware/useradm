@@ -75,7 +75,7 @@ paths:
           required: true
           type: string
           format: Bearer [token]
-        - name: X-Original-URI
+        - name: X-Forwarded-Uri
           in: header
           description: |
             URI the original request was sent to, the URI is expected to have
@@ -83,7 +83,7 @@ paths:
           required: true
           type: string
           format: HTTP path
-        - name: X-Original-Method
+        - name: X-Forwarded-Method
           in: header
           description: HTTP method used when accessing the original URI
           required: true
@@ -250,4 +250,3 @@ definitions:
       email: 'user@acme.com'
       password: 'secret'
       propagate: false
-
