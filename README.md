@@ -16,7 +16,7 @@ and comprises several repositories.
 
 The User Administration Service is allows for user managment and authentication.
 
-![Mender logo](https://mender.io/user/pages/04.resources/_logos/logoS.png)
+![Mender logo](https://hosted.mender.io/ui/assets/img/loginlogo.png)
 
 
 ## Getting started
