@@ -15,6 +15,8 @@
 package model
 
 import (
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/asaskevich/govalidator"
@@ -148,5 +150,65 @@ func checkPwd(password string) error {
 }
 
 func checkEmail(email string) error {
+	return nil
+}
+
+type UserFilter struct {
+	ID    []string `json:"id,omitempty"`
+	Email []string `json:"email,omitempty"`
+
+	CreatedAfter  *time.Time `json:"created_after,omitempty"`
+	CreatedBefore *time.Time `json:"created_before,omitempty"`
+
+	UpdatedAfter  *time.Time `json:"updated_after,omitempty"`
+	UpdatedBefore *time.Time `json:"updated_before,omitempty"`
+}
+
+func (fltr *UserFilter) ParseForm(form url.Values) error {
+	if ids, ok := form["id"]; ok {
+		fltr.ID = ids
+	}
+	if email, ok := form["email"]; ok {
+		fltr.Email = email
+	}
+	if ca := form.Get("created_after"); ca != "" {
+		caInt, err := strconv.ParseInt(ca, 10, 64)
+		if err != nil {
+			return errors.Wrap(err,
+				`invalid form parameter "created_after"`)
+		}
+		caUnix := time.Unix(caInt, 0)
+		fltr.CreatedAfter = &caUnix
+	}
+
+	if cb := form.Get("created_before"); cb != "" {
+		cbInt, err := strconv.ParseInt(cb, 10, 64)
+		if err != nil {
+			return errors.Wrap(err,
+				`invalid form parameter "created_before"`)
+		}
+		cbUnix := time.Unix(cbInt, 0)
+		fltr.CreatedBefore = &cbUnix
+	}
+
+	if ua := form.Get("updated_after"); ua != "" {
+		uaInt, err := strconv.ParseInt(ua, 10, 64)
+		if err != nil {
+			return errors.Wrap(err,
+				`invalid form parameter "updated_after"`)
+		}
+		uaUnix := time.Unix(uaInt, 0)
+		fltr.UpdatedAfter = &uaUnix
+	}
+
+	if ub := form.Get("updated_before"); ub != "" {
+		ubInt, err := strconv.ParseInt(ub, 10, 64)
+		if err != nil {
+			return errors.Wrap(err,
+				`invalid form parameter "updated_before"`)
+		}
+		ubUnix := time.Unix(ubInt, 0)
+		fltr.UpdatedBefore = &ubUnix
+	}
 	return nil
 }

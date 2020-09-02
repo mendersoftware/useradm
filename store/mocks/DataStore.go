@@ -180,13 +180,13 @@ func (_m *DataStore) GetUserById(ctx context.Context, id string) (*model.User, e
 	return r0, r1
 }
 
-// GetUsers provides a mock function with given fields: ctx
-func (_m *DataStore) GetUsers(ctx context.Context) ([]model.User, error) {
-	ret := _m.Called(ctx)
+// GetUsers provides a mock function with given fields: ctx, fltr
+func (_m *DataStore) GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error) {
+	ret := _m.Called(ctx, fltr)
 
 	var r0 []model.User
-	if rf, ok := ret.Get(0).(func(context.Context) []model.User); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, model.UserFilter) []model.User); ok {
+		r0 = rf(ctx, fltr)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]model.User)
@@ -194,8 +194,8 @@ func (_m *DataStore) GetUsers(ctx context.Context) ([]model.User, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, model.UserFilter) error); ok {
+		r1 = rf(ctx, fltr)
 	} else {
 		r1 = ret.Error(1)
 	}

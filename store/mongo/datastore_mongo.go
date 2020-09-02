@@ -256,25 +256,68 @@ func (db *DataStoreMongo) GetTokenById(ctx context.Context, id oid.ObjectID) (*j
 	return &token, nil
 }
 
-func (db *DataStoreMongo) GetUsers(ctx context.Context) ([]model.User, error) {
-	o := mopts.Find()
-	o.SetProjection(bson.M{DbUserPass: 0})
+func (db *DataStoreMongo) GetUsers(
+	ctx context.Context,
+	fltr model.UserFilter,
+) ([]model.User, error) {
+	findOpts := mopts.Find().
+		SetProjection(bson.M{DbUserPass: 0})
 
-	c, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
-		Collection(DbUsersColl).
-		Find(ctx, bson.M{}, o)
+	collUsers := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl)
 
+	var mgoFltr = bson.D{}
+	if fltr.ID != nil {
+		mgoFltr = append(mgoFltr, bson.E{Key: "_id", Value: bson.D{{
+			Key: "$in", Value: fltr.ID,
+		}}})
+	}
+	if fltr.Email != nil {
+		mgoFltr = append(mgoFltr, bson.E{Key: "email", Value: bson.D{{
+			Key: "$in", Value: fltr.Email,
+		}}})
+	}
+	if fltr.CreatedAfter != nil {
+		mgoFltr = append(mgoFltr, bson.E{
+			Key: "created_ts", Value: bson.D{{
+				Key: "$gt", Value: *fltr.CreatedAfter,
+			}},
+		})
+	}
+	if fltr.CreatedBefore != nil {
+		mgoFltr = append(mgoFltr, bson.E{
+			Key: "created_ts", Value: bson.D{{
+				Key: "$lt", Value: *fltr.CreatedBefore,
+			}},
+		})
+	}
+	if fltr.UpdatedAfter != nil {
+		mgoFltr = append(mgoFltr, bson.E{
+			Key: "updated_ts", Value: bson.D{{
+				Key: "$gt", Value: *fltr.UpdatedAfter,
+			}},
+		})
+	}
+	if fltr.UpdatedBefore != nil {
+		mgoFltr = append(mgoFltr, bson.E{
+			Key: "updated_ts", Value: bson.D{{
+				Key: "$lt", Value: *fltr.UpdatedBefore,
+			}},
+		})
+	}
+	cur, err := collUsers.Find(ctx, mgoFltr, findOpts)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch users")
+		return nil, errors.Wrap(err, "store: failed to fetch users")
 	}
 
 	users := []model.User{}
-	err = c.All(ctx, &users)
+	err = cur.All(ctx, &users)
 	switch err {
 	case nil, mongo.ErrNoDocuments:
 		return users, nil
 	default:
-		return nil, errors.Wrap(err, "failed to fetch users")
+		return nil, errors.Wrap(err, "store: failed to decode users")
 	}
 }
 
