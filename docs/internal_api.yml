@@ -173,6 +173,75 @@ paths:
           description: Internal server error.
           schema:
             $ref: "#/definitions/Error"
+
+    get:
+      operationId: List Users
+      tags:
+        - Internal API
+      summary: |
+        List all users registered under the tenant owning the JWT.
+      parameters:
+        - name: tenant_id
+          in: path
+          type: string
+          description: Tenant ID.
+          required: true
+        - name: id
+          in: query
+          type: string
+          description: >
+            Limit result by user ID, can be repeated to include multiple users
+            in the query.
+          required: false
+        - name: email
+          in: query
+          type: string
+          description: >
+            Limit result by user email, can be repeated to include multiple users
+            in the query.
+          required: false
+        - name: created_after
+          in: query
+          type: integer
+          description: >
+            Filter users created after timestamp (UNIX timestamp).
+          required: false
+        - name: created_before
+          in: query
+          type: integer
+          description: >
+            Filter users created before timestamp (UNIX timestamp).
+          required: false
+        - name: updated_after
+          in: query
+          type: integer
+          description: >
+            Filter users updated after timestamp (UNIX timestamp).
+          required: false
+        - name: updated_before
+          in: query
+          type: integer
+          description: >
+            Filter users updated before timestamp (UNIX timestamp).
+          required: false
+      responses:
+        200:
+          description: Successful response.
+          schema:
+            title: ListOfUsers
+            type: array
+            items:
+              $ref: '#/definitions/User'
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
   /tokens:
     delete:
       operationId: Revoke User Tokens
@@ -226,6 +295,36 @@ definitions:
         type: string
     example:
       tenant_id: "1234"
+
+  User:
+    description: User descriptor.
+    type: object
+    properties:
+      email:
+        description: A unique email address.
+        type: string
+      id:
+        description: User Id.
+        type: string
+      created_ts:
+        description: |
+            Server-side timestamp of the user creation.
+        type: string
+        format: date-time
+      updated_ts:
+        description: |
+            Server-side timestamp of the last user information update.
+        type: string
+        format: date-time
+    required:
+      - email
+      - id
+    example:
+      email: "user@acme.com"
+      id: "806603def19d417d004a4b67e"
+      created_ts: "2020-07-06T15:04:49.114046203+02:00"
+      updated_ts: "2020-07-07T01:04:49.114046203+02:00"
+
   UserNew:
     description: New user descriptor.
     type: object
