@@ -54,7 +54,7 @@ type App interface {
 	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
 	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
 	Verify(ctx context.Context, token *jwt.Token) error
-	GetUsers(ctx context.Context) ([]model.User, error)
+	GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	SetPassword(ctx context.Context, u model.UserUpdate) error
@@ -372,8 +372,8 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	return nil
 }
 
-func (ua *UserAdm) GetUsers(ctx context.Context) ([]model.User, error) {
-	users, err := ua.db.GetUsers(ctx)
+func (ua *UserAdm) GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error) {
+	users, err := ua.db.GetUsers(ctx, fltr)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to get users")
 	}

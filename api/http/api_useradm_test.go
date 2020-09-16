@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -831,9 +833,11 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 		uaUsers []model.User
 		uaError error
 
-		checker mt.ResponseChecker
+		queryString string
+		checker     mt.ResponseChecker
 	}{
 		"ok": {
+			queryString: "id=1&id=2",
 			uaUsers: []model.User{
 				{
 					ID:    "1",
@@ -875,6 +879,34 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 				[]model.User{},
 			),
 		},
+		"error: invalid query string": {
+			queryString: "%%%%",
+
+			uaUsers: nil,
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError(`api: bad form parameters: `+
+					`invalid URL escape "%%%"`),
+			),
+		},
+		"error: bad query values": {
+			queryString: "created_before=an_hour_ago",
+
+			uaUsers: nil,
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError(`api: invalid form values: invalid `+
+					`form parameter "created_before": `+
+					`strconv.ParseInt: parsing `+
+					`"an_hour_ago": invalid syntax`),
+			),
+		},
 		"error: useradm internal": {
 			uaUsers: nil,
 			uaError: errors.New("some internal error"),
@@ -894,16 +926,159 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 
 			//make mock useradm
 			uadm := &museradm.App{}
-			uadm.On("GetUsers", ctx).Return(tc.uaUsers, tc.uaError)
+			defer uadm.AssertExpectations(t)
+
+			if tc.uaUsers != nil || tc.uaError != nil {
+				fltr := model.UserFilter{}
+				query, _ := url.ParseQuery(tc.queryString)
+				fltr.ParseForm(query)
+				uadm.On("GetUsers", ctx, fltr).
+					Return(tc.uaUsers, tc.uaError)
+			}
 
 			//make handler
 			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
 			req := makeReq("GET",
-				"http://1.2.3.4/api/management/v1/useradm/users",
+				"http://1.2.3.4"+uriManagementUsers+"?"+
+					tc.queryString,
 				"Bearer "+token,
 				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
+func TestUserAdmApiTenantsGetUsers(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	testCases := map[string]struct {
+		tenant string
+
+		queryString string
+		uaUsers     []model.User
+		uaError     error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			queryString: "id=1&id=2",
+			uaUsers: []model.User{
+				{
+					ID:    "1",
+					Email: "foo@acme.com",
+				},
+				{
+					ID:        "2",
+					Email:     "bar@acme.com",
+					CreatedTs: &now,
+					UpdatedTs: &now,
+				},
+			},
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				[]model.User{
+					{
+						ID:    "1",
+						Email: "foo@acme.com",
+					},
+					{
+						ID:        "2",
+						Email:     "bar@acme.com",
+						CreatedTs: &now,
+						UpdatedTs: &now,
+					},
+				},
+			),
+		},
+		"ok: empty": {
+			uaUsers: []model.User{},
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				[]model.User{},
+			),
+		},
+		"error: invalid query string": {
+			queryString: "%%%%",
+
+			uaUsers: nil,
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError(`api: bad form parameters: `+
+					`invalid URL escape "%%%"`),
+			),
+		},
+		"error: bad query values": {
+			queryString: "created_before=an_hour_ago",
+
+			uaUsers: nil,
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError(`api: invalid form values: invalid `+
+					`form parameter "created_before": `+
+					`strconv.ParseInt: parsing `+
+					`"an_hour_ago": invalid syntax`),
+			),
+		},
+		"error: useradm internal": {
+			uaUsers: nil,
+			uaError: errors.New("some internal error"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+
+			ctx := mtesting.ContextMatcher()
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			defer uadm.AssertExpectations(t)
+
+			if tc.uaUsers != nil || tc.uaError != nil {
+				fltr := model.UserFilter{}
+				query, _ := url.ParseQuery(tc.queryString)
+				fltr.ParseForm(query)
+				uadm.On("GetUsers", ctx, fltr).
+					Return(tc.uaUsers, tc.uaError)
+			}
+
+			//make handler
+			api := makeMockApiHandler(t, uadm, nil)
+
+			//make request
+			repl := strings.NewReplacer(":id", tc.tenant)
+			req, _ := http.NewRequest(
+				"GET",
+				"http://localhost"+
+					repl.Replace(uriInternalTenantUsers),
+				nil,
+			)
+			req.Header.Set("X-MEN-RequestID", "test")
+			req.URL.RawQuery = tc.queryString
 
 			//test
 			recorded := test.RunRequest(t, api, req)

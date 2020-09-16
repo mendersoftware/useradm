@@ -14,7 +14,10 @@
 package model
 
 import (
+	"errors"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -79,5 +82,100 @@ func TestValidateNew(t *testing.T) {
 		} else {
 			assert.EqualError(t, err, tc.outErr)
 		}
+	}
+}
+
+func TestUserFilterParseForm(t *testing.T) {
+	testCases := []struct {
+		Name string
+
+		Form url.Values
+
+		Result UserFilter
+		Error  error
+	}{{
+		Name: "ok",
+
+		Form: url.Values{
+			"id": []string{"1", "2", "3"},
+			"email": []string{
+				"user1@acme.io",
+				"user2@acme.io",
+				"user3@acme.io",
+			},
+			"created_before": []string{"1234567890"},
+			"created_after":  []string{"123456789"},
+			"updated_before": []string{"9876543210"},
+			"updated_after":  []string{"2345678901"},
+		},
+		Result: UserFilter{
+			ID: []string{"1", "2", "3"},
+			Email: []string{
+				"user1@acme.io",
+				"user2@acme.io",
+				"user3@acme.io",
+			},
+			CreatedBefore: func() *time.Time {
+				ret := time.Unix(1234567890, 0)
+				return &ret
+			}(),
+			CreatedAfter: func() *time.Time {
+				ret := time.Unix(123456789, 0)
+				return &ret
+			}(),
+			UpdatedBefore: func() *time.Time {
+				ret := time.Unix(9876543210, 0)
+				return &ret
+			}(),
+			UpdatedAfter: func() *time.Time {
+				ret := time.Unix(2345678901, 0)
+				return &ret
+			}(),
+		},
+	}, {
+		Name: "error, created_after not an int",
+
+		Form: url.Values{
+			"created_after": []string{"foo"},
+		},
+		Error: errors.New(`invalid form parameter "created_after": ` +
+			`strconv.ParseInt: parsing "foo": invalid syntax`),
+	}, {
+		Name: "error, created_before not an int",
+
+		Form: url.Values{
+			"created_before": []string{"foo"},
+		},
+		Error: errors.New(`invalid form parameter "created_before": ` +
+			`strconv.ParseInt: parsing "foo": invalid syntax`),
+	}, {
+		Name: "error, updated_after not an int",
+
+		Form: url.Values{
+			"updated_after": []string{"foo"},
+		},
+		Error: errors.New(`invalid form parameter "updated_after": ` +
+			`strconv.ParseInt: parsing "foo": invalid syntax`),
+	}, {
+		Name: "error, updated_before not an int",
+
+		Form: url.Values{
+			"updated_before": []string{"foo"},
+		},
+		Error: errors.New(`invalid form parameter "updated_before": ` +
+			`strconv.ParseInt: parsing "foo": invalid syntax`),
+	}}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			var fltr UserFilter
+
+			err := fltr.ParseForm(tc.Form)
+			if tc.Error != nil {
+				assert.EqualError(t, err, tc.Error.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.Result, fltr)
+			}
+		})
 	}
 }

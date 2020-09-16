@@ -929,11 +929,12 @@ func TestUserAdmGetUsers(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("GetUsers", ctx).Return(tc.dbUsers, tc.dbErr)
+			db.On("GetUsers", ctx, model.UserFilter{}).
+				Return(tc.dbUsers, tc.dbErr)
 
 			useradm := NewUserAdm(nil, db, nil, Config{})
 
-			users, err := useradm.GetUsers(ctx)
+			users, err := useradm.GetUsers(ctx, model.UserFilter{})
 
 			if tc.err != nil {
 				assert.EqualError(t, err, tc.err.Error())

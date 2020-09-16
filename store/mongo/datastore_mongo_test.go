@@ -15,6 +15,7 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -566,11 +567,21 @@ func TestMongoGetUsers(t *testing.T) {
 	assert.NoError(t, err)
 
 	testCases := map[string]struct {
+		ctx      context.Context
 		inUsers  []interface{}
 		outUsers []model.User
-		tenant   string
+		filter   model.UserFilter
+		error    error
 	}{
 		"ok: list": {
+			ctx: func() context.Context {
+				ctx := context.Background()
+				return identity.WithContext(ctx,
+					&identity.Identity{
+						Tenant: "foo",
+					},
+				)
+			}(),
 			inUsers: []interface{}{
 				model.User{
 					ID:       "1",
@@ -606,26 +617,98 @@ func TestMongoGetUsers(t *testing.T) {
 					UpdatedTs: &ts,
 				},
 			},
-			tenant: "foo",
+		},
+		"ok: with filter": {
+			ctx: context.Background(),
+			inUsers: []interface{}{
+				model.User{
+					ID:       "1",
+					Email:    "foo@bar.com",
+					Password: "passwordhash12345",
+				},
+				model.User{
+					ID:        "2",
+					Email:     "bar@bar.com",
+					Password:  "passwordhashqwerty",
+					CreatedTs: &ts,
+					UpdatedTs: func() *time.Time {
+						t := ts.Add(time.Minute)
+						return &t
+					}(),
+				},
+				model.User{
+					ID:        "3",
+					Email:     "baz@bar.com",
+					Password:  "passwordhash1sdf2345",
+					UpdatedTs: &ts,
+				},
+			},
+			filter: model.UserFilter{
+				ID: []string{"1", "2"},
+				Email: []string{
+					"foo@bar.com",
+					"bar@bar.com",
+					"baz@bar.com",
+					"user@acme.io",
+				},
+				CreatedAfter: func() *time.Time {
+					t := ts.Add(-time.Hour)
+					return &t
+				}(),
+				CreatedBefore: func() *time.Time {
+					t := ts.Add(time.Hour)
+					return &t
+				}(),
+				UpdatedAfter: func() *time.Time {
+					t := ts.Add(-time.Hour)
+					return &t
+				}(),
+				UpdatedBefore: func() *time.Time {
+					t := ts.Add(time.Hour)
+					return &t
+				}(),
+			},
+
+			outUsers: []model.User{
+				{
+					ID:        "2",
+					Email:     "bar@bar.com",
+					CreatedTs: &ts,
+					UpdatedTs: func() *time.Time {
+						t := ts.Add(time.Minute)
+						return &t
+					}(),
+				},
+			},
 		},
 		"ok: empty": {
+			ctx:      context.Background(),
 			inUsers:  []interface{}{},
 			outUsers: []model.User{},
+		},
+		"error: context canceled": {
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancel(
+					context.Background(),
+				)
+				cancel()
+				return ctx
+			}(),
+			inUsers: []interface{}{
+				model.User{
+					ID:       "1",
+					Email:    "foo@bar.com",
+					Password: "passwordhash12345",
+				},
+			},
+			error: errors.New("store: failed to fetch users"),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-			t.Logf("test case: %s", name)
 
 			db.Wipe()
-
-			ctx := context.Background()
-			if tc.tenant != "" {
-				ctx = identity.WithContext(ctx, &identity.Identity{
-					Tenant: tc.tenant,
-				})
-			}
 
 			client := db.Client()
 			store, err := NewDataStoreMongoWithClient(client)
@@ -633,29 +716,39 @@ func TestMongoGetUsers(t *testing.T) {
 
 			if len(tc.inUsers) > 0 {
 				_, err = client.
-					Database(mstore.DbFromContext(ctx, DbName)).
+					Database(mstore.DbFromContext(tc.ctx, DbName)).
 					Collection(DbUsersColl).
-					InsertMany(ctx, tc.inUsers)
-			}
-
-			users, err := store.GetUsers(ctx)
-			assert.NoError(t, err)
-
-			// transform times to utc
-			// bson encoder uses time.Local before writing to mongo, which can be e.g. 'CET'
-			// this won't match with assert.Equal
-			for i := range users {
-				if users[i].CreatedTs != nil {
-					t := users[i].CreatedTs.UTC()
-					users[i].CreatedTs = &t
-				}
-				if users[i].UpdatedTs != nil {
-					t := users[i].UpdatedTs.UTC()
-					users[i].UpdatedTs = &t
+					InsertMany(context.Background(), tc.inUsers)
+				if !assert.NoError(t, err) {
+					t.FailNow()
 				}
 			}
 
-			assert.Equal(t, tc.outUsers, users)
+			users, err := store.GetUsers(tc.ctx, tc.filter)
+			if tc.error != nil {
+				if assert.Error(t, err) {
+					assert.Contains(t, err.Error(), tc.error.Error())
+				}
+			} else {
+				assert.NoError(t, err)
+
+				// transform times to utc
+				// bson encoder uses time.Local before writing
+				// to mongo, which can be e.g. 'CET'
+				// this won't match with assert.Equal
+				for i := range users {
+					if users[i].CreatedTs != nil {
+						t := users[i].CreatedTs.UTC()
+						users[i].CreatedTs = &t
+					}
+					if users[i].UpdatedTs != nil {
+						t := users[i].UpdatedTs.UTC()
+						users[i].UpdatedTs = &t
+					}
+				}
+
+				assert.Equal(t, tc.outUsers, users)
+			}
 		})
 	}
 }

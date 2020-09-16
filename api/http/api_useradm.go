@@ -42,10 +42,10 @@ const (
 	uriInternalAlive  = "/api/internal/v1/useradm/alive"
 	uriInternalHealth = "/api/internal/v1/useradm/health"
 
-	uriInternalAuthVerify = "/api/internal/v1/useradm/auth/verify"
-	uriInternalTenants    = "/api/internal/v1/useradm/tenants"
-	uriInternalTenantUser = "/api/internal/v1/useradm/tenants/:id/users"
-	uriInternalTokens     = "/api/internal/v1/useradm/tokens"
+	uriInternalAuthVerify  = "/api/internal/v1/useradm/auth/verify"
+	uriInternalTenants     = "/api/internal/v1/useradm/tenants"
+	uriInternalTenantUsers = "/api/internal/v1/useradm/tenants/:id/users"
+	uriInternalTokens      = "/api/internal/v1/useradm/tokens"
 )
 
 const (
@@ -78,7 +78,8 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Get(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
-		rest.Post(uriInternalTenantUser, i.CreateTenantUserHandler),
+		rest.Post(uriInternalTenantUsers, i.CreateTenantUserHandler),
+		rest.Get(uriInternalTenantUsers, i.GetTenantUsersHandler),
 		rest.Delete(uriInternalTokens, i.DeleteTokensHandler),
 
 		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
@@ -90,8 +91,6 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 		rest.Get(uriManagementSettings, i.GetSettingsHandler),
 	}
-
-	routes = append(routes)
 
 	app, err := rest.MakeRouter(
 		// augment routes with OPTIONS handler
@@ -243,13 +242,35 @@ func (u *UserAdmApiHandlers) GetUsersHandler(w rest.ResponseWriter, r *rest.Requ
 
 	l := log.FromContext(ctx)
 
-	users, err := u.userAdm.GetUsers(ctx)
+	if err := r.ParseForm(); err != nil {
+		err = errors.Wrap(err, "api: bad form parameters")
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	fltr := model.UserFilter{}
+	if err := fltr.ParseForm(r.Form); err != nil {
+		err = errors.Wrap(err, "api: invalid form values")
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	users, err := u.userAdm.GetUsers(ctx, fltr)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
 	}
 
 	w.WriteJson(users)
+}
+
+func (u *UserAdmApiHandlers) GetTenantUsersHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	ctx = identity.WithContext(ctx, &identity.Identity{
+		Tenant: r.PathParam("id"),
+	})
+	r.Request = r.Request.WithContext(ctx)
+	u.GetUsersHandler(w, r)
 }
 
 func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Request) {

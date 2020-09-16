@@ -43,7 +43,7 @@ type DataStore interface {
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
-	GetUsers(ctx context.Context) ([]model.User, error)
+	GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	SaveToken(ctx context.Context, token *jwt.Token) error
 	GetTokenById(ctx context.Context, id oid.ObjectID) (*jwt.Token, error)
