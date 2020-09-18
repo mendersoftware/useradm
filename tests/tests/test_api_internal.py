@@ -17,85 +17,107 @@ import bravado
 import pytest
 import tenantadm
 
+
 class TestInternalApiTenantCreate:
     def test_create_ok(self, api_client_int, clean_db):
 
-        _, r = api_client_int.create_tenant('foobar')
+        _, r = api_client_int.create_tenant("foobar")
         assert r.status_code == 201
 
-        assert 'useradm-foobar' in clean_db.database_names()
-        assert 'migration_info' in clean_db['useradm-foobar'].collection_names()
+        assert "useradm-foobar" in clean_db.database_names()
+        assert "migration_info" in clean_db["useradm-foobar"].collection_names()
 
     def test_create_twice(self, api_client_int, clean_db):
 
-        _, r = api_client_int.create_tenant('foobar')
+        _, r = api_client_int.create_tenant("foobar")
         assert r.status_code == 201
 
         # creating once more should not fail
-        _, r = api_client_int.create_tenant('foobar')
+        _, r = api_client_int.create_tenant("foobar")
         assert r.status_code == 201
-
 
     def test_create_empty(self, api_client_int):
         try:
-            _, r = api_client_int.create_tenant('')
+            _, r = api_client_int.create_tenant("")
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
 
+
 class TestInternalApiUserForTenantCreateEnterprise:
-    def test_ok(self, api_client_int,api_client_mgmt, clean_db, ):
-        user = {"email":"stefan@example.com", "password":"secret12345"}
+    def test_ok(
+        self,
+        api_client_int,
+        api_client_mgmt,
+        clean_db,
+    ):
+        user = {"email": "stefan@example.com", "password": "secret12345"}
 
         with tenantadm.run_fake_create_user(user):
-            api_client_int.create_user_for_tenant('foobar', user)
+            api_client_int.create_user_for_tenant("foobar", user)
 
-        auth = make_auth("foo", 'foobar')
+        auth = make_auth("foo", "foobar")
         users = api_client_mgmt.get_users(auth)
         assert len(users) == 1
 
-    def test_ok_pwd_hash(self, api_client_int,api_client_mgmt, clean_db):
-        user = {"email":"stefan@example.com", "password_hash":"secret12345", "propagate": False}
+    def test_ok_pwd_hash(self, api_client_int, api_client_mgmt, clean_db):
+        user = {
+            "email": "stefan@example.com",
+            "password_hash": "secret12345",
+            "propagate": False,
+        }
 
         with tenantadm.run_fake_create_user(user):
-            api_client_int.create_user_for_tenant('foobar', user)
+            api_client_int.create_user_for_tenant("foobar", user)
 
-        auth = make_auth("foo", 'foobar')
+        auth = make_auth("foo", "foobar")
         users = api_client_mgmt.get_users(auth)
         assert len(users) == 1
 
-    def test_no_propagate(self, api_client_int,api_client_mgmt, clean_db, ):
-        user = {"email":"stefan@example.com", "password":"secret12345",
-                "propagate" : False }
+    def test_no_propagate(
+        self,
+        api_client_int,
+        api_client_mgmt,
+        clean_db,
+    ):
+        user = {
+            "email": "stefan@example.com",
+            "password": "secret12345",
+            "propagate": False,
+        }
 
         with tenantadm.run_fake_create_user(user, 500):
-            api_client_int.create_user_for_tenant('foobar', user)
+            api_client_int.create_user_for_tenant("foobar", user)
 
-        auth = make_auth("foo", 'foobar')
+        auth = make_auth("foo", "foobar")
         users = api_client_mgmt.get_users(auth)
         assert len(users) == 1
 
     def test_fail_malformed_body(self, api_client_int):
-        new_user = {"foo":"bar"}
+        new_user = {"foo": "bar"}
         try:
-            api_client_int.create_user_for_tenant('foobar', new_user)
+            api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
         else:
             pytest.fail("Exception expected")
 
     def test_fail_no_password(self, api_client_int):
-        new_user = {"email":"foobar"}
+        new_user = {"email": "foobar"}
         try:
-            api_client_int.create_user_for_tenant('foobar', new_user)
+            api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
         else:
             pytest.fail("Exception expected")
 
-    def test_fail_pwd_and_hash(self, api_client_int,api_client_mgmt, clean_db):
-        new_user = {"email":"foobar@tenant.com", "password": "secret1234", "password_hash": "secret1234"}
+    def test_fail_pwd_and_hash(self, api_client_int, api_client_mgmt, clean_db):
+        new_user = {
+            "email": "foobar@tenant.com",
+            "password": "secret1234",
+            "password_hash": "secret1234",
+        }
         try:
-            api_client_int.create_user_for_tenant('foobar', new_user)
+            api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
         else:
@@ -104,25 +126,25 @@ class TestInternalApiUserForTenantCreateEnterprise:
     def test_fail_no_email(self, api_client_int):
         new_user = {"password": "asdf1234zxcv"}
         try:
-            api_client_int.create_user_for_tenant('foobar', new_user)
+            api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
         else:
             pytest.fail("Exception expected")
 
     def test_fail_not_an_email(self, api_client_int):
-        new_user = {"email":"foobar", "password": "asdf1234zxcv"}
+        new_user = {"email": "foobar", "password": "asdf1234zxcv"}
         try:
-            api_client_int.create_user_for_tenant('foobar', new_user)
+            api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
         else:
             pytest.fail("Exception expected")
 
     def test_fail_pwd_too_short(self, api_client_int):
-        new_user = {"email":"foo@bar.com", "password": "asdf"}
+        new_user = {"email": "foo@bar.com", "password": "asdf"}
         try:
-            api_client_int.create_user_for_tenant('foobar', new_user)
+            api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
         else:

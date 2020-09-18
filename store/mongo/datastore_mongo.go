@@ -385,6 +385,14 @@ func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
 	}
 }
 
+func (db *DataStoreMongo) DeleteToken(ctx context.Context, tokenID oid.ObjectID) error {
+	_, err := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl).
+		DeleteOne(ctx, bson.M{"_id": tokenID})
+	return err
+}
+
 // deletes all tenant's tokens (identity in context)
 func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
 	d, err := db.client.

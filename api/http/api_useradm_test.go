@@ -43,7 +43,7 @@ import (
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store"
 	mstore "github.com/mendersoftware/useradm/store/mocks"
-	"github.com/mendersoftware/useradm/user"
+	useradm "github.com/mendersoftware/useradm/user"
 	museradm "github.com/mendersoftware/useradm/user/mocks"
 	mtesting "github.com/mendersoftware/useradm/utils/testing"
 )
@@ -229,6 +229,66 @@ func TestUserAdmApiLogin(t *testing.T) {
 		api := makeMockApiHandler(t, uadm, nil)
 
 		//test
+		recorded := test.RunRequest(t, api, req)
+		mt.CheckResponse(t, tc.checker, recorded)
+	}
+}
+
+func TestUserAdmApiLogout(t *testing.T) {
+	t.Parallel()
+
+	// we setup authz, so a real token is needed
+	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ0ODE4OTM5MD" +
+		"AsImlzcyI6Im1lbmRlciIsInN1YiI6Ijc4MWVjMmMzLTM2YTYtNGMxNC05Mj" +
+		"E1LTc1Y2ZjZmQ4MzEzNiIsInNjcCI6Im1lbmRlci4qIiwiaWF0IjoxNDQ1Mj" +
+		"EyODAwLCJqdGkiOiI5NzM0Zjc1Mi0wOWZkLTQ2NmItYmNjYS04ZTFmNDQwN2" +
+		"JmNjUifQ.HRff3mxlygPl4ZlCA0uEalcEUrSb_xi_dnp6uDZWwAGVp-AL7NW" +
+		"MhVfRw9mVNXeM2nUom7z0JUgIDGxB-24gejssiZSuZPCDJ01oyutm2xqdQKW" +
+		"2LlHR5zD0m8KbNHtbHO9dPGUJATa7lHi3_QxGAqqXQYf-Jg7LwXRNqHT1EvY" +
+		"gZMffuqx5i5pwpoCm9a7bTlfKxYkwuMVps3zjuliJxgqbMP3zFN9IlNB0Atb" +
+		"4hEu7REd3s-2TpoIl6ztbbFDYUwz6lg1jD_q0Sbx89gw1R-auZPPZOH49szk" +
+		"8bb75uaEce4BQfgIwvVyVN0NXhfN7bq6ucObZdUbNhuXmN1R6MQ"
+
+	testCases := map[string]struct {
+		logoutError error
+		checker     mt.ResponseChecker
+	}{
+		"ok": {
+			checker: &mt.BaseResponse{
+				Status:      http.StatusAccepted,
+				ContentType: "application/json",
+			},
+		},
+		"error": {
+			logoutError: errors.New("error"),
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error")),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %v", name)
+		ctx := mtesting.ContextMatcher()
+
+		// make mock useradm
+		uadm := &museradm.App{}
+		uadm.On("Logout",
+			ctx,
+			mock.AnythingOfType("*jwt.Token"),
+		).Return(tc.logoutError)
+
+		// make mock request
+		req := makeReq("POST",
+			"http://1.2.3.4/api/management/v1/useradm/auth/logout",
+			"Bearer "+token,
+			nil,
+		)
+
+		api := makeMockApiHandler(t, uadm, nil)
+
+		// test
 		recorded := test.RunRequest(t, api, req)
 		mt.CheckResponse(t, tc.checker, recorded)
 	}
@@ -647,7 +707,15 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http.Handler {
-	handlers := NewUserAdmApiHandlers(uadm, db)
+	// JWT handler
+	privkey, err := keys.LoadRSAPrivate("../../crypto/private.pem")
+	if !assert.NoError(t, err) {
+		t.Fatalf("faied to load private key: %v", err)
+	}
+	jwth := jwt.NewJWTHandlerRS256(privkey)
+
+	// API handler
+	handlers := NewUserAdmApiHandlers(uadm, db, jwth)
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()
@@ -660,12 +728,7 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 		&requestid.RequestIdMiddleware{},
 	)
 
-	//setup the authz middleware
-	privkey, err := keys.LoadRSAPrivate("../../crypto/private.pem")
-	if !assert.NoError(t, err) {
-		t.Fatalf("faied to load private key: %v", err)
-	}
-
+	// setup the authz middleware
 	authorizer := &mauthz.Authorizer{}
 	authorizer.On("Authorize",
 		mock.MatchedBy(func(c context.Context) bool { return true }),
@@ -678,7 +741,7 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	authzmw := &authz.AuthzMiddleware{
 		Authz:      authorizer,
 		ResFunc:    ExtractResourceAction,
-		JWTHandler: jwt.NewJWTHandlerRS256(privkey),
+		JWTHandler: jwth,
 	}
 
 	ifmw := &rest.IfMiddleware{

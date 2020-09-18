@@ -50,6 +50,7 @@ type App interface {
 	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
 	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
+	Logout(ctx context.Context, token *jwt.Token) error
 	CreateUser(ctx context.Context, u *model.User) error
 	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
 	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
@@ -200,6 +201,10 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 
 func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 	return u.jwtHandler.ToJWT(t)
+}
+
+func (u *UserAdm) Logout(ctx context.Context, token *jwt.Token) error {
+	return u.db.DeleteToken(ctx, token.ID)
 }
 
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {

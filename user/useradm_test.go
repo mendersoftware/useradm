@@ -368,6 +368,53 @@ func TestUserAdmLogin(t *testing.T) {
 
 }
 
+func TestUserAdmLogout(t *testing.T) {
+	testCases := map[string]struct {
+		token            *jwt.Token
+		deleteTokenError error
+
+		err error
+	}{
+		"ok": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: oid.NewUUIDv5("1234"),
+					Scope:   scope.All,
+				},
+			},
+		},
+		"ko": {
+			token: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: oid.NewUUIDv5("1234"),
+					Scope:   scope.All,
+				},
+			},
+			deleteTokenError: errors.New("error"),
+			err:              errors.New("error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		ctx := context.Background()
+
+		db := &mstore.DataStore{}
+		db.On("DeleteToken", ContextMatcher(), tc.token.ID).Return(tc.deleteTokenError)
+		defer db.AssertExpectations(t)
+
+		useradm := NewUserAdm(nil, db, nil, Config{})
+		err := useradm.Logout(ctx, tc.token)
+
+		if tc.err != nil {
+			assert.EqualError(t, err, tc.err.Error())
+		} else {
+			assert.Nil(t, err)
+		}
+	}
+}
+
 func TestUserAdmDoCreateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUser model.User

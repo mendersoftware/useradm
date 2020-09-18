@@ -108,21 +108,15 @@ class TestCli:
         cli.migrate()
 
         Migration.verify_db_and_collections(mongo, Migration.DB_NAME)
-        Migration.verify_migration(
-            mongo[Migration.DB_NAME], Migration.DB_VERSION
-        )
+        Migration.verify_migration(mongo[Migration.DB_NAME], Migration.DB_VERSION)
 
 
 class TestCliEnterprise:
     def test_create_user(self, api_client_mgmt, cli):
-        cli.create_user(
-            "foo-tenant1id@bar.com", "1234youseeme", tenant_id="tenant1id"
-        )
+        cli.create_user("foo-tenant1id@bar.com", "1234youseeme", tenant_id="tenant1id")
 
         users = api_client_mgmt.get_users(make_auth("foo", tenant="tenant1id"))
-        assert [
-            user for user in users if user.email == "foo-tenant1id@bar.com"
-        ]
+        assert [user for user in users if user.email == "foo-tenant1id@bar.com"]
 
         other_tenant_users = api_client_mgmt.get_users(
             make_auth("foo", tenant="tenant2id")

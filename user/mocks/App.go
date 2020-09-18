@@ -183,6 +183,20 @@ func (_m *App) Login(ctx context.Context, email string, pass string) (*jwt.Token
 	return r0, r1
 }
 
+// Logout provides a mock function with given fields: ctx, token
+func (_m *App) Logout(ctx context.Context, token *jwt.Token) error {
+	ret := _m.Called(ctx, token)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *jwt.Token) error); ok {
+		r0 = rf(ctx, token)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SetPassword provides a mock function with given fields: ctx, u
 func (_m *App) SetPassword(ctx context.Context, u model.UserUpdate) error {
 	ret := _m.Called(ctx, u)
