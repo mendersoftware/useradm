@@ -146,6 +146,13 @@ class ManagementApiClient(ApiClient):
             _request_options={"headers": {"Authorization": auth}}
         ).result()
 
+    def logout(self, auth=None):
+        if auth is None:
+            auth = self.auth
+        return self.client.Management_API.Logout(
+            _request_options={"headers": auth}
+        ).result()
+
     def post_settings(self, settings, auth=None):
         if auth is None:
             auth = self.auth

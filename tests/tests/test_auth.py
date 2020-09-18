@@ -61,6 +61,39 @@ class TestAuthLogin:
         assert "mender.user" in claims and claims["mender.user"] == True
 
 
+class TestAuthLogout:
+    def test_ok(self, api_client_int, api_client_mgmt, init_users):
+        email = "user-1@foo.com"
+        password = "correcthorsebatterystaple"
+
+        # log in
+        _, r = api_client_mgmt.login(email, password)
+        assert r.status_code == 200
+        token = r.text
+
+        # token is valid
+        _, r = api_client_int.verify(token)
+        assert r.status_code == 200
+
+        # log out
+        _, r = api_client_mgmt.logout(auth={"Authorization": "Bearer {}".format(token)})
+        assert r.status_code == 202
+
+        # token is not valid anymore
+        try:
+            _, r = api_client_int.verify(token)
+        except bravado.exception.HTTPError as herr:
+            assert herr.response.status_code == 401
+
+    def test_internal_error(self, api_client_mgmt, init_users):
+        try:
+            _, r = api_client_mgmt.logout(
+                auth={"Authorization": "Bearer invalid-token"}
+            )
+        except bravado.exception.HTTPError as herr:
+            assert herr.response.status_code == 500
+
+
 class TestAuthLoginEnterprise:
     def test_ok(self, api_client_mgmt, init_users_mt):
         password = "correcthorsebatterystaple"
