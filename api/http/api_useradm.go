@@ -28,16 +28,18 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/useradm/authz"
+	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store"
-	"github.com/mendersoftware/useradm/user"
+	useradm "github.com/mendersoftware/useradm/user"
 )
 
 const (
-	uriManagementAuthLogin = "/api/management/v1/useradm/auth/login"
-	uriManagementUser      = "/api/management/v1/useradm/users/:id"
-	uriManagementUsers     = "/api/management/v1/useradm/users"
-	uriManagementSettings  = "/api/management/v1/useradm/settings"
+	uriManagementAuthLogin  = "/api/management/v1/useradm/auth/login"
+	uriManagementAuthLogout = "/api/management/v1/useradm/auth/logout"
+	uriManagementUser       = "/api/management/v1/useradm/users/:id"
+	uriManagementUsers      = "/api/management/v1/useradm/users"
+	uriManagementSettings   = "/api/management/v1/useradm/settings"
 
 	uriInternalAlive  = "/api/internal/v1/useradm/alive"
 	uriInternalHealth = "/api/internal/v1/useradm/health"
@@ -60,13 +62,15 @@ var (
 type UserAdmApiHandlers struct {
 	userAdm useradm.App
 	db      store.DataStore
+	jwth    *jwt.JWTHandlerRS256
 }
 
 // return an ApiHandler for user administration and authentiacation app
-func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore) ApiHandler {
+func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore, jwth *jwt.JWTHandlerRS256) ApiHandler {
 	return &UserAdmApiHandlers{
 		userAdm: userAdm,
 		db:      db,
+		jwth:    jwth,
 	}
 }
 
@@ -83,6 +87,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Delete(uriInternalTokens, i.DeleteTokensHandler),
 
 		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
+		rest.Post(uriManagementAuthLogout, i.AuthLogoutHandler),
 		rest.Post(uriManagementUsers, i.AddUserHandler),
 		rest.Get(uriManagementUsers, i.GetUsersHandler),
 		rest.Get(uriManagementUser, i.GetUserHandler),
@@ -153,6 +158,25 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 
 	w.Header().Set("Content-Type", "application/jwt")
 	w.(http.ResponseWriter).Write([]byte(raw))
+}
+
+func (u *UserAdmApiHandlers) AuthLogoutHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	l := log.FromContext(ctx)
+
+	if tokenStr := authz.ExtractToken(r.Header); tokenStr != "" {
+		token, err := u.jwth.FromJWT(tokenStr)
+		if err != nil {
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+			return
+		}
+		if err := u.userAdm.Logout(ctx, token); err != nil {
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (u *UserAdmApiHandlers) AuthVerifyHandler(w rest.ResponseWriter, r *rest.Request) {

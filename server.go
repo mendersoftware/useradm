@@ -28,7 +28,7 @@ import (
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/store/mongo"
-	"github.com/mendersoftware/useradm/user"
+	useradm "github.com/mendersoftware/useradm/user"
 )
 
 func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler) (*rest.Api, error) {
@@ -79,7 +79,7 @@ func RunServer(c config.Reader) error {
 		ua = ua.WithTenantVerification(tc)
 	}
 
-	useradmapi := api_http.NewUserAdmApiHandlers(ua, db)
+	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwth)
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {
