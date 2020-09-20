@@ -610,6 +610,18 @@ func TestCreateUserForTenant(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	t.Parallel()
 
+	// we setup authz, so a real token is needed
+	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ0ODE4OTM5MD" +
+		"AsImlzcyI6Im1lbmRlciIsInN1YiI6Ijc4MWVjMmMzLTM2YTYtNGMxNC05Mj" +
+		"E1LTc1Y2ZjZmQ4MzEzNiIsInNjcCI6Im1lbmRlci4qIiwiaWF0IjoxNDQ1Mj" +
+		"EyODAwLCJqdGkiOiI5NzM0Zjc1Mi0wOWZkLTQ2NmItYmNjYS04ZTFmNDQwN2" +
+		"JmNjUifQ.HRff3mxlygPl4ZlCA0uEalcEUrSb_xi_dnp6uDZWwAGVp-AL7NW" +
+		"MhVfRw9mVNXeM2nUom7z0JUgIDGxB-24gejssiZSuZPCDJ01oyutm2xqdQKW" +
+		"2LlHR5zD0m8KbNHtbHO9dPGUJATa7lHi3_QxGAqqXQYf-Jg7LwXRNqHT1EvY" +
+		"gZMffuqx5i5pwpoCm9a7bTlfKxYkwuMVps3zjuliJxgqbMP3zFN9IlNB0Atb" +
+		"4hEu7REd3s-2TpoIl6ztbbFDYUwz6lg1jD_q0Sbx89gw1R-auZPPZOH49szk" +
+		"8bb75uaEce4BQfgIwvVyVN0NXhfN7bq6ucObZdUbNhuXmN1R6MQ"
+
 	testCases := map[string]struct {
 		inReq *http.Request
 
@@ -620,6 +632,22 @@ func TestUpdateUser(t *testing.T) {
 		"ok": {
 			inReq: test.MakeSimpleRequest("PUT",
 				"http://1.2.3.4/api/management/v1/useradm/users/123",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"ok with jwt token": {
+			inReq: makeReq("PUT",
+				"http://1.2.3.4/api/management/v1/useradm/users/123",
+				"Bearer "+token,
 				map[string]interface{}{
 					"email":    "foo@foo.com",
 					"password": "foobarbar",

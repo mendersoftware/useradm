@@ -680,6 +680,19 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			dbErr:  nil,
 			outErr: nil,
 		},
+		"ok with current token": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+				Token:    &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+			},
+
+			verifyTenant: true,
+			tenantErr:    nil,
+
+			dbErr:  nil,
+			outErr: nil,
+		},
 		"ok, multitenant": {
 			inUserUpdate: model.UserUpdate{
 				Email:    "foo@bar.com",
@@ -752,11 +765,28 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("UpdateUser",
-				ContextMatcher(),
-				mock.AnythingOfType("string"),
-				mock.AnythingOfType("*model.UserUpdate")).
-				Return(tc.dbErr)
+			defer db.AssertExpectations(t)
+
+			if !tc.verifyTenant || tc.tenantErr == nil {
+				db.On("UpdateUser",
+					ContextMatcher(),
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("*model.UserUpdate")).
+					Return(tc.dbErr)
+
+				if tc.dbErr == nil && tc.inUserUpdate.Token == nil {
+					db.On("DeleteTokensByUserId",
+						ContextMatcher(),
+						mock.AnythingOfType("string"),
+					).Return(nil)
+				} else if tc.dbErr == nil {
+					db.On("DeleteTokensByUserIdExceptCurrentOne",
+						ContextMatcher(),
+						mock.AnythingOfType("string"),
+						tc.inUserUpdate.Token.ID,
+					).Return(nil)
+				}
+			}
 
 			useradm := NewUserAdm(nil, db, nil, Config{})
 
@@ -767,6 +797,8 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				ctx = identity.WithContext(ctx, id)
 
 				cTenant := &mct.ClientRunner{}
+				defer cTenant.AssertExpectations(t)
+
 				cTenant.On("UpdateUser",
 					ContextMatcher(),
 					mock.AnythingOfType("string"),
@@ -1161,11 +1193,12 @@ func TestUserAdmCreateTenant(t *testing.T) {
 
 func TestUserAdmSetPassword(t *testing.T) {
 	testCases := map[string]struct {
-		inUser      model.User
-		dbGetErr    error
-		dbUpdateErr error
-		outErr      error
-		foundUser   *model.User
+		inUser       model.User
+		currentToken *jwt.Token
+		dbGetErr     error
+		dbUpdateErr  error
+		outErr       error
+		foundUser    *model.User
 	}{
 		"ok": {
 			inUser: model.User{
@@ -1175,6 +1208,17 @@ func TestUserAdmSetPassword(t *testing.T) {
 			dbGetErr:  nil,
 			outErr:    nil,
 			foundUser: &model.User{ID: "test_id"},
+		},
+
+		"ok with current token": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			currentToken: &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+			dbGetErr:     nil,
+			outErr:       nil,
+			foundUser:    &model.User{ID: "test_id"},
 		},
 
 		"error, user not found": {
@@ -1228,10 +1272,26 @@ func TestUserAdmSetPassword(t *testing.T) {
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.dbUpdateErr)
 		}
+
+		if tc.foundUser != nil && tc.dbUpdateErr == nil {
+			if tc.currentToken == nil {
+				db.On("DeleteTokensByUserId",
+					ContextMatcher(),
+					mock.AnythingOfType("string"),
+				).Return(nil)
+			} else {
+				db.On("DeleteTokensByUserIdExceptCurrentOne",
+					ContextMatcher(),
+					mock.AnythingOfType("string"),
+					tc.currentToken.ID,
+				).Return(nil)
+			}
+		}
+
 		useradm := NewUserAdm(nil, db, nil, Config{})
 		cTenant := &mct.ClientRunner{}
 
-		err := useradm.SetPassword(ctx, model.UserUpdate{Email: tc.inUser.Email})
+		err := useradm.SetPassword(ctx, model.UserUpdate{Email: tc.inUser.Email, Password: "new-password", Token: tc.currentToken})
 
 		if tc.outErr != nil {
 			assert.EqualError(t, err, tc.outErr.Error())
@@ -1240,6 +1300,7 @@ func TestUserAdmSetPassword(t *testing.T) {
 		}
 
 		cTenant.AssertExpectations(t)
+		db.AssertExpectations(t)
 	}
 
 }

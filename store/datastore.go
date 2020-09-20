@@ -54,6 +54,7 @@ type DataStore interface {
 
 	// deletes user tokens
 	DeleteTokensByUserId(ctx context.Context, userId string) error
+	DeleteTokensByUserIdExceptCurrentOne(ctx context.Context, userId string, tokenID oid.ObjectID) error
 
 	SaveSettings(ctx context.Context, s map[string]interface{}) error
 	GetSettings(ctx context.Context) (map[string]interface{}, error)

@@ -1624,8 +1624,7 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 			},
 		},
 		"ok - no tokens": {
-			user:     oid.NewUUIDv5("user2").String(),
-			outError: store.ErrTokenNotFound.Error(),
+			user: oid.NewUUIDv5("user2").String(),
 		},
 	}
 
@@ -1654,6 +1653,179 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 		}
 
 		err = store.DeleteTokensByUserId(ctx, tc.user)
+		if tc.outError != "" {
+			assert.EqualError(t, err, tc.outError)
+		} else {
+			assert.NoError(t, err)
+		}
+
+		var tokens []jwt.Token
+		if tc.outTokens != nil {
+			c, err := client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbTokensColl).
+				Find(ctx, bson.M{})
+			assert.NoError(t, err)
+
+			err = c.All(ctx, &tokens)
+			assert.NoError(t, err)
+		}
+
+		if assert.Len(t, tokens, len(tc.outTokens)) {
+			for i, token := range tokens {
+				assertEqualTokens(t, &tc.outTokens[i], &token)
+			}
+		}
+	}
+}
+
+func TestMongoDeleteTokensByUserIdExceptCurrentOne(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		user     string
+		inTokens []interface{}
+
+		outTokens []jwt.Token
+		outError  string
+	}{
+		"ok": {
+			user: oid.NewUUIDv5("user-1").String(),
+			inTokens: []interface{}{
+				jwt.Token{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+				jwt.Token{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+				jwt.Token{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+			},
+			outTokens: []jwt.Token{
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Logf("test case: %s", name)
+
+		db.Wipe()
+
+		ctx := context.Background()
+		if tc.tenant != "" {
+			ctx = identity.WithContext(ctx, &identity.Identity{
+				Tenant: tc.tenant,
+			})
+		}
+
+		client := db.Client()
+		store, err := NewDataStoreMongoWithClient(client)
+		assert.NoError(t, err)
+
+		if len(tc.inTokens) > 0 {
+			_, err = client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbTokensColl).
+				InsertMany(ctx, tc.inTokens)
+			assert.NoError(t, err)
+		}
+
+		err = store.DeleteTokensByUserIdExceptCurrentOne(ctx, tc.user, tc.inTokens[0].(jwt.Token).ID)
 		if tc.outError != "" {
 			assert.EqualError(t, err, tc.outError)
 		} else {

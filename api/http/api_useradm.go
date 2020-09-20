@@ -333,6 +333,16 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 		return
 	}
 
+	// extract the token used to update the user
+	if tokenStr := authz.ExtractToken(r.Header); tokenStr != "" {
+		token, err := u.jwth.FromJWT(tokenStr)
+		if err != nil {
+			rest_utils.RestErrWithLogInternal(w, r, l, err)
+			return
+		}
+		userUpdate.Token = token
+	}
+
 	err = u.userAdm.UpdateUser(ctx, id, userUpdate)
 	if err != nil {
 		switch err {

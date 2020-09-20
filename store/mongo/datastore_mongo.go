@@ -413,6 +413,11 @@ func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
 
 // deletes all user's tokens
 func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId string) error {
+	return db.DeleteTokensByUserIdExceptCurrentOne(ctx, userId, oid.ObjectID{})
+}
+
+// deletes all user's tokens except the current one
+func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(ctx context.Context, userId string, tokenID oid.ObjectID) error {
 	c := db.client.
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl)
@@ -422,14 +427,15 @@ func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId strin
 		"sub": id,
 	}
 
-	ci, err := c.DeleteMany(ctx, filter)
-
-	if err != nil {
-		return errors.Wrap(err, "failed to remove tokens")
+	if tokenID != (oid.ObjectID{}) {
+		filter["_id"] = bson.M{
+			"$ne": tokenID,
+		}
 	}
 
-	if ci.DeletedCount == 0 {
-		return store.ErrTokenNotFound
+	_, err := c.DeleteMany(ctx, filter)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove tokens")
 	}
 
 	return nil
