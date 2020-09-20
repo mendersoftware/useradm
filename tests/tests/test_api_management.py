@@ -251,9 +251,10 @@ class TestManagementApiPutUserBase:
     def _do_test_ok_email(
         self, api_client_mgmt, init_users, user, update, tenant_id=None
     ):
-        auth = None
-        if tenant_id is not None:
-            auth = make_auth("foo", tenant_id)
+        _, r = api_client_mgmt.login(user.email, 'correcthorsebatterystaple')
+        assert r.status_code == 200
+        token = r.text
+        auth = {"Authorization": "Bearer " + token}
 
         # test update
         _, r = api_client_mgmt.update_user(user.id, update, auth)
@@ -269,9 +270,10 @@ class TestManagementApiPutUserBase:
     def _do_test_ok_email_or_pass(
         self, api_client_mgmt, init_users, user, update, tenant_id=None
     ):
-        auth = None
-        if tenant_id is not None:
-            auth = make_auth("foo", tenant_id)
+        _, r = api_client_mgmt.login(user.email, 'correcthorsebatterystaple')
+        assert r.status_code == 200
+        token = r.text
+        auth = {"Authorization": "Bearer " + token}
 
         # test update
         _, r = api_client_mgmt.update_user(user.id, update, auth)
@@ -298,9 +300,10 @@ class TestManagementApiPutUserBase:
     def _do_test_fail_not_found(
         self, api_client_mgmt, init_users, update, tenant_id=None
     ):
-        auth = None
-        if tenant_id is not None:
-            auth = make_auth("foo", tenant_id)
+        _, r = api_client_mgmt.login(init_users[0].email, 'correcthorsebatterystaple')
+        assert r.status_code == 200
+        token = r.text
+        auth = {"Authorization": "Bearer " + token}
 
         try:
             _, r = api_client_mgmt.update_user("madeupid", update, auth)
@@ -316,9 +319,10 @@ class TestManagementApiPutUserBase:
     def _do_test_fail_duplicate_email(
         self, api_client_mgmt, init_users, user, update, tenant_id=None
     ):
-        auth = None
-        if tenant_id is not None:
-            auth = make_auth("foo", tenant_id)
+        _, r = api_client_mgmt.login(user.email, 'correcthorsebatterystaple')
+        assert r.status_code == 200
+        token = r.text
+        auth = {"Authorization": "Bearer " + token}
 
         try:
             _, r = api_client_mgmt.update_user(user.id, update, auth)
