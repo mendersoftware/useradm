@@ -73,15 +73,15 @@ func TestValidateNew(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case %s", name)
+		t.Run(name, func(t *testing.T) {
+			err := tc.inUser.ValidateNew()
 
-		err := tc.inUser.ValidateNew()
-
-		if tc.outErr == "" {
-			assert.NoError(t, err)
-		} else {
-			assert.EqualError(t, err, tc.outErr)
-		}
+			if tc.outErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tc.outErr)
+			}
+		})
 	}
 }
 

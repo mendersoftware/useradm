@@ -202,64 +202,64 @@ func TestAuthzMiddleware(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %v", name)
+		t.Run(name, func(t *testing.T) {
+			//setup api
+			api := rest.NewApi()
+			api.Use(
+				&requestlog.RequestLogMiddleware{
+					BaseLogger: &logrus.Logger{Out: ioutil.Discard},
+				},
+				&requestid.RequestIdMiddleware{},
+			)
+			rest.ErrorFieldName = "error"
 
-		//setup api
-		api := rest.NewApi()
-		api.Use(
-			&requestlog.RequestLogMiddleware{
-				BaseLogger: &logrus.Logger{Out: ioutil.Discard},
-			},
-			&requestid.RequestIdMiddleware{},
-		)
-		rest.ErrorFieldName = "error"
+			ctx := mtest.ContextMatcher()
 
-		ctx := mtest.ContextMatcher()
+			//setup mocks
+			a := &mauthz.Authorizer{}
+			a.On("Authorize",
+				ctx,
+				mock.AnythingOfType("*jwt.Token"),
+				tc.action.Resource,
+				tc.action.Method).Return(tc.authErr)
 
-		//setup mocks
-		a := &mauthz.Authorizer{}
-		a.On("Authorize",
-			ctx,
-			mock.AnythingOfType("*jwt.Token"),
-			tc.action.Resource,
-			tc.action.Method).Return(tc.authErr)
+			a.On("WithLog",
+				mock.AnythingOfType("*log.Logger")).
+				Return(a)
 
-		a.On("WithLog",
-			mock.AnythingOfType("*log.Logger")).
-			Return(a)
+			resfunc := func(r *rest.Request) (*Action, error) {
+				return tc.action, tc.actionErr
+			}
 
-		resfunc := func(r *rest.Request) (*Action, error) {
-			return tc.action, tc.actionErr
-		}
+			//finish setting up the middleware
+			privkey := loadPrivKey("../crypto/private.pem", t)
+			jwth := jwt.NewJWTHandlerRS256(privkey)
+			mw := AuthzMiddleware{
+				Authz:      a,
+				ResFunc:    resfunc,
+				JWTHandler: jwth,
+			}
+			api.Use(&mw)
 
-		//finish setting up the middleware
-		privkey := loadPrivKey("../crypto/private.pem", t)
-		jwth := jwt.NewJWTHandlerRS256(privkey)
-		mw := AuthzMiddleware{
-			Authz:      a,
-			ResFunc:    resfunc,
-			JWTHandler: jwth,
-		}
-		api.Use(&mw)
+			//setup dummy handler
+			api.SetApp(rest.AppSimple(func(w rest.ResponseWriter, r *rest.Request) {
+				w.WriteJson(map[string]string{"foo": "bar"})
+			}))
 
-		//setup dummy handler
-		api.SetApp(rest.AppSimple(func(w rest.ResponseWriter, r *rest.Request) {
-			w.WriteJson(map[string]string{"foo": "bar"})
-		}))
+			//test
+			authhdr := ""
+			if tc.token != "" {
+				authhdr = "Bearer " + tc.token
+			}
 
-		//test
-		authhdr := ""
-		if tc.token != "" {
-			authhdr = "Bearer " + tc.token
-		}
+			req := makeReq(tc.action.Method,
+				"localhost",
+				authhdr,
+				nil)
 
-		req := makeReq(tc.action.Method,
-			"localhost",
-			authhdr,
-			nil)
-
-		recorded := test.RunRequest(t, api.MakeHandler(), req)
-		mt.CheckResponse(t, tc.checker, recorded)
+			recorded := test.RunRequest(t, api.MakeHandler(), req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
 	}
 }
 

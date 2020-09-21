@@ -52,15 +52,16 @@ func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerRS256(tc.privKey)
+		t.Run(name, func(t *testing.T) {
+			jwtHandler := NewJWTHandlerRS256(tc.privKey)
 
-		raw, err := jwtHandler.ToJWT(&Token{
-			Claims: tc.claims,
+			raw, err := jwtHandler.ToJWT(&Token{
+				Claims: tc.claims,
+			})
+			assert.NoError(t, err)
+
+			_ = parseGeneratedTokenRS256(t, string(raw), tc.privKey)
 		})
-		assert.NoError(t, err)
-
-		_ = parseGeneratedTokenRS256(t, string(raw), tc.privKey)
 	}
 }
 

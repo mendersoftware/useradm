@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -182,7 +181,7 @@ func TestGetTenant(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			s, rd := ct.NewMockServer(tc.status, tc.inTenants)
@@ -228,7 +227,7 @@ func TestCreateUser(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			s, rd := ct.NewMockServer(tc.status, nil)
@@ -275,7 +274,7 @@ func TestDeleteUser(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			s, rd := ct.NewMockServer(tc.status, nil)
@@ -336,7 +335,7 @@ func TestUpdateUser(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("name %v", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			s, rd := ct.NewMockServer(tc.status, nil)
