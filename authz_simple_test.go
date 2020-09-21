@@ -83,18 +83,18 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			authz := &SimpleAuthz{}
 
-		authz := &SimpleAuthz{}
+			err := authz.Authorize(context.TODO(),
+				tc.inToken, tc.inResource, tc.inAction)
 
-		err := authz.Authorize(context.TODO(),
-			tc.inToken, tc.inResource, tc.inAction)
-
-		if tc.outErr == "" {
-			assert.NoError(t, err)
-		} else {
-			assert.EqualError(t, err, tc.outErr)
-		}
+			if tc.outErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tc.outErr)
+			}
+		})
 	}
 }
 

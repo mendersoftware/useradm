@@ -320,7 +320,19 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 			}
 		}
 	}
-	if err := ua.db.UpdateUser(ctx, id, u); err != nil {
+
+	err := ua.db.UpdateUser(ctx, id, u)
+
+	// if we changed the password, invalidate the JWT tokens but the one used to update the user
+	if err == nil && u.Password != "" {
+		if u.Token != nil {
+			err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, id, u.Token.ID)
+		} else {
+			err = ua.db.DeleteTokensByUserId(ctx, id)
+		}
+	}
+
+	if err != nil {
 		if err == store.ErrDuplicateEmail || err == store.ErrUserNotFound {
 			return err
 		}
@@ -439,7 +451,20 @@ func (ua *UserAdm) SetPassword(ctx context.Context, uu model.UserUpdate) error {
 	}
 
 	err = ua.db.UpdateUser(ctx, u.ID, &uu)
-	return errors.Wrap(err, "useradm: failed to update user information")
+
+	// if we changed the password, invalidate the JWT tokens but the one used to update the user
+	if err == nil && uu.Password != "" {
+		if uu.Token != nil {
+			err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, u.ID, uu.Token.ID)
+		} else {
+			err = ua.db.DeleteTokensByUserId(ctx, u.ID)
+		}
+	}
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to update user information")
+	}
+
+	return nil
 }
 
 func (ua *UserAdm) DeleteTokens(ctx context.Context, tenantId, userId string) error {

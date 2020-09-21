@@ -16,7 +16,6 @@ package mongo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 	"unsafe"
@@ -125,44 +124,44 @@ func TestMongoCreateUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
-
-		_, err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbUsersColl).
-			InsertMany(ctx, exisitingUsers)
-
-		assert.NoError(t, err)
-
-		err = store.CreateUser(ctx, &tc.inUser)
-
-		if tc.outErr == "" {
-			//fetch user by id, verify password checks out
-			var user model.User
-			err := client.
+			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
-				FindOne(ctx, bson.M{"_id": "1234"}).
-				Decode(&user)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.inUser.Password, user.Password)
+				InsertMany(ctx, exisitingUsers)
 
-		} else {
-			assert.EqualError(t, err, tc.outErr)
-		}
+			assert.NoError(t, err)
+
+			err = store.CreateUser(ctx, &tc.inUser)
+
+			if tc.outErr == "" {
+				//fetch user by id, verify password checks out
+				var user model.User
+				err := client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbUsersColl).
+					FindOne(ctx, bson.M{"_id": "1234"}).
+					Decode(&user)
+				assert.NoError(t, err)
+				assert.Equal(t, tc.inUser.Password, user.Password)
+
+			} else {
+				assert.EqualError(t, err, tc.outErr)
+			}
+		})
 	}
 }
 
@@ -232,8 +231,7 @@ func TestMongoUpdateUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			db.Wipe()
 
 			ctx := context.Background()
@@ -339,35 +337,35 @@ func TestMongoGetUserByEmail(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			_, err = client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbUsersColl).
+				InsertMany(ctx, existingUsers)
+			assert.NoError(t, err)
 
-		_, err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbUsersColl).
-			InsertMany(ctx, existingUsers)
-		assert.NoError(t, err)
+			user, err := store.GetUserByEmail(ctx, tc.inEmail)
 
-		user, err := store.GetUserByEmail(ctx, tc.inEmail)
-
-		if tc.outUser != nil {
-			assert.Equal(t, *tc.outUser, *user)
-		} else {
-			assert.Nil(t, user)
-			assert.Nil(t, err)
-		}
+			if tc.outUser != nil {
+				assert.Equal(t, *tc.outUser, *user)
+			} else {
+				assert.Nil(t, user)
+				assert.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -428,35 +426,35 @@ func TestMongoGetUserById(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			_, err = client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbUsersColl).
+				InsertMany(ctx, existingUsers)
+			assert.NoError(t, err)
 
-		_, err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbUsersColl).
-			InsertMany(ctx, existingUsers)
-		assert.NoError(t, err)
+			user, err := store.GetUserById(ctx, tc.inId)
 
-		user, err := store.GetUserById(ctx, tc.inId)
-
-		if tc.outUser != nil {
-			assert.Equal(t, *tc.outUser, *user)
-		} else {
-			assert.Nil(t, user)
-			assert.Nil(t, err)
-		}
+			if tc.outUser != nil {
+				assert.Equal(t, *tc.outUser, *user)
+			} else {
+				assert.Nil(t, user)
+				assert.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -525,36 +523,36 @@ func TestMongoGetTokenById(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			t.Log(existing[0])
+			_, err = client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbTokensColl).
+				InsertMany(ctx, existing)
+			assert.NoError(t, err)
 
-		t.Log(existing[0])
-		_, err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbTokensColl).
-			InsertMany(ctx, existing)
-		assert.NoError(t, err)
+			token, err := store.GetTokenById(ctx, oid.NewUUIDv5(tc.id))
 
-		token, err := store.GetTokenById(ctx, oid.NewUUIDv5(tc.id))
-
-		if tc.outToken != nil {
-			assertEqualTokens(t, tc.outToken, token)
-		} else {
-			assert.Nil(t, token)
-			assert.Nil(t, err)
-		}
+			if tc.outToken != nil {
+				assertEqualTokens(t, tc.outToken, token)
+			} else {
+				assert.Nil(t, token)
+				assert.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -706,7 +704,7 @@ func TestMongoGetUsers(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			db.Wipe()
 
@@ -815,42 +813,42 @@ func TestMongoDeleteUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			_, err = client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbUsersColl).
+				InsertMany(ctx, existingUsers)
+			assert.NoError(t, err)
 
-		_, err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbUsersColl).
-			InsertMany(ctx, existingUsers)
-		assert.NoError(t, err)
+			err = store.DeleteUser(ctx, tc.inId)
+			assert.NoError(t, err)
 
-		err = store.DeleteUser(ctx, tc.inId)
-		assert.NoError(t, err)
+			var users []model.User
+			c, err := client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbUsersColl).
+				Find(ctx, bson.M{})
 
-		var users []model.User
-		c, err := client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbUsersColl).
-			Find(ctx, bson.M{})
+			assert.NoError(t, err)
 
-		assert.NoError(t, err)
+			err = c.All(ctx, &users)
+			assert.NoError(t, err)
 
-		err = c.All(ctx, &users)
-		assert.NoError(t, err)
-
-		assert.Equal(t, tc.outUsers, users)
+			assert.Equal(t, tc.outUsers, users)
+		})
 	}
 }
 
@@ -920,36 +918,36 @@ func TestMongoSaveToken(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			//setup
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		//setup
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			//test
+			err = store.SaveToken(ctx, tc.token)
+			assert.NoError(t, err)
 
-		//test
-		err = store.SaveToken(ctx, tc.token)
-		assert.NoError(t, err)
+			var token jwt.Token
+			err = client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbTokensColl).
+				FindOne(ctx, bson.M{"_id": tc.token.Claims.ID}).
+				Decode(&token)
 
-		var token jwt.Token
-		err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbTokensColl).
-			FindOne(ctx, bson.M{"_id": tc.token.Claims.ID}).
-			Decode(&token)
+			assert.NoError(t, err)
 
-		assert.NoError(t, err)
-
-		assertEqualTokens(t, tc.token, &token)
+			assertEqualTokens(t, tc.token, &token)
+		})
 	}
 }
 
@@ -995,67 +993,68 @@ func TestMigrate(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("case: %s", name)
-		db.Wipe()
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		store, err := NewDataStoreMongoWithClient(db.Client())
-		assert.NoError(t, err)
+			store, err := NewDataStoreMongoWithClient(db.Client())
+			assert.NoError(t, err)
 
-		// set up automigration
-		if tc.automigrate {
-			store = store.WithAutomigrate()
-		}
-
-		// set up multitenancy/tenant dbs
-		if len(tc.tenantDbs) != 0 {
-			store = store.WithMultitenant()
-
-			for _, d := range tc.tenantDbs {
-				_, err := store.client.
-					Database(d).
-					Collection("foo").
-					InsertOne(context.TODO(), bson.M{"foo": "bar"})
-				assert.NoError(t, err)
-			}
-		}
-
-		ctx := context.Background()
-
-		err = store.Migrate(ctx, tc.version)
-
-		if tc.err != "" {
-			assert.EqualError(t, err, tc.err)
-		} else {
-
-			// verify migration entry in all databases (>1 if multitenant)
-			dbs := []string{DbName}
-			if len(tc.tenantDbs) > 0 {
-				dbs = tc.tenantDbs
+			// set up automigration
+			if tc.automigrate {
+				store = store.WithAutomigrate()
 			}
 
-			for _, d := range dbs {
-				var out []migrate.MigrationEntry
+			// set up multitenancy/tenant dbs
+			if len(tc.tenantDbs) != 0 {
+				store = store.WithMultitenant()
 
-				c, err := store.client.
-					Database(d).
-					Collection(migrate.DbMigrationsColl).
-					Find(ctx, bson.M{})
-				assert.NoError(t, err)
-
-				err = c.All(ctx, &out)
-				assert.NoError(t, err)
-
-				if tc.automigrate {
-					assert.Len(t, out, 1)
+				for _, d := range tc.tenantDbs {
+					_, err := store.client.
+						Database(d).
+						Collection("foo").
+						InsertOne(context.TODO(), bson.M{"foo": "bar"})
 					assert.NoError(t, err)
-
-					v, _ := migrate.NewVersion(tc.version)
-					assert.Equal(t, *v, out[0].Version)
-				} else {
-					assert.Len(t, out, 0)
 				}
 			}
-		}
+
+			ctx := context.Background()
+
+			err = store.Migrate(ctx, tc.version)
+
+			if tc.err != "" {
+				assert.EqualError(t, err, tc.err)
+			} else {
+
+				// verify migration entry in all databases (>1 if multitenant)
+				dbs := []string{DbName}
+				if len(tc.tenantDbs) > 0 {
+					dbs = tc.tenantDbs
+				}
+
+				for _, d := range dbs {
+					var out []migrate.MigrationEntry
+
+					c, err := store.client.
+						Database(d).
+						Collection(migrate.DbMigrationsColl).
+						Find(ctx, bson.M{})
+					assert.NoError(t, err)
+
+					err = c.All(ctx, &out)
+					assert.NoError(t, err)
+
+					if tc.automigrate {
+						assert.Len(t, out, 1)
+						assert.NoError(t, err)
+
+						v, _ := migrate.NewVersion(tc.version)
+						assert.Equal(t, *v, out[0].Version)
+					} else {
+						assert.Len(t, out, 0)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -1223,42 +1222,42 @@ func TestMongoDeleteToken(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, tc.inTokens)
+				assert.NoError(t, err)
+			}
 
-		if len(tc.inTokens) > 0 {
-			_, err = client.
+			err = store.DeleteToken(ctx, tc.token.ID)
+			assert.NoError(t, err)
+
+			var tokens []jwt.Token
+			c, err := client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbTokensColl).
-				InsertMany(ctx, tc.inTokens)
+				Find(ctx, bson.M{"_id": tc.token.ID})
 			assert.NoError(t, err)
-		}
 
-		err = store.DeleteToken(ctx, tc.token.ID)
-		assert.NoError(t, err)
-
-		var tokens []jwt.Token
-		c, err := client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbTokensColl).
-			Find(ctx, bson.M{"_id": tc.token.ID})
-		assert.NoError(t, err)
-
-		err = c.All(ctx, &tokens)
-		assert.NoError(t, err)
-		assert.Nil(t, tokens)
+			err = c.All(ctx, &tokens)
+			assert.NoError(t, err)
+			assert.Nil(t, tokens)
+		})
 	}
 }
 
@@ -1391,47 +1390,47 @@ func TestMongoDeleteTokens(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, tc.inTokens)
+				assert.NoError(t, err)
+			}
 
-		if len(tc.inTokens) > 0 {
-			_, err = client.
+			err = store.DeleteTokens(ctx)
+			if tc.outError != "" {
+				assert.EqualError(t, err, tc.outError)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			var tokens []jwt.Token
+			c, err := client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbTokensColl).
-				InsertMany(ctx, tc.inTokens)
+				Find(ctx, bson.M{})
 			assert.NoError(t, err)
-		}
 
-		err = store.DeleteTokens(ctx)
-		if tc.outError != "" {
-			assert.EqualError(t, err, tc.outError)
-		} else {
+			err = c.All(ctx, &tokens)
+
 			assert.NoError(t, err)
-		}
-
-		var tokens []jwt.Token
-		c, err := client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbTokensColl).
-			Find(ctx, bson.M{})
-		assert.NoError(t, err)
-
-		err = c.All(ctx, &tokens)
-
-		assert.NoError(t, err)
-		assert.Nil(t, tokens)
+			assert.Nil(t, tokens)
+		})
 	}
 }
 
@@ -1624,59 +1623,231 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 			},
 		},
 		"ok - no tokens": {
-			user:     oid.NewUUIDv5("user2").String(),
-			outError: store.ErrTokenNotFound.Error(),
+			user: oid.NewUUIDv5("user2").String(),
 		},
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
-
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
-
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
-
-		if len(tc.inTokens) > 0 {
-			_, err = client.
-				Database(mstore.DbFromContext(ctx, DbName)).
-				Collection(DbTokensColl).
-				InsertMany(ctx, tc.inTokens)
-			assert.NoError(t, err)
-		}
-
-		err = store.DeleteTokensByUserId(ctx, tc.user)
-		if tc.outError != "" {
-			assert.EqualError(t, err, tc.outError)
-		} else {
-			assert.NoError(t, err)
-		}
-
-		var tokens []jwt.Token
-		if tc.outTokens != nil {
-			c, err := client.
-				Database(mstore.DbFromContext(ctx, DbName)).
-				Collection(DbTokensColl).
-				Find(ctx, bson.M{})
-			assert.NoError(t, err)
-
-			err = c.All(ctx, &tokens)
-			assert.NoError(t, err)
-		}
-
-		if assert.Len(t, tokens, len(tc.outTokens)) {
-			for i, token := range tokens {
-				assertEqualTokens(t, &tc.outTokens[i], &token)
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
 			}
-		}
+
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, tc.inTokens)
+				assert.NoError(t, err)
+			}
+
+			err = store.DeleteTokensByUserId(ctx, tc.user)
+			if tc.outError != "" {
+				assert.EqualError(t, err, tc.outError)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			var tokens []jwt.Token
+			if tc.outTokens != nil {
+				c, err := client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					Find(ctx, bson.M{})
+				assert.NoError(t, err)
+
+				err = c.All(ctx, &tokens)
+				assert.NoError(t, err)
+			}
+
+			if assert.Len(t, tokens, len(tc.outTokens)) {
+				for i, token := range tokens {
+					assertEqualTokens(t, &tc.outTokens[i], &token)
+				}
+			}
+		})
+	}
+}
+
+func TestMongoDeleteTokensByUserIdExceptCurrentOne(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		user     string
+		inTokens []interface{}
+
+		outTokens []jwt.Token
+		outError  string
+	}{
+		"ok": {
+			user: oid.NewUUIDv5("user-1").String(),
+			inTokens: []interface{}{
+				jwt.Token{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+				jwt.Token{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+				jwt.Token{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+			},
+			outTokens: []jwt.Token{
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  oid.NewUUIDv5("user-1"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("user-2"),
+						Audience: "audience",
+						ExpiresAt: jwt.Time{
+							Time: time.Now().
+								Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: time.Now(),
+						},
+						Issuer: "iss-1",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope: "scope-1",
+						User:  true,
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
+
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, tc.inTokens)
+				assert.NoError(t, err)
+			}
+
+			err = store.DeleteTokensByUserIdExceptCurrentOne(ctx, tc.user, tc.inTokens[0].(jwt.Token).ID)
+			if tc.outError != "" {
+				assert.EqualError(t, err, tc.outError)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			var tokens []jwt.Token
+			if tc.outTokens != nil {
+				c, err := client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					Find(ctx, bson.M{})
+				assert.NoError(t, err)
+
+				err = c.All(ctx, &tokens)
+				assert.NoError(t, err)
+			}
+
+			if assert.Len(t, tokens, len(tc.outTokens)) {
+				for i, token := range tokens {
+					assertEqualTokens(t, &tc.outTokens[i], &token)
+				}
+			}
+		})
 	}
 }
 
@@ -1755,46 +1926,46 @@ func TestMongoSaveSettings(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
 
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
+			if tc.settingsExisting != nil {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbSettingsColl).
+					InsertOne(ctx, tc.settingsExisting)
+				assert.NoError(t, err)
+			}
 
-		if tc.settingsExisting != nil {
-			_, err = client.
+			err = store.SaveSettings(ctx, tc.settingsIn)
+			if tc.err != "" {
+				assert.EqualError(t, err, tc.err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			var settings map[string]interface{}
+
+			err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbSettingsColl).
-				InsertOne(ctx, tc.settingsExisting)
+				FindOne(ctx, bson.M{}).
+				Decode(&settings)
+
 			assert.NoError(t, err)
-		}
-
-		err = store.SaveSettings(ctx, tc.settingsIn)
-		if tc.err != "" {
-			assert.EqualError(t, err, tc.err)
-		} else {
-			assert.NoError(t, err)
-		}
-
-		var settings map[string]interface{}
-
-		err = client.
-			Database(mstore.DbFromContext(ctx, DbName)).
-			Collection(DbSettingsColl).
-			FindOne(ctx, bson.M{}).
-			Decode(&settings)
-
-		assert.NoError(t, err)
-		assert.Equal(t, tc.settingsOut, settings)
+			assert.Equal(t, tc.settingsOut, settings)
+		})
 	}
 }
 
@@ -1836,32 +2007,32 @@ func TestMongoGetSettings(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
 
-		db.Wipe()
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
 
-		ctx := context.Background()
-		if tc.tenant != "" {
-			ctx = identity.WithContext(ctx, &identity.Identity{
-				Tenant: tc.tenant,
-			})
-		}
-
-		client := db.Client()
-		store, err := NewDataStoreMongoWithClient(client)
-		assert.NoError(t, err)
-
-		if tc.settingsExisting != nil {
-			_, err = client.
-				Database(mstore.DbFromContext(ctx, DbName)).
-				Collection(DbSettingsColl).
-				InsertOne(ctx, tc.settingsExisting)
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
 			assert.NoError(t, err)
-		}
 
-		out, err := store.GetSettings(ctx)
+			if tc.settingsExisting != nil {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbSettingsColl).
+					InsertOne(ctx, tc.settingsExisting)
+				assert.NoError(t, err)
+			}
 
-		assert.NoError(t, err)
-		assert.Equal(t, tc.settingsOut, out)
+			out, err := store.GetSettings(ctx)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.settingsOut, out)
+		})
 	}
 }

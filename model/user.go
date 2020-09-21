@@ -21,6 +21,8 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
+
+	"github.com/mendersoftware/useradm/jwt"
 )
 
 const (
@@ -100,6 +102,9 @@ type UserUpdate struct {
 
 	// timestamp of the last user information update
 	UpdatedTs *time.Time `json:"-" bson:"updated_ts,omitempty"`
+
+	// token used to update the user, optional
+	Token *jwt.Token `json:"-" bson:"-"`
 }
 
 func (u User) ValidateNew() error {

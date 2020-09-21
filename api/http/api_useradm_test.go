@@ -16,7 +16,6 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -209,28 +208,28 @@ func TestUserAdmApiLogin(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %v", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := mtesting.ContextMatcher()
 
-		ctx := mtesting.ContextMatcher()
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("Login", ctx,
+				mock.AnythingOfType("string"),
+				mock.AnythingOfType("string")).
+				Return(tc.uaToken, tc.uaError)
 
-		//make mock useradm
-		uadm := &museradm.App{}
-		uadm.On("Login", ctx,
-			mock.AnythingOfType("string"),
-			mock.AnythingOfType("string")).
-			Return(tc.uaToken, tc.uaError)
+			uadm.On("SignToken", ctx, tc.uaToken).Return(tc.signed, tc.signErr)
 
-		uadm.On("SignToken", ctx, tc.uaToken).Return(tc.signed, tc.signErr)
+			//make mock request
+			req := makeReq("POST", "http://1.2.3.4/api/management/v1/useradm/auth/login",
+				tc.inAuthHeader, nil)
 
-		//make mock request
-		req := makeReq("POST", "http://1.2.3.4/api/management/v1/useradm/auth/login",
-			tc.inAuthHeader, nil)
+			api := makeMockApiHandler(t, uadm, nil)
 
-		api := makeMockApiHandler(t, uadm, nil)
-
-		//test
-		recorded := test.RunRequest(t, api, req)
-		mt.CheckResponse(t, tc.checker, recorded)
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
 	}
 }
 
@@ -269,28 +268,29 @@ func TestUserAdmApiLogout(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %v", name)
-		ctx := mtesting.ContextMatcher()
+		t.Run(name, func(t *testing.T) {
+			ctx := mtesting.ContextMatcher()
 
-		// make mock useradm
-		uadm := &museradm.App{}
-		uadm.On("Logout",
-			ctx,
-			mock.AnythingOfType("*jwt.Token"),
-		).Return(tc.logoutError)
+			// make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("Logout",
+				ctx,
+				mock.AnythingOfType("*jwt.Token"),
+			).Return(tc.logoutError)
 
-		// make mock request
-		req := makeReq("POST",
-			"http://1.2.3.4/api/management/v1/useradm/auth/logout",
-			"Bearer "+token,
-			nil,
-		)
+			// make mock request
+			req := makeReq("POST",
+				"http://1.2.3.4/api/management/v1/useradm/auth/logout",
+				"Bearer "+token,
+				nil,
+			)
 
-		api := makeMockApiHandler(t, uadm, nil)
+			api := makeMockApiHandler(t, uadm, nil)
 
-		// test
-		recorded := test.RunRequest(t, api, req)
-		mt.CheckResponse(t, tc.checker, recorded)
+			// test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
 	}
 }
 
@@ -393,8 +393,7 @@ func TestCreateUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("CreateUser", mtesting.ContextMatcher(),
@@ -587,8 +586,7 @@ func TestCreateUserForTenant(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("CreateUserInternal", mock.MatchedBy(func(c context.Context) bool {
@@ -610,6 +608,18 @@ func TestCreateUserForTenant(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	t.Parallel()
 
+	// we setup authz, so a real token is needed
+	token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQ0ODE4OTM5MD" +
+		"AsImlzcyI6Im1lbmRlciIsInN1YiI6Ijc4MWVjMmMzLTM2YTYtNGMxNC05Mj" +
+		"E1LTc1Y2ZjZmQ4MzEzNiIsInNjcCI6Im1lbmRlci4qIiwiaWF0IjoxNDQ1Mj" +
+		"EyODAwLCJqdGkiOiI5NzM0Zjc1Mi0wOWZkLTQ2NmItYmNjYS04ZTFmNDQwN2" +
+		"JmNjUifQ.HRff3mxlygPl4ZlCA0uEalcEUrSb_xi_dnp6uDZWwAGVp-AL7NW" +
+		"MhVfRw9mVNXeM2nUom7z0JUgIDGxB-24gejssiZSuZPCDJ01oyutm2xqdQKW" +
+		"2LlHR5zD0m8KbNHtbHO9dPGUJATa7lHi3_QxGAqqXQYf-Jg7LwXRNqHT1EvY" +
+		"gZMffuqx5i5pwpoCm9a7bTlfKxYkwuMVps3zjuliJxgqbMP3zFN9IlNB0Atb" +
+		"4hEu7REd3s-2TpoIl6ztbbFDYUwz6lg1jD_q0Sbx89gw1R-auZPPZOH49szk" +
+		"8bb75uaEce4BQfgIwvVyVN0NXhfN7bq6ucObZdUbNhuXmN1R6MQ"
+
 	testCases := map[string]struct {
 		inReq *http.Request
 
@@ -620,6 +630,22 @@ func TestUpdateUser(t *testing.T) {
 		"ok": {
 			inReq: test.MakeSimpleRequest("PUT",
 				"http://1.2.3.4/api/management/v1/useradm/users/123",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"ok with jwt token": {
+			inReq: makeReq("PUT",
+				"http://1.2.3.4/api/management/v1/useradm/users/123",
+				"Bearer "+token,
 				map[string]interface{}{
 					"email":    "foo@foo.com",
 					"password": "foobarbar",
@@ -687,8 +713,7 @@ func TestUpdateUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("UpdateUser", mtesting.ContextMatcher(),
@@ -817,60 +842,60 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %v", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := mtesting.ContextMatcher()
 
-		ctx := mtesting.ContextMatcher()
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("Verify", ctx,
+				mock.AnythingOfType("*jwt.Token")).
+				Return(tc.uaError)
 
-		//make mock useradm
-		uadm := &museradm.App{}
-		uadm.On("Verify", ctx,
-			mock.AnythingOfType("*jwt.Token")).
-			Return(tc.uaError)
+			//make handler
+			api := makeMockApiHandler(t, uadm, nil)
 
-		//make handler
-		api := makeMockApiHandler(t, uadm, nil)
+			//make request
+			req := makeReq("POST",
+				"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
+				"Bearer "+token,
+				nil)
 
-		//make request
-		req := makeReq("POST",
-			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
-			"Bearer "+token,
-			nil)
+			// set these to make the middleware happy
+			req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
+			req.Header.Add("X-Original-Method", "POST")
 
-		// set these to make the middleware happy
-		req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
-		req.Header.Add("X-Original-Method", "POST")
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
 
-		//test
-		recorded := test.RunRequest(t, api, req)
-		mt.CheckResponse(t, tc.checker, recorded)
+			//make request
+			req = makeReq("GET",
+				"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
+				"Bearer "+token,
+				nil)
 
-		//make request
-		req = makeReq("GET",
-			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
-			"Bearer "+token,
-			nil)
+			// set these to make the middleware happy
+			req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
+			req.Header.Add("X-Original-Method", "GET")
 
-		// set these to make the middleware happy
-		req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
-		req.Header.Add("X-Original-Method", "GET")
+			//test
+			recorded = test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
 
-		//test
-		recorded = test.RunRequest(t, api, req)
-		mt.CheckResponse(t, tc.checker, recorded)
+			//make request for forwarded request
+			req = makeReq("GET",
+				"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
+				"Bearer "+token,
+				nil)
 
-		//make request for forwarded request
-		req = makeReq("GET",
-			"http://1.2.3.4/api/internal/v1/useradm/auth/verify",
-			"Bearer "+token,
-			nil)
+			// set these to make the middleware happy
+			req.Header.Add("X-Forwarded-URI", "/api/mgmt/0.1/someservice/some/resource")
+			req.Header.Add("X-Forwarded-Method", "POST")
 
-		// set these to make the middleware happy
-		req.Header.Add("X-Forwarded-URI", "/api/mgmt/0.1/someservice/some/resource")
-		req.Header.Add("X-Forwarded-Method", "POST")
-
-		//test
-		recorded = test.RunRequest(t, api, req)
-		mt.CheckResponse(t, tc.checker, recorded)
+			//test
+			recorded = test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
 	}
 }
 
@@ -983,8 +1008,7 @@ func TestUserAdmApiGetUsers(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
@@ -1113,8 +1137,7 @@ func TestUserAdmApiTenantsGetUsers(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
@@ -1217,8 +1240,7 @@ func TestUserAdmApiGetUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
@@ -1284,8 +1306,7 @@ func TestUserAdmApiDeleteUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
@@ -1368,8 +1389,7 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm
@@ -1449,8 +1469,7 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock store
@@ -1509,8 +1528,7 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock store
@@ -1600,8 +1618,7 @@ func TestUserAdmApiDeleteTokens(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
-
+		t.Run(name, func(t *testing.T) {
 			ctx := mtesting.ContextMatcher()
 
 			//make mock useradm

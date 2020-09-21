@@ -15,7 +15,6 @@ package useradm
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -110,24 +109,24 @@ func TestUserAdmSignToken(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
 
-		ctx := context.Background()
+			mockJWTHandler := mjwt.Handler{}
+			mockJWTHandler.On("ToJWT",
+				mock.AnythingOfType("*jwt.Token"),
+			).Return(tc.signed, tc.signErr)
 
-		mockJWTHandler := mjwt.Handler{}
-		mockJWTHandler.On("ToJWT",
-			mock.AnythingOfType("*jwt.Token"),
-		).Return(tc.signed, tc.signErr)
+			useradm := NewUserAdm(&mockJWTHandler, nil, nil, tc.config)
+			signed, err := useradm.SignToken(ctx, &jwt.Token{})
 
-		useradm := NewUserAdm(&mockJWTHandler, nil, nil, tc.config)
-		signed, err := useradm.SignToken(ctx, &jwt.Token{})
-
-		if tc.signErr != nil {
-			assert.EqualError(t, err, tc.signErr.Error())
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tc.signed, signed)
-		}
+			if tc.signErr != nil {
+				assert.EqualError(t, err, tc.signErr.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.signed, signed)
+			}
+		})
 	}
 
 }
@@ -328,42 +327,42 @@ func TestUserAdmLogin(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
 
-		ctx := context.Background()
+			db := &mstore.DataStore{}
+			db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
-		db := &mstore.DataStore{}
-		db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
+			db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
 
-		db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
-
-		useradm := NewUserAdm(nil, db, nil, tc.config)
-		if tc.verifyTenant {
-			cTenant := &mct.ClientRunner{}
-			cTenant.On("GetTenant", ContextMatcher(), tc.inEmail, &apiclient.HttpApi{}).
-				Return(tc.tenant, tc.tenantErr)
-			useradm = useradm.WithTenantVerification(cTenant)
-		}
-
-		token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword)
-
-		if tc.outErr != nil {
-			assert.EqualError(t, err, tc.outErr.Error())
-			assert.Nil(t, token)
-		} else {
-			if tc.outToken != nil && assert.NotNil(t, token) {
-				assert.NoError(t, err)
-				assert.NotEmpty(t, token.ID)
-				assert.NotEmpty(t, token.Claims.ID)
-				assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
-				assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)
-				assert.WithinDuration(t,
-					time.Now().Add(time.Duration(tc.config.ExpirationTime)*time.Second),
-					token.Claims.ExpiresAt.Time,
-					time.Second)
-
+			useradm := NewUserAdm(nil, db, nil, tc.config)
+			if tc.verifyTenant {
+				cTenant := &mct.ClientRunner{}
+				cTenant.On("GetTenant", ContextMatcher(), tc.inEmail, &apiclient.HttpApi{}).
+					Return(tc.tenant, tc.tenantErr)
+				useradm = useradm.WithTenantVerification(cTenant)
 			}
-		}
+
+			token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword)
+
+			if tc.outErr != nil {
+				assert.EqualError(t, err, tc.outErr.Error())
+				assert.Nil(t, token)
+			} else {
+				if tc.outToken != nil && assert.NotNil(t, token) {
+					assert.NoError(t, err)
+					assert.NotEmpty(t, token.ID)
+					assert.NotEmpty(t, token.Claims.ID)
+					assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
+					assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)
+					assert.WithinDuration(t,
+						time.Now().Add(time.Duration(tc.config.ExpirationTime)*time.Second),
+						token.Claims.ExpiresAt.Time,
+						time.Second)
+
+				}
+			}
+		})
 	}
 
 }
@@ -396,22 +395,22 @@ func TestUserAdmLogout(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
 
-		ctx := context.Background()
+			db := &mstore.DataStore{}
+			db.On("DeleteToken", ContextMatcher(), tc.token.ID).Return(tc.deleteTokenError)
+			defer db.AssertExpectations(t)
 
-		db := &mstore.DataStore{}
-		db.On("DeleteToken", ContextMatcher(), tc.token.ID).Return(tc.deleteTokenError)
-		defer db.AssertExpectations(t)
+			useradm := NewUserAdm(nil, db, nil, Config{})
+			err := useradm.Logout(ctx, tc.token)
 
-		useradm := NewUserAdm(nil, db, nil, Config{})
-		err := useradm.Logout(ctx, tc.token)
-
-		if tc.err != nil {
-			assert.EqualError(t, err, tc.err.Error())
-		} else {
-			assert.Nil(t, err)
-		}
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+			} else {
+				assert.Nil(t, err)
+			}
+		})
 	}
 }
 
@@ -608,55 +607,55 @@ func TestUserAdmDoCreateUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
 
-		ctx := context.Background()
-
-		db := &mstore.DataStore{}
-		db.On("CreateUser",
-			ContextMatcher(),
-			mock.AnythingOfType("*model.User")).
-			Return(tc.dbErr)
-
-		db.On("GetUserByEmail", ContextMatcher(), mock.AnythingOfType("string")).
-			Return(tc.dbUser, tc.dbGetUserErr)
-
-		useradm := NewUserAdm(nil, db, nil, Config{})
-		cTenant := &mct.ClientRunner{}
-
-		id := &identity.Identity{
-			Tenant: "foo",
-		}
-		ctx = identity.WithContext(ctx, id)
-
-		if tc.shouldVerifyTenant {
-			cTenant.On("CreateUser",
+			db := &mstore.DataStore{}
+			db.On("CreateUser",
 				ContextMatcher(),
-				mock.AnythingOfType("*tenant.User"),
-				&apiclient.HttpApi{}).
-				Return(tc.tenantCreateUserErr)
+				mock.AnythingOfType("*model.User")).
+				Return(tc.dbErr)
 
-			if tc.shouldCompensateTenantUser {
-				cTenant.On("DeleteUser",
-					ContextMatcher(),
-					mock.AnythingOfType("string"), mock.AnythingOfType("string"),
-					&apiclient.HttpApi{}).
-					Return(tc.tenantDeleteUserErr)
+			db.On("GetUserByEmail", ContextMatcher(), mock.AnythingOfType("string")).
+				Return(tc.dbUser, tc.dbGetUserErr)
+
+			useradm := NewUserAdm(nil, db, nil, Config{})
+			cTenant := &mct.ClientRunner{}
+
+			id := &identity.Identity{
+				Tenant: "foo",
 			}
-		}
-		if tc.withTenantVerification {
-			useradm = useradm.WithTenantVerification(cTenant)
-		}
+			ctx = identity.WithContext(ctx, id)
 
-		err := useradm.doCreateUser(ctx, &tc.inUser, tc.propagate)
+			if tc.shouldVerifyTenant {
+				cTenant.On("CreateUser",
+					ContextMatcher(),
+					mock.AnythingOfType("*tenant.User"),
+					&apiclient.HttpApi{}).
+					Return(tc.tenantCreateUserErr)
 
-		if tc.outErr != nil {
-			assert.EqualError(t, err, tc.outErr.Error())
-		} else {
-			assert.NoError(t, err)
-		}
+				if tc.shouldCompensateTenantUser {
+					cTenant.On("DeleteUser",
+						ContextMatcher(),
+						mock.AnythingOfType("string"), mock.AnythingOfType("string"),
+						&apiclient.HttpApi{}).
+						Return(tc.tenantDeleteUserErr)
+				}
+			}
+			if tc.withTenantVerification {
+				useradm = useradm.WithTenantVerification(cTenant)
+			}
 
-		cTenant.AssertExpectations(t)
+			err := useradm.doCreateUser(ctx, &tc.inUser, tc.propagate)
+
+			if tc.outErr != nil {
+				assert.EqualError(t, err, tc.outErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			cTenant.AssertExpectations(t)
+		})
 	}
 
 }
@@ -677,6 +676,19 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Email:    "foo@bar.com",
 				Password: "correcthorsebatterystaple",
 			},
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"ok with current token": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+				Token:    &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+			},
+
+			verifyTenant: true,
+			tenantErr:    nil,
+
 			dbErr:  nil,
 			outErr: nil,
 		},
@@ -747,16 +759,33 @@ func TestUserAdmUpdateUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc: %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("UpdateUser",
-				ContextMatcher(),
-				mock.AnythingOfType("string"),
-				mock.AnythingOfType("*model.UserUpdate")).
-				Return(tc.dbErr)
+			defer db.AssertExpectations(t)
+
+			if !tc.verifyTenant || tc.tenantErr == nil {
+				db.On("UpdateUser",
+					ContextMatcher(),
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("*model.UserUpdate")).
+					Return(tc.dbErr)
+
+				if tc.dbErr == nil && tc.inUserUpdate.Token == nil {
+					db.On("DeleteTokensByUserId",
+						ContextMatcher(),
+						mock.AnythingOfType("string"),
+					).Return(nil)
+				} else if tc.dbErr == nil {
+					db.On("DeleteTokensByUserIdExceptCurrentOne",
+						ContextMatcher(),
+						mock.AnythingOfType("string"),
+						tc.inUserUpdate.Token.ID,
+					).Return(nil)
+				}
+			}
 
 			useradm := NewUserAdm(nil, db, nil, Config{})
 
@@ -767,6 +796,8 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				ctx = identity.WithContext(ctx, id)
 
 				cTenant := &mct.ClientRunner{}
+				defer cTenant.AssertExpectations(t)
+
 				cTenant.On("UpdateUser",
 					ContextMatcher(),
 					mock.AnythingOfType("string"),
@@ -905,7 +936,7 @@ func TestUserAdmVerify(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("test case: %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			config := Config{Issuer: "mender"}
 
@@ -969,7 +1000,7 @@ func TestUserAdmGetUsers(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			t.Logf("test case: %s", name)
 
@@ -1027,7 +1058,7 @@ func TestUserAdmGetUser(t *testing.T) {
 	}
 
 	for name, tc := range testCases {
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			t.Logf("test case: %s", name)
 
@@ -1082,7 +1113,7 @@ func TestUserAdmDeleteUser(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			t.Logf("test case: %s", name)
 
@@ -1138,7 +1169,7 @@ func TestUserAdmCreateTenant(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			t.Logf("test case: %s", name)
 
@@ -1161,11 +1192,12 @@ func TestUserAdmCreateTenant(t *testing.T) {
 
 func TestUserAdmSetPassword(t *testing.T) {
 	testCases := map[string]struct {
-		inUser      model.User
-		dbGetErr    error
-		dbUpdateErr error
-		outErr      error
-		foundUser   *model.User
+		inUser       model.User
+		currentToken *jwt.Token
+		dbGetErr     error
+		dbUpdateErr  error
+		outErr       error
+		foundUser    *model.User
 	}{
 		"ok": {
 			inUser: model.User{
@@ -1175,6 +1207,17 @@ func TestUserAdmSetPassword(t *testing.T) {
 			dbGetErr:  nil,
 			outErr:    nil,
 			foundUser: &model.User{ID: "test_id"},
+		},
+
+		"ok with current token": {
+			inUser: model.User{
+				Email:    "foo@bar.com",
+				Password: "correcthorsebatterystaple",
+			},
+			currentToken: &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+			dbGetErr:     nil,
+			outErr:       nil,
+			foundUser:    &model.User{ID: "test_id"},
 		},
 
 		"error, user not found": {
@@ -1210,36 +1253,53 @@ func TestUserAdmSetPassword(t *testing.T) {
 		},
 	}
 	for name, tc := range testCases {
-		t.Logf("test case: %s", name)
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
 
-		ctx := context.Background()
+			db := &mstore.DataStore{}
 
-		db := &mstore.DataStore{}
-
-		db.On("GetUserByEmail",
-			ContextMatcher(),
-			tc.inUser.Email).
-			Return(tc.foundUser, tc.dbGetErr)
-
-		if tc.foundUser != nil {
-			db.On("UpdateUser",
+			db.On("GetUserByEmail",
 				ContextMatcher(),
-				tc.foundUser.ID,
-				mock.AnythingOfType("*model.UserUpdate")).
-				Return(tc.dbUpdateErr)
-		}
-		useradm := NewUserAdm(nil, db, nil, Config{})
-		cTenant := &mct.ClientRunner{}
+				tc.inUser.Email).
+				Return(tc.foundUser, tc.dbGetErr)
 
-		err := useradm.SetPassword(ctx, model.UserUpdate{Email: tc.inUser.Email})
+			if tc.foundUser != nil {
+				db.On("UpdateUser",
+					ContextMatcher(),
+					tc.foundUser.ID,
+					mock.AnythingOfType("*model.UserUpdate")).
+					Return(tc.dbUpdateErr)
+			}
 
-		if tc.outErr != nil {
-			assert.EqualError(t, err, tc.outErr.Error())
-		} else {
-			assert.NoError(t, err)
-		}
+			if tc.foundUser != nil && tc.dbUpdateErr == nil {
+				if tc.currentToken == nil {
+					db.On("DeleteTokensByUserId",
+						ContextMatcher(),
+						mock.AnythingOfType("string"),
+					).Return(nil)
+				} else {
+					db.On("DeleteTokensByUserIdExceptCurrentOne",
+						ContextMatcher(),
+						mock.AnythingOfType("string"),
+						tc.currentToken.ID,
+					).Return(nil)
+				}
+			}
 
-		cTenant.AssertExpectations(t)
+			useradm := NewUserAdm(nil, db, nil, Config{})
+			cTenant := &mct.ClientRunner{}
+
+			err := useradm.SetPassword(ctx, model.UserUpdate{Email: tc.inUser.Email, Password: "new-password", Token: tc.currentToken})
+
+			if tc.outErr != nil {
+				assert.EqualError(t, err, tc.outErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			cTenant.AssertExpectations(t)
+			db.AssertExpectations(t)
+		})
 	}
 
 }
@@ -1278,7 +1338,7 @@ func TestUserAdmDeleteTokens(t *testing.T) {
 
 	for name := range testCases {
 		tc := testCases[name]
-		t.Run(fmt.Sprintf("tc %s", name), func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 
 			t.Logf("test case: %s", name)
 

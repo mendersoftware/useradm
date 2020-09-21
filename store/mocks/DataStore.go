@@ -88,6 +88,20 @@ func (_m *DataStore) DeleteTokensByUserId(ctx context.Context, userId string) er
 	return r0
 }
 
+// DeleteTokensByUserIdExceptCurrentOne provides a mock function with given fields: ctx, userId, tokenID
+func (_m *DataStore) DeleteTokensByUserIdExceptCurrentOne(ctx context.Context, userId string, tokenID oid.ObjectID) error {
+	ret := _m.Called(ctx, userId, tokenID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, oid.ObjectID) error); ok {
+		r0 = rf(ctx, userId, tokenID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteUser provides a mock function with given fields: ctx, id
 func (_m *DataStore) DeleteUser(ctx context.Context, id string) error {
 	ret := _m.Called(ctx, id)
