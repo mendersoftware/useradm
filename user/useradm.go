@@ -184,10 +184,11 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 	subjectID := oid.FromString(subject)
 	now := jwt.Time{Time: time.Now()}
 	ret := &jwt.Token{Claims: jwt.Claims{
-		ID:       id,
-		Subject:  subjectID,
-		Issuer:   u.config.Issuer,
-		IssuedAt: now,
+		ID:        id,
+		Subject:   subjectID,
+		Issuer:    u.config.Issuer,
+		IssuedAt:  now,
+		NotBefore: now,
 		ExpiresAt: jwt.Time{
 			Time: now.Add(time.Second *
 				time.Duration(u.config.ExpirationTime)),
