@@ -771,7 +771,10 @@ func TestUserAdmUpdateUser(t *testing.T) {
 					ContextMatcher(),
 					mock.AnythingOfType("string"),
 					mock.AnythingOfType("*model.UserUpdate")).
-					Return(tc.dbErr)
+					Return(&model.User{
+						Email:    tc.inUserUpdate.Email,
+						Password: tc.inUserUpdate.Password,
+					}, tc.dbErr)
 
 				if tc.dbErr == nil && tc.inUserUpdate.Token == nil {
 					db.On("DeleteTokensByUserId",
@@ -1268,7 +1271,7 @@ func TestUserAdmSetPassword(t *testing.T) {
 					ContextMatcher(),
 					tc.foundUser.ID,
 					mock.AnythingOfType("*model.UserUpdate")).
-					Return(tc.dbUpdateErr)
+					Return(&tc.inUser, tc.dbUpdateErr)
 			}
 
 			if tc.foundUser != nil && tc.dbUpdateErr == nil {

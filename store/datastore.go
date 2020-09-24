@@ -38,8 +38,9 @@ type DataStore interface {
 	Ping(ctx context.Context) error
 	// CreateUser persists the user
 	CreateUser(ctx context.Context, u *model.User) error
-	// Update user information - password or/and email address
-	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error
+	// Update user information - password or/and email address and
+	// returns the updated user
+	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) (*model.User, error)
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
