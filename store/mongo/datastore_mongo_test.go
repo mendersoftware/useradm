@@ -228,6 +228,14 @@ func TestMongoUpdateUser(t *testing.T) {
 			inUserId: "2",
 			outErr:   "user with a given email already exists",
 		},
+		"error, user not found": {
+			inUserUpdate: model.UserUpdate{
+				Email:    "foo@acme.com",
+				Password: "correcthorsebatterystaple",
+			},
+			inUserId: "3",
+			outErr:   store.ErrUserNotFound.Error(),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -253,7 +261,7 @@ func TestMongoUpdateUser(t *testing.T) {
 			assert.NoError(t, err)
 
 			pass := tc.inUserUpdate.Password
-			err = store.UpdateUser(ctx, tc.inUserId, &tc.inUserUpdate)
+			_, err = store.UpdateUser(ctx, tc.inUserId, &tc.inUserUpdate)
 
 			if tc.outErr == "" {
 				var user model.User

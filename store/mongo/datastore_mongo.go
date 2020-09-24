@@ -160,12 +160,37 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	return nil
 }
 
-func (db *DataStoreMongo) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
+func isDuplicateKeyError(err error) bool {
+	const errCodeDupKey = 11000
+	switch errType := err.(type) {
+	case mongo.WriteException:
+		if len(errType.WriteErrors) > 0 {
+			for _, we := range errType.WriteErrors {
+				if we.Code == errCodeDupKey {
+					return true
+				}
+			}
+		}
+	case mongo.CommandError:
+		if errType.Code == errCodeDupKey {
+			return true
+		}
+	}
+	return false
+}
+
+func (db *DataStoreMongo) UpdateUser(
+	ctx context.Context,
+	id string,
+	u *model.UserUpdate,
+) (*model.User, error) {
+	var updatedUser = new(model.User)
 	//compute/set password hash
 	if u.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 		if err != nil {
-			return errors.Wrap(err, "failed to generate password hash")
+			return nil, errors.Wrap(err,
+				"failed to generate password hash")
 		}
 		u.Password = string(hash)
 	}
@@ -173,27 +198,27 @@ func (db *DataStoreMongo) UpdateUser(ctx context.Context, id string, u *model.Us
 	now := time.Now().UTC()
 	u.UpdatedTs = &now
 
-	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+	collUsers := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbUsersColl)
 
 	f := bson.M{"_id": id}
 	up := bson.M{"$set": u}
+	fuOpts := mopts.FindOneAndUpdate().
+		SetReturnDocument(mopts.After)
+	err := collUsers.FindOneAndUpdate(ctx, f, up, fuOpts).
+		Decode(updatedUser)
 
-	res, err := c.UpdateOne(ctx, f, up)
-
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key error") {
-			return store.ErrDuplicateEmail
-		} else {
-			return errors.Wrap(err, "failed to update user")
-		}
+	switch {
+	case err == mongo.ErrNoDocuments:
+		return nil, store.ErrUserNotFound
+	case isDuplicateKeyError(err):
+		return nil, store.ErrDuplicateEmail
+	case err != nil:
+		return nil, errors.Wrap(err, "store: failed to update user")
 	}
 
-	if res.MatchedCount == 0 {
-		return store.ErrUserNotFound
-	}
-
-	return nil
+	return updatedUser, nil
 }
 
 func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {

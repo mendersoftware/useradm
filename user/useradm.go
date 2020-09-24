@@ -322,7 +322,7 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 		}
 	}
 
-	err := ua.db.UpdateUser(ctx, id, u)
+	_, err := ua.db.UpdateUser(ctx, id, u)
 
 	// if we changed the password, invalidate the JWT tokens but the one used to update the user
 	if err == nil && u.Password != "" {
@@ -451,7 +451,7 @@ func (ua *UserAdm) SetPassword(ctx context.Context, uu model.UserUpdate) error {
 		return ErrUserNotFound
 	}
 
-	err = ua.db.UpdateUser(ctx, u.ID, &uu)
+	_, err = ua.db.UpdateUser(ctx, u.ID, &uu)
 
 	// if we changed the password, invalidate the JWT tokens but the one used to update the user
 	if err == nil && uu.Password != "" {
