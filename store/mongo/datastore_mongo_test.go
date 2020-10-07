@@ -138,6 +138,8 @@ func TestMongoCreateUser(t *testing.T) {
 			store, err := NewDataStoreMongoWithClient(client)
 			assert.NoError(t, err)
 
+			store.EnsureIndexes(ctx)
+
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
@@ -254,6 +256,7 @@ func TestMongoUpdateUser(t *testing.T) {
 			assert.NoError(t, err)
 
 			store.EnsureIndexes(ctx)
+
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).

@@ -135,10 +135,6 @@ func (db *DataStoreMongo) Ping(ctx context.Context) error {
 }
 
 func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
-	if err := db.EnsureIndexes(ctx); err != nil {
-		return err
-	}
-
 	now := time.Now().UTC()
 
 	u.CreatedTs = &now
