@@ -205,7 +205,7 @@ func (db *DataStoreMongo) UpdateUser(
 	f := bson.M{"_id": id}
 	up := bson.M{"$set": u}
 	fuOpts := mopts.FindOneAndUpdate().
-		SetReturnDocument(mopts.After)
+		SetReturnDocument(mopts.Before)
 	err := collUsers.FindOneAndUpdate(ctx, f, up, fuOpts).
 		Decode(updatedUser)
 
