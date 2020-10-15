@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/mendersoftware/go-lib-micro/requestlog"
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 
 	"github.com/mendersoftware/useradm/jwt"
@@ -49,12 +49,12 @@ type ResourceActionExtractor func(r *rest.Request) (*Action, error)
 // MiddlewareFunc makes AuthzMiddleware implement the Middleware interface.
 func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 	return func(w rest.ResponseWriter, r *rest.Request) {
-		l := requestlog.GetRequestLogger(r)
+		l := log.FromContext(r.Context())
 
 		//get token, no token header = http 401
-		tokstr := ExtractToken(r.Header)
-		if tokstr == "" {
-			rest_utils.RestErrWithLog(w, r, l, ErrAuthzNoAuthHeader, http.StatusUnauthorized)
+		tokstr, err := ExtractToken(r.Request)
+		if err != nil {
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnauthorized)
 			return
 		}
 
@@ -96,15 +96,25 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 }
 
 // extracts JWT from authorization header
-func ExtractToken(header http.Header) string {
+func ExtractToken(req *http.Request) (string, error) {
 	const authHeaderName = "Authorization"
-	authHeader := header.Get(authHeaderName)
-	if authHeader == "" {
-		return authHeader
+	auth := req.Header.Get(authHeaderName)
+	if auth != "" {
+		auths := strings.Fields(auth)
+		if !strings.EqualFold(auths[0], "Bearer") || len(auths) < 2 {
+			return "", ErrInvalidAuthHeader
+		}
+		return auths[1], nil
 	}
-	tokenStr := strings.Replace(authHeader, "Bearer", "", 1)
-	tokenStr = strings.Replace(tokenStr, "bearer", "", 1)
-	return strings.TrimSpace(tokenStr)
+	cookie, err := req.Cookie("JWT")
+	if err != nil {
+		return "", ErrAuthzNoAuth
+	}
+	auth = cookie.Value
+	if auth == "" {
+		return "", ErrAuthzNoAuth
+	}
+	return auth, nil
 }
 
 func GetRequestToken(env map[string]interface{}) *jwt.Token {

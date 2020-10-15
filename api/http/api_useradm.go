@@ -164,7 +164,7 @@ func (u *UserAdmApiHandlers) AuthLogoutHandler(w rest.ResponseWriter, r *rest.Re
 	ctx := r.Context()
 	l := log.FromContext(ctx)
 
-	if tokenStr := authz.ExtractToken(r.Header); tokenStr != "" {
+	if tokenStr, err := authz.ExtractToken(r.Request); err == nil {
 		token, err := u.jwth.FromJWT(tokenStr)
 		if err != nil {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
@@ -334,7 +334,7 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 	}
 
 	// extract the token used to update the user
-	if tokenStr := authz.ExtractToken(r.Header); tokenStr != "" {
+	if tokenStr, err := authz.ExtractToken(r.Request); err == nil {
 		token, err := u.jwth.FromJWT(tokenStr)
 		if err != nil {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
