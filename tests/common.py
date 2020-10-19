@@ -17,7 +17,7 @@ import pytest
 import uuid
 from datetime import datetime, timedelta
 from pymongo import MongoClient
-from base64 import b64encode, urlsafe_b64decode
+from base64 import urlsafe_b64encode, urlsafe_b64decode
 from client import CliClient, ManagementApiClient, InternalApiClient
 
 
@@ -46,9 +46,9 @@ def make_auth(sub, tenant=None):
     if tenant is not None:
         payload["mender.tenant"] = tenant
     payload = json.dumps(payload)
-    payloadb64 = b64encode(payload.encode("utf-8"))
+    payloadb64 = urlsafe_b64encode(payload.encode("utf-8"))
 
-    jwt = "bogus_header." + payloadb64.decode() + ".bogus_sign"
+    jwt = "bogus_header." + payloadb64.decode().strip("=") + ".bogus_sign"
 
     return {"Authorization": "Bearer " + jwt}
 
@@ -58,7 +58,7 @@ def make_basic_auth(username, password):
     Creates an auth header suitable for user /login.
     """
     hdr = "{}:{}".format(username, password)
-    hdr = b64encode(hdr.encode("utf-8"))
+    hdr = urlsafe_b64encode(hdr.encode("utf-8"))
     return "Basic " + hdr.decode()
 
 
@@ -92,9 +92,7 @@ def api_client_int():
 @pytest.yield_fixture(scope="class")
 def init_users(cli, api_client_mgmt, mongo):
     for i in range(5):
-        cli.create_user(
-            "user-{}@foo.com".format(i), "correcthorsebatterystaple"
-        )
+        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
 
     yield api_client_mgmt.get_users()
     mongo_cleanup(mongo)
@@ -106,9 +104,7 @@ def init_users_f(cli, api_client_mgmt, mongo):
     Function-scoped version of 'init_users'.
     """
     for i in range(5):
-        cli.create_user(
-            "user-{}@foo.com".format(i), "correcthorsebatterystaple"
-        )
+        cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
 
     yield api_client_mgmt.get_users()
     mongo_cleanup(mongo)
@@ -120,10 +116,7 @@ def init_users_mt(cli, api_client_mgmt, mongo):
     for t in tenant_users:
         for i in range(5):
             cli.create_user(
-                "user-{}-{}@foo.com".format(i, t),
-                "correcthorsebatterystaple",
-                None,
-                t,
+                "user-{}-{}@foo.com".format(i, t), "correcthorsebatterystaple", None, t,
             )
         tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
@@ -139,10 +132,7 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     for t in tenant_users:
         for i in range(5):
             cli.create_user(
-                "user-{}-{}@foo.com".format(i, t),
-                "correcthorsebatterystaple",
-                None,
-                t,
+                "user-{}-{}@foo.com".format(i, t), "correcthorsebatterystaple", None, t,
             )
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users

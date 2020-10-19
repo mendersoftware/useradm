@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import (
 
 var (
 	ErrAuthzUnauthorized = errors.New("unauthorized")
-	ErrAuthzNoAuthHeader = errors.New("missing or invalid auth header")
+	ErrAuthzNoAuth       = errors.New("authorization not present in header")
+	ErrInvalidAuthHeader = errors.New("malformed Authorization header")
 	ErrAuthzTokenInvalid = errors.New("invalid jwt")
 )
 
