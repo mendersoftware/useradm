@@ -27,6 +27,7 @@ import (
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
+	mopts "go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mendersoftware/useradm/model"
@@ -127,16 +128,23 @@ func TestMongoCreateUser(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			db.Wipe()
 
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			store = store.WithAutomigrate()
 			ctx := context.Background()
 			if tc.tenant != "" {
 				ctx = identity.WithContext(ctx, &identity.Identity{
 					Tenant: tc.tenant,
 				})
+				store = store.WithMultitenant()
+				err = store.MigrateTenant(ctx, DbVersion, tc.tenant)
+				assert.NoError(t, err)
+			} else {
+				err = store.Migrate(ctx, DbVersion)
+				assert.NoError(t, err)
 			}
-
-			client := db.Client()
-			store, err := NewDataStoreMongoWithClient(client)
-			assert.NoError(t, err)
 
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
@@ -242,18 +250,24 @@ func TestMongoUpdateUser(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			db.Wipe()
 
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			store = store.WithAutomigrate()
 			ctx := context.Background()
 			if tc.tenant != "" {
 				ctx = identity.WithContext(ctx, &identity.Identity{
 					Tenant: tc.tenant,
 				})
+				store = store.WithMultitenant()
+				err = store.MigrateTenant(ctx, DbVersion, tc.tenant)
+				assert.NoError(t, err)
+			} else {
+				err = store.Migrate(ctx, DbVersion)
+				assert.NoError(t, err)
 			}
 
-			client := db.Client()
-			store, err := NewDataStoreMongoWithClient(client)
-			assert.NoError(t, err)
-
-			store.EnsureIndexes(ctx)
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
@@ -1041,18 +1055,22 @@ func TestMigrate(t *testing.T) {
 
 				for _, d := range dbs {
 					var out []migrate.MigrationEntry
-
+					findOpts := mopts.Find().SetSort(bson.D{
+						{Key: "version.major", Value: -1},
+						{Key: "version.minor", Value: -1},
+						{Key: "version.patch", Value: -1},
+					})
 					c, err := store.client.
 						Database(d).
 						Collection(migrate.DbMigrationsColl).
-						Find(ctx, bson.M{})
+						Find(ctx, bson.M{}, findOpts)
 					assert.NoError(t, err)
 
 					err = c.All(ctx, &out)
 					assert.NoError(t, err)
 
 					if tc.automigrate {
-						assert.Len(t, out, 1)
+						assert.Len(t, out, 2)
 						assert.NoError(t, err)
 
 						v, _ := migrate.NewVersion(tc.version)
