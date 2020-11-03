@@ -70,8 +70,8 @@ class InternalApiClient(ApiClient):
         return self.client.Internal_API.Verify_JWT(
             **{
                 "Authorization": token,
-                "X-Original-URI": uri,
-                "X-Original-Method": method,
+                "X-Forwarded-Uri": uri,
+                "X-Forwarded-Method": method,
             }
         ).result()
 
