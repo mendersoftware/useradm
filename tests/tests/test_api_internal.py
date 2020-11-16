@@ -45,10 +45,7 @@ class TestInternalApiTenantCreate:
 
 class TestInternalApiUserForTenantCreateEnterprise:
     def test_ok(
-        self,
-        api_client_int,
-        api_client_mgmt,
-        clean_db,
+        self, api_client_int, api_client_mgmt, clean_db,
     ):
         user = {"email": "stefan@example.com", "password": "secret12345"}
 
@@ -74,10 +71,7 @@ class TestInternalApiUserForTenantCreateEnterprise:
         assert len(users) == 1
 
     def test_no_propagate(
-        self,
-        api_client_int,
-        api_client_mgmt,
-        clean_db,
+        self, api_client_int, api_client_mgmt, clean_db,
     ):
         user = {
             "email": "stefan@example.com",
@@ -102,7 +96,7 @@ class TestInternalApiUserForTenantCreateEnterprise:
             pytest.fail("Exception expected")
 
     def test_fail_no_password(self, api_client_int):
-        new_user = {"email": "foobar"}
+        new_user = {"email": "foo@bar.bz"}
         try:
             api_client_int.create_user_for_tenant("foobar", new_user)
         except bravado.exception.HTTPError as e:

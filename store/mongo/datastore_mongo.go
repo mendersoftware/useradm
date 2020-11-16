@@ -40,6 +40,8 @@ const (
 
 	DbUserEmail = "email"
 	DbUserPass  = "password"
+
+	DbUniqueEmailIndexName = "email_1"
 )
 
 type DataStoreMongoConfig struct {
@@ -135,10 +137,6 @@ func (db *DataStoreMongo) Ping(ctx context.Context) error {
 }
 
 func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
-	if err := db.EnsureIndexes(ctx); err != nil {
-		return err
-	}
-
 	now := time.Now().UTC()
 
 	u.CreatedTs = &now
@@ -205,7 +203,7 @@ func (db *DataStoreMongo) UpdateUser(
 	f := bson.M{"_id": id}
 	up := bson.M{"$set": u}
 	fuOpts := mopts.FindOneAndUpdate().
-		SetReturnDocument(mopts.After)
+		SetReturnDocument(mopts.Before)
 	err := collUsers.FindOneAndUpdate(ctx, f, up, fuOpts).
 		Decode(updatedUser)
 
@@ -368,26 +366,6 @@ func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error
 	}
 
 	return nil
-}
-
-func (db *DataStoreMongo) EnsureIndexes(ctx context.Context) error {
-	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
-		Collection(DbUsersColl)
-
-	idxUsers := c.Indexes()
-
-	indexOptions := mopts.Index()
-	indexOptions.SetUnique(true)
-	indexOptions.SetBackground(false)
-
-	uniqueEmailIndex := mongo.IndexModel{
-		Keys:    bson.D{{Key: DbUserEmail, Value: 1}},
-		Options: indexOptions,
-	}
-
-	_, err := idxUsers.CreateOne(ctx, uniqueEmailIndex)
-
-	return err
 }
 
 // WithMultitenant enables multitenant support and returns a new datastore based

@@ -41,8 +41,11 @@ import (
 
 func TestAuthzMiddleware(t *testing.T) {
 
-	testCases := map[string]struct {
-		token string
+	testCases := []struct {
+		Name string
+
+		Header http.Header
+		Cookie *http.Cookie
 
 		action    *Action
 		actionErr error
@@ -50,9 +53,10 @@ func TestAuthzMiddleware(t *testing.T) {
 		authErr error
 
 		checker mt.ResponseChecker
-	}{
-		"ok": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+	}{{
+		Name: "ok",
+		Header: http.Header{"Authorization": []string{
+			"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
 				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
 				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
 				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
@@ -65,42 +69,26 @@ func TestAuthzMiddleware(t *testing.T) {
 				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
 				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
 				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
-			action: &Action{
-				Resource: "foo:bar",
-				Method:   "GET",
-			},
-
-			actionErr: nil,
-
-			authErr: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusOK,
-				nil,
-				map[string]string{"foo": "bar"},
-			),
+		}},
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
 		},
 
-		"error: missing token header": {
-			token: "",
-			action: &Action{
-				Resource: "foo:bar",
-				Method:   "GET",
-			},
+		actionErr: nil,
 
-			actionErr: nil,
+		authErr: nil,
 
-			authErr: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusUnauthorized,
-				nil,
-				restError("missing or invalid auth header"),
-			),
-		},
-
-		"error: resource id error": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+		checker: mt.NewJSONResponse(
+			http.StatusOK,
+			nil,
+			map[string]string{"foo": "bar"},
+		),
+	}, {
+		Name: "ok, with cookie",
+		Cookie: &http.Cookie{
+			Name: "JWT",
+			Value: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
 				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
 				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
 				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
@@ -113,38 +101,63 @@ func TestAuthzMiddleware(t *testing.T) {
 				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
 				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
 				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
-			action: &Action{
-				Resource: "",
-				Method:   "GET",
-			},
-			actionErr: errors.New("can't identify resource"),
-
-			authErr: nil,
-
-			checker: mt.NewJSONResponse(
-				http.StatusInternalServerError,
-				nil,
-				restError("internal error"),
-			),
+			Path: "/",
 		},
-		"error: invalid token": {
-			token: "dummy",
-			action: &Action{
-				Resource: "foo:bar",
-				Method:   "GET",
-			},
-			actionErr: errors.New("can't identify resource"),
-
-			authErr: ErrAuthzTokenInvalid,
-
-			checker: mt.NewJSONResponse(
-				http.StatusUnauthorized,
-				nil,
-				restError("invalid jwt"),
-			),
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
 		},
-		"error: unauthorized token": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+
+		actionErr: nil,
+
+		authErr: nil,
+
+		checker: mt.NewJSONResponse(
+			http.StatusOK,
+			nil,
+			map[string]string{"foo": "bar"},
+		),
+	}, {
+		Name: "error: basic auth",
+		Header: http.Header{"Authorization": []string{
+			"Basic eyJhbGciOiJSUzI1NiIsInRn:5cCI6IkpXVCJ9eyJleHA",
+		}},
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
+		},
+
+		actionErr: nil,
+
+		authErr: nil,
+
+		checker: mt.NewJSONResponse(
+			http.StatusUnauthorized,
+			nil,
+			restError(ErrInvalidAuthHeader.Error()),
+		),
+	}, {
+		Name: "error: missing token header",
+
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
+		},
+
+		actionErr: nil,
+
+		authErr: nil,
+
+		checker: mt.NewJSONResponse(
+			http.StatusUnauthorized,
+			nil,
+			restError(ErrAuthzNoAuth.Error()),
+		),
+	}, {
+		Name: "error: resource id error",
+
+		Header: http.Header{"Authorization": []string{
+			"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
 				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
 				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
 				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
@@ -157,22 +170,42 @@ func TestAuthzMiddleware(t *testing.T) {
 				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
 				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
 				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
-			action: &Action{
-				Resource: "foo:bar",
-				Method:   "GET",
-			},
-			actionErr: nil,
-
-			authErr: ErrAuthzUnauthorized,
-
-			checker: mt.NewJSONResponse(
-				http.StatusForbidden,
-				nil,
-				restError("unauthorized"),
-			),
+		}},
+		action: &Action{
+			Resource: "",
+			Method:   "GET",
 		},
-		"error: authorizer internal error": {
-			token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+		actionErr: errors.New("can't identify resource"),
+
+		authErr: nil,
+
+		checker: mt.NewJSONResponse(
+			http.StatusInternalServerError,
+			nil,
+			restError("internal error"),
+		),
+	}, {
+		Name: "error: invalid token",
+		Header: http.Header{"Authorization": []string{
+			"Bearer dummy",
+		}},
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
+		},
+		actionErr: errors.New("can't identify resource"),
+
+		authErr: ErrAuthzTokenInvalid,
+
+		checker: mt.NewJSONResponse(
+			http.StatusUnauthorized,
+			nil,
+			restError("invalid jwt"),
+		),
+	}, {
+		Name: "error: forbidden resource",
+		Header: http.Header{"Authorization": []string{
+			"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
 				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
 				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
 				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
@@ -185,24 +218,87 @@ func TestAuthzMiddleware(t *testing.T) {
 				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
 				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
 				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
-			action: &Action{
-				Resource: "foo:bar",
-				Method:   "GET",
-			},
-			actionErr: nil,
-
-			authErr: errors.New("some internal error"),
-
-			checker: mt.NewJSONResponse(
-				http.StatusInternalServerError,
-				nil,
-				restError("internal error"),
-			),
+		}},
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
 		},
+		actionErr: nil,
+
+		authErr: ErrAuthzTokenInvalid,
+
+		checker: mt.NewJSONResponse(
+			http.StatusUnauthorized,
+			nil,
+			restError(ErrAuthzTokenInvalid.Error()),
+		),
+	}, {
+		Name: "error: unauthorized token",
+		Header: http.Header{"Authorization": []string{
+			"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
+				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
+				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
+				"MTRkLWJlMzE0MzEyMjMwZSIsInNjcCI6Im1lbmRlci5m" +
+				"b28ifQ.KsL6UqOwqE1sdVqHWUj1DNlagv_Gk9AI76zBt" +
+				"vlSH8cP-8EV24bD6xdHowoN1TPHdPnvwYsCP6u0KOdRw" +
+				"MDHVkJojNEUyMNAZAAKNvyjdEBlKNIbLIrPvFZY4zIyP" +
+				"wOljmFhdACahVtPsn3x8g4fkCcd29Bpy21jWs5Y8N4nA" +
+				"yJdfCNOaXyQwhY6mAGodAyKy0YKUqJicbpU4rmYUzGGc" +
+				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
+				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
+				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
+		}},
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
+		},
+		actionErr: nil,
+
+		authErr: ErrAuthzUnauthorized,
+
+		checker: mt.NewJSONResponse(
+			http.StatusForbidden,
+			nil,
+			restError(ErrAuthzUnauthorized.Error()),
+		),
+	}, {
+		Name: "error: authorizer internal error",
+		Header: http.Header{"Authorization": []string{
+			"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAi" +
+				"OjQxMDExMDQwNjksImlzcyI6Im1lbmRlciIsInN1YiI6" +
+				"Ijc0YzYwMmI1LWJlMWYtNTgwMC04MTRkLWJlMzE0MzEy" +
+				"MjMwZSIsImp0aSI6Ijc0YzYwMmI1LWJlMWYtNTgwMC04" +
+				"MTRkLWJlMzE0MzEyMjMwZSIsInNjcCI6Im1lbmRlci5m" +
+				"b28ifQ.KsL6UqOwqE1sdVqHWUj1DNlagv_Gk9AI76zBt" +
+				"vlSH8cP-8EV24bD6xdHowoN1TPHdPnvwYsCP6u0KOdRw" +
+				"MDHVkJojNEUyMNAZAAKNvyjdEBlKNIbLIrPvFZY4zIyP" +
+				"wOljmFhdACahVtPsn3x8g4fkCcd29Bpy21jWs5Y8N4nA" +
+				"yJdfCNOaXyQwhY6mAGodAyKy0YKUqJicbpU4rmYUzGGc" +
+				"vQqtivUIDXswb80vfsuhOGYJKT6XJMPEeTCK4lPrLIyU" +
+				"U5gXjxl0Ym_61MVvPIohOreimeDFMN0TbV_ljDzWxLlM" +
+				"d2At6zLVWIOkFc0YLeZAsNlD3JxGqwVfKiWRfj_bg",
+		}},
+		action: &Action{
+			Resource: "foo:bar",
+			Method:   "GET",
+		},
+		actionErr: nil,
+
+		authErr: errors.New("some internal error"),
+
+		checker: mt.NewJSONResponse(
+			http.StatusInternalServerError,
+			nil,
+			restError("internal error"),
+		),
+	},
 	}
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
 			//setup api
 			api := rest.NewApi()
 			api.Use(
@@ -247,31 +343,20 @@ func TestAuthzMiddleware(t *testing.T) {
 			}))
 
 			//test
-			authhdr := ""
-			if tc.token != "" {
-				authhdr = "Bearer " + tc.token
+			req, _ := http.NewRequest(tc.action.Method, "localhost", nil)
+			for k, v := range tc.Header {
+				for _, vv := range v {
+					req.Header.Add(k, vv)
+				}
 			}
-
-			req := makeReq(tc.action.Method,
-				"localhost",
-				authhdr,
-				nil)
-
+			req.Header.Set("X-MEN-RequestID", "test")
+			if tc.Cookie != nil {
+				req.AddCookie(tc.Cookie)
+			}
 			recorded := test.RunRequest(t, api.MakeHandler(), req)
 			mt.CheckResponse(t, tc.checker, recorded)
 		})
 	}
-}
-
-func makeReq(method, url, auth string, body interface{}) *http.Request {
-	req := test.MakeSimpleRequest(method, url, body)
-
-	if auth != "" {
-		req.Header.Set("Authorization", auth)
-	}
-
-	req.Header.Add(requestid.RequestIdHeader, "test")
-	return req
 }
 
 func restError(status string) map[string]interface{} {

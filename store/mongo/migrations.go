@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	DbVersion = "1.0.0"
+	DbVersion = "1.1.4"
 	DbName    = "useradm"
 )
 
@@ -46,6 +46,10 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 	}
 	migrations := []migrate.Migration{
 		&migration_1_0_0{
+			ds:  db,
+			ctx: tenantCtx,
+		},
+		&migration_1_1_4{
 			ds:  db,
 			ctx: tenantCtx,
 		},
