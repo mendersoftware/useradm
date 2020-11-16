@@ -300,6 +300,41 @@ func TestMongoUpdateUser(t *testing.T) {
 	}
 }
 
+func TestMongoUpdateLoginTs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+	client := db.Client()
+	store, err := NewDataStoreMongoWithClient(client)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	user := &model.User{
+		ID:       oid.NewUUIDv5("userid").String(),
+		Password: "123456",
+		Email:    "foo@bar.bz",
+	}
+	ctx := context.Background()
+	err = store.CreateUser(ctx, user)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	insertedUser, err := store.GetUserById(ctx, user.ID)
+	assert.NoError(t, err)
+	assert.Nil(t, insertedUser.LoginTs)
+
+	err = store.UpdateLoginTs(ctx, user.ID)
+	assert.NoError(t, err)
+	resultUser, err := store.GetUserById(ctx, user.ID)
+	assert.NoError(t, err)
+	if assert.NotNil(t, resultUser.LoginTs) {
+		assert.WithinDuration(
+			t, time.Now(), *resultUser.LoginTs, time.Second*10,
+		)
+	}
+
+}
+
 func TestMongoGetUserByEmail(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode.")

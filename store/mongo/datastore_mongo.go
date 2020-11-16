@@ -38,8 +38,9 @@ const (
 	DbTokensColl   = "tokens"
 	DbSettingsColl = "settings"
 
-	DbUserEmail = "email"
-	DbUserPass  = "password"
+	DbUserEmail   = "email"
+	DbUserPass    = "password"
+	DbUserLoginTs = "login_ts"
 
 	DbUniqueEmailIndexName = "email_1"
 )
@@ -217,6 +218,20 @@ func (db *DataStoreMongo) UpdateUser(
 	}
 
 	return updatedUser, nil
+}
+
+func (db *DataStoreMongo) UpdateLoginTs(ctx context.Context, id string) error {
+	collUsrs := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl)
+
+	_, err := collUsrs.UpdateOne(ctx,
+		bson.D{{Key: "_id", Value: id}},
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: DbUserLoginTs, Value: time.Now()}},
+		}},
+	)
+	return err
 }
 
 func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {

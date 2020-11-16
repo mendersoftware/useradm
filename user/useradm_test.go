@@ -143,7 +143,8 @@ func TestUserAdmLogin(t *testing.T) {
 		dbUser    *model.User
 		dbUserErr error
 
-		dbTokenErr error
+		dbTokenErr  error
+		dbUpdateErr error
 
 		outErr   error
 		outToken *jwt.Token
@@ -191,6 +192,8 @@ func TestUserAdmLogin(t *testing.T) {
 				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
 			},
 			dbUserErr: nil,
+			// error for updating login_ts is suppressed
+			dbUpdateErr: errors.New("internal error"),
 
 			outErr: nil,
 			outToken: &jwt.Token{
@@ -334,6 +337,10 @@ func TestUserAdmLogin(t *testing.T) {
 			db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
 			db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
+			if tc.dbUser != nil {
+				db.On("UpdateLoginTs", ContextMatcher(), tc.dbUser.ID).
+					Return(tc.dbUpdateErr)
+			}
 
 			useradm := NewUserAdm(nil, db, nil, tc.config)
 			if tc.verifyTenant {

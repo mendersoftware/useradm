@@ -123,6 +123,7 @@ func (u *UserAdm) HealthCheck(ctx context.Context) error {
 
 func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {
 	var ident identity.Identity
+	l := log.FromContext(ctx)
 
 	if email == "" {
 		return nil, ErrUnauthorized
@@ -174,6 +175,10 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	err = u.db.SaveToken(ctx, t)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to save token")
+	}
+
+	if err = u.db.UpdateLoginTs(ctx, user.ID); err != nil {
+		l.Warnf("failed to update login timestamp: %s", err.Error())
 	}
 
 	return t, nil

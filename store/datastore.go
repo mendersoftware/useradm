@@ -41,6 +41,7 @@ type DataStore interface {
 	// Update user information - password or/and email address and
 	// returns the updated user
 	UpdateUser(ctx context.Context, id string, u *model.UserUpdate) (*model.User, error)
+	UpdateLoginTs(ctx context.Context, id string) error
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
