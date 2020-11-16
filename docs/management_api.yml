@@ -415,6 +415,11 @@ definitions:
             Server-side timestamp of the last user information update.
         type: string
         format: date-time
+      login_ts:
+        description: |-
+            Timestamp of last successful login.
+        type: string
+        format: date-time
     required:
       - email
       - id

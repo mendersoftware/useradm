@@ -49,6 +49,9 @@ type User struct {
 
 	// timestamp of the last user information update
 	UpdatedTs *time.Time `json:"updated_ts,omitempty" bson:"updated_ts,omitempty"`
+
+	// LoginTs is the timestamp of the last login for this user.
+	LoginTs *time.Time `json:"login_ts,omitempty" bson:"login_ts,omitempty"`
 }
 
 type UserInternal struct {
@@ -105,6 +108,8 @@ type UserUpdate struct {
 
 	// token used to update the user, optional
 	Token *jwt.Token `json:"-" bson:"-"`
+
+	LoginTs *time.Time `json:"-" bson:"login_ts,omitempty"`
 }
 
 func (u User) ValidateNew() error {
