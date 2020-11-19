@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	mopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func TestMigration_1_1_4(t *testing.T) {
@@ -77,10 +79,21 @@ func TestMigration_1_1_4(t *testing.T) {
 				Db:          dbName,
 				Automigrate: true,
 			}
+			c := client.Database(dbName).Collection(DbUsersColl)
+			idxView := c.Indexes()
+			_, err = idxView.CreateOne(context.Background(), mongo.IndexModel{Keys: bson.D{{
+				Key: DbUserEmail, Value: 1,
+			}},
+				Options: mopts.Index().
+					SetUnique(true).
+					SetName(OldDbUniqueEmailIndexName),
+			})
+			if err != nil {
+				t.FailNow()
+			}
 
 			err = m.Apply(ctx, migrate.MakeVersion(1, 1, 4), migrations)
 			assert.NoError(t, err)
-			c := client.Database(dbName).Collection(DbUsersColl)
 
 			userCollectionIndexes, err := c.Indexes().List(ctx)
 			assert.NoError(t, err)
