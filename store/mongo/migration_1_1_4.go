@@ -19,9 +19,11 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
+	mongox "go.mongodb.org/mongo-driver/x/mongo/driver"
 )
 
 const (
@@ -32,6 +34,8 @@ type migration_1_1_4 struct {
 	ds  *DataStoreMongo
 	ctx context.Context
 }
+
+const ErrCodeIndexOptionsError = 85
 
 func (m *migration_1_1_4) Up(from migrate.Version) error {
 	c := m.ds.client.Database(mstore.DbFromContext(m.ctx, DbName)).
@@ -52,16 +56,18 @@ func (m *migration_1_1_4) Up(from migrate.Version) error {
 
 	_, err := idxUsers.CreateOne(m.ctx, uniqueEmailIndex)
 	if err != nil {
-		return err
+		if mgoErr, ok := err.(mongox.Error); ok {
+			if mgoErr.Code == ErrCodeIndexOptionsError {
+				_, e := idxUsers.DropOne(m.ctx, OldDbUniqueEmailIndexName)
+				if e != nil {
+					return errors.Wrap(err, e.Error())
+				}
+				_, err = idxUsers.CreateOne(m.ctx, uniqueEmailIndex)
+			}
+		}
 	}
 
-	// drop old index
-	_, err = idxUsers.DropOne(m.ctx, OldDbUniqueEmailIndexName)
-	if err != nil && err.Error() != "(IndexNotFound) index not found with name [uniqueEmail]" {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (m *migration_1_1_4) Version() migrate.Version {
