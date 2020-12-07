@@ -23,7 +23,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
-	mongox "go.mongodb.org/mongo-driver/x/mongo/driver"
 )
 
 const (
@@ -46,6 +45,7 @@ func (m *migration_1_1_4) Up(from migrate.Version) error {
 	// create new index with predictable name
 	indexOptions := mopts.Index()
 	indexOptions.SetUnique(true)
+	//nolint:staticcheck - SetBackground is deprecated
 	indexOptions.SetBackground(false)
 	indexOptions.SetName(DbUniqueEmailIndexName)
 
@@ -56,7 +56,7 @@ func (m *migration_1_1_4) Up(from migrate.Version) error {
 
 	_, err := idxUsers.CreateOne(m.ctx, uniqueEmailIndex)
 	if err != nil {
-		if mgoErr, ok := err.(mongox.Error); ok {
+		if mgoErr, ok := err.(mongo.CommandError); ok {
 			if mgoErr.Code == ErrCodeIndexOptionsError {
 				_, e := idxUsers.DropOne(m.ctx, OldDbUniqueEmailIndexName)
 				if e != nil {
