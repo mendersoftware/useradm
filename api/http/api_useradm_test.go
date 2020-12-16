@@ -642,6 +642,22 @@ func TestUpdateUser(t *testing.T) {
 				nil,
 			),
 		},
+		"ok with me": {
+			inReq: test.MakeSimpleRequest("PUT",
+				"http://1.2.3.4/api/management/v1/useradm/users/me",
+				map[string]interface{}{
+					"email":    "foo@foo.com",
+					"password": "foobarbar",
+					"roles":    []string{"RBAC_ROLE_ROLE0", "RBAC_ROLE_ROLE1"},
+				},
+			),
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
 		"ok with jwt token": {
 			inReq: makeReq("PUT",
 				"http://1.2.3.4/api/management/v1/useradm/users/123",
@@ -717,14 +733,15 @@ func TestUpdateUser(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("UpdateUser", mtesting.ContextMatcher(),
-				mock.AnythingOfType("string"),
+				"123",
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.updateUserErr)
 
 			api := makeMockApiHandler(t, uadm, nil)
 
 			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
-			recorded := test.RunRequest(t, api, tc.inReq)
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
+			recorded := test.RunRequest(t, api, tc.inReq.WithContext(ctx))
 
 			mt.CheckResponse(t, tc.checker, recorded)
 		})
