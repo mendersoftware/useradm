@@ -218,7 +218,7 @@ paths:
         - name: id
           in: path
           type: string
-          description: User id.
+          description: User id. Set to "me" for the current user.
           required: true
       responses:
         200:
@@ -249,7 +249,7 @@ paths:
         - name: id
           in: path
           type: string
-          description: User id.
+          description: User id. Set to "me" for the current user.
           required: true
         - name: update
           in: body

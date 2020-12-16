@@ -52,6 +52,7 @@ const (
 
 const (
 	defaultTimeout = time.Second * 5
+	pathParamMe    = "me"
 )
 
 var (
@@ -297,12 +298,21 @@ func (u *UserAdmApiHandlers) GetTenantUsersHandler(w rest.ResponseWriter, r *res
 	u.GetUsersHandler(w, r)
 }
 
+func getUserIdFromPath(r *rest.Request) string {
+	id := r.PathParam("id")
+	if id == pathParamMe {
+		id = identity.FromContext(r.Context()).Subject
+	}
+	return id
+}
+
 func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Request) {
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
 
-	user, err := u.userAdm.GetUser(ctx, r.PathParam("id"))
+	id := getUserIdFromPath(r)
+	user, err := u.userAdm.GetUser(ctx, id)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
@@ -320,8 +330,6 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
-
-	id := r.PathParam("id")
 
 	userUpdate, err := parseUserUpdate(r)
 	if err != nil {
@@ -343,6 +351,7 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 		userUpdate.Token = token
 	}
 
+	id := getUserIdFromPath(r)
 	err = u.userAdm.UpdateUser(ctx, id, userUpdate)
 	if err != nil {
 		switch err {
