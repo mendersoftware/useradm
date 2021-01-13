@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/asaskevich/govalidator"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
@@ -390,7 +389,7 @@ func parseUser(r *rest.Request) (*model.User, error) {
 		return nil, errors.Wrap(err, "failed to decode request body")
 	}
 
-	if err := user.ValidateNew(); err != nil {
+	if err := user.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -406,7 +405,7 @@ func parseUserInternal(r *rest.Request) (*model.UserInternal, error) {
 		return nil, errors.Wrap(err, "failed to decode request body")
 	}
 
-	if err := user.ValidateNew(); err != nil {
+	if err := user.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -448,20 +447,20 @@ func (u *UserAdmApiHandlers) CreateTenantHandler(w rest.ResponseWriter, r *rest.
 
 	l := log.FromContext(ctx)
 
-	var newTenant newTenantRequest
+	var newTenant model.NewTenant
 
 	if err := r.DecodeJsonPayload(&newTenant); err != nil {
 		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
 		return
 	}
 
-	if _, err := govalidator.ValidateStruct(newTenant); err != nil {
+	if err := newTenant.Validate(); err != nil {
 		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
 		return
 	}
 
 	err := u.userAdm.CreateTenant(ctx, model.NewTenant{
-		ID: newTenant.TenantID,
+		ID: newTenant.ID,
 	})
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)

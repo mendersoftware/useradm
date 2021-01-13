@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -377,7 +377,7 @@ func TestCreateUser(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError("email: ąę@org.com does not validate as ascii;"),
+				restError("email: must contain ASCII characters only."),
 			),
 		},
 		"no body": {
@@ -535,7 +535,7 @@ func TestCreateUserForTenant(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError(model.ErrPasswordTooShort.Error()),
+				restError("User: "+model.ErrPasswordTooShort.Error()+"."),
 			),
 			propagate: true,
 		},
@@ -1391,7 +1391,7 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError("tenant_id: non zero value required;"),
+				restError("tenant_id: cannot be blank."),
 			),
 		},
 		"error: empty json": {

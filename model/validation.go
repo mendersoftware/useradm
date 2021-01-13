@@ -14,14 +14,11 @@
 
 package model
 
-import validation "github.com/go-ozzo/ozzo-validation/v4"
+import (
+	"github.com/go-ozzo/ozzo-validation/v4"
+)
 
-type NewTenant struct {
-	ID string `json:"tenant_id"`
-}
-
-func (nt NewTenant) Validate() error {
-	return validation.ValidateStruct(&nt,
-		validation.Field(&nt.ID, validation.Required),
-	)
-}
+// Reusable validation rules
+var (
+	lessThan4096 = validation.Length(0, 4096)
+)

@@ -3,6 +3,7 @@ package govalidator
 import (
 	"reflect"
 	"regexp"
+	"sort"
 	"sync"
 )
 
@@ -15,7 +16,27 @@ type CustomTypeValidator func(i interface{}, o interface{}) bool
 
 // ParamValidator is a wrapper for validator functions that accepts additional parameters.
 type ParamValidator func(str string, params ...string) bool
-type tagOptionsMap map[string]string
+type InterfaceParamValidator func(in interface{}, params ...string) bool
+type tagOptionsMap map[string]tagOption
+
+func (t tagOptionsMap) orderedKeys() []string {
+	var keys []string
+	for k := range t {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(a, b int) bool {
+		return t[keys[a]].order < t[keys[b]].order
+	})
+
+	return keys
+}
+
+type tagOption struct {
+	name               string
+	customErrorMessage string
+	order              int
+}
 
 // UnsupportedTypeError is a wrapper for reflect.Type
 type UnsupportedTypeError struct {
@@ -26,14 +47,27 @@ type UnsupportedTypeError struct {
 // It implements the methods to sort by string.
 type stringValues []reflect.Value
 
+// InterfaceParamTagMap is a map of functions accept variants parameters for an interface value
+var InterfaceParamTagMap = map[string]InterfaceParamValidator{
+	"type": IsType,
+}
+
+// InterfaceParamTagRegexMap maps interface param tags to their respective regexes.
+var InterfaceParamTagRegexMap = map[string]*regexp.Regexp{
+	"type": regexp.MustCompile(`^type\((.*)\)$`),
+}
+
 // ParamTagMap is a map of functions accept variants parameters
 var ParamTagMap = map[string]ParamValidator{
-	"length":       ByteLength,
-	"range":        Range,
-	"runelength":   RuneLength,
-	"stringlength": StringLength,
-	"matches":      StringMatches,
-	"in":           isInRaw,
+	"length":          ByteLength,
+	"range":           Range,
+	"runelength":      RuneLength,
+	"stringlength":    StringLength,
+	"matches":         StringMatches,
+	"in":              IsInRaw,
+	"rsapub":          IsRsaPub,
+	"minstringlength": MinStringLength,
+	"maxstringlength": MaxStringLength,
 }
 
 // ParamTagRegexMap maps param tags to their respective regexes.
@@ -44,6 +78,9 @@ var ParamTagRegexMap = map[string]*regexp.Regexp{
 	"stringlength": regexp.MustCompile("^stringlength\\((\\d+)\\|(\\d+)\\)$"),
 	"in":           regexp.MustCompile(`^in\((.*)\)`),
 	"matches":      regexp.MustCompile(`^matches\((.+)\)$`),
+	"rsapub":       regexp.MustCompile("^rsapub\\((\\d+)\\)$"),
+	"minstringlength": regexp.MustCompile("^minstringlength\\((\\d+)\\)$"),
+	"maxstringlength": regexp.MustCompile("^maxstringlength\\((\\d+)\\)$"),
 }
 
 type customTypeTagMap struct {
@@ -72,57 +109,59 @@ var CustomTypeTagMap = &customTypeTagMap{validators: make(map[string]CustomTypeV
 
 // TagMap is a map of functions, that can be used as tags for ValidateStruct function.
 var TagMap = map[string]Validator{
-	"email":          IsEmail,
-	"url":            IsURL,
-	"dialstring":     IsDialString,
-	"requrl":         IsRequestURL,
-	"requri":         IsRequestURI,
-	"alpha":          IsAlpha,
-	"utfletter":      IsUTFLetter,
-	"alphanum":       IsAlphanumeric,
-	"utfletternum":   IsUTFLetterNumeric,
-	"numeric":        IsNumeric,
-	"utfnumeric":     IsUTFNumeric,
-	"utfdigit":       IsUTFDigit,
-	"hexadecimal":    IsHexadecimal,
-	"hexcolor":       IsHexcolor,
-	"rgbcolor":       IsRGBcolor,
-	"lowercase":      IsLowerCase,
-	"uppercase":      IsUpperCase,
-	"int":            IsInt,
-	"float":          IsFloat,
-	"null":           IsNull,
-	"uuid":           IsUUID,
-	"uuidv3":         IsUUIDv3,
-	"uuidv4":         IsUUIDv4,
-	"uuidv5":         IsUUIDv5,
-	"creditcard":     IsCreditCard,
-	"isbn10":         IsISBN10,
-	"isbn13":         IsISBN13,
-	"json":           IsJSON,
-	"multibyte":      IsMultibyte,
-	"ascii":          IsASCII,
-	"printableascii": IsPrintableASCII,
-	"fullwidth":      IsFullWidth,
-	"halfwidth":      IsHalfWidth,
-	"variablewidth":  IsVariableWidth,
-	"base64":         IsBase64,
-	"datauri":        IsDataURI,
-	"ip":             IsIP,
-	"port":           IsPort,
-	"ipv4":           IsIPv4,
-	"ipv6":           IsIPv6,
-	"dns":            IsDNSName,
-	"host":           IsHost,
-	"mac":            IsMAC,
-	"latitude":       IsLatitude,
-	"longitude":      IsLongitude,
-	"ssn":            IsSSN,
-	"semver":         IsSemver,
-	"rfc3339":        IsRFC3339,
-	"ISO3166Alpha2":  IsISO3166Alpha2,
-	"ISO3166Alpha3":  IsISO3166Alpha3,
-	"ISO4217":        IsISO4217,
+	"email":              IsEmail,
+	"url":                IsURL,
+	"dialstring":         IsDialString,
+	"requrl":             IsRequestURL,
+	"requri":             IsRequestURI,
+	"alpha":              IsAlpha,
+	"utfletter":          IsUTFLetter,
+	"alphanum":           IsAlphanumeric,
+	"utfletternum":       IsUTFLetterNumeric,
+	"numeric":            IsNumeric,
+	"utfnumeric":         IsUTFNumeric,
+	"utfdigit":           IsUTFDigit,
+	"hexadecimal":        IsHexadecimal,
+	"hexcolor":           IsHexcolor,
+	"rgbcolor":           IsRGBcolor,
+	"lowercase":          IsLowerCase,
+	"uppercase":          IsUpperCase,
+	"int":                IsInt,
+	"float":              IsFloat,
+	"null":               IsNull,
+	"notnull":            IsNotNull,
+	"uuid":               IsUUID,
+	"uuidv3":             IsUUIDv3,
+	"uuidv4":             IsUUIDv4,
+	"uuidv5":             IsUUIDv5,
+	"creditcard":         IsCreditCard,
+	"isbn10":             IsISBN10,
+	"isbn13":             IsISBN13,
+	"json":               IsJSON,
+	"multibyte":          IsMultibyte,
+	"ascii":              IsASCII,
+	"printableascii":     IsPrintableASCII,
+	"fullwidth":          IsFullWidth,
+	"halfwidth":          IsHalfWidth,
+	"variablewidth":      IsVariableWidth,
+	"base64":             IsBase64,
+	"datauri":            IsDataURI,
+	"ip":                 IsIP,
+	"port":               IsPort,
+	"ipv4":               IsIPv4,
+	"ipv6":               IsIPv6,
+	"dns":                IsDNSName,
+	"host":               IsHost,
+	"mac":                IsMAC,
+	"latitude":           IsLatitude,
+	"longitude":          IsLongitude,
+	"ssn":                IsSSN,
+	"semver":             IsSemver,
+	"rfc3339":            IsRFC3339,
+	"rfc3339WithoutZone": IsRFC3339WithoutZone,
+	"ISO3166Alpha2":      IsISO3166Alpha2,
+	"ISO3166Alpha3":      IsISO3166Alpha3,
+	"ISO4217":            IsISO4217,
 }
 
 // ISO3166Entry stores country codes
