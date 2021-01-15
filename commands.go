@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ func commandCreateUser(c config.Reader, username, password, userId, tenantId str
 		u.ID = userId
 	}
 
-	if err := u.ValidateNew(); err != nil {
+	if err := u.Validate(); err != nil {
 		return errors.Wrap(err, "user validation failed")
 	}
 
@@ -176,7 +176,7 @@ func commandSetPassword(c config.Reader, username, password, tenantId string) er
 		Password: password,
 	}
 
-	if err := u.ValidateNew(); err != nil {
+	if err := u.Validate(); err != nil {
 		return errors.Wrap(err, "user validation failed")
 	}
 

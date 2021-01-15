@@ -3,7 +3,7 @@
 github.com/ant0ine/go-json-rest/rest
 github.com/ant0ine/go-json-rest/rest/test
 github.com/ant0ine/go-json-rest/rest/trie
-# github.com/asaskevich/govalidator v0.0.0-20170903095215-73945b6115bf
+# github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
 ## explicit
 github.com/asaskevich/govalidator
 # github.com/aws/aws-sdk-go v1.34.28
@@ -33,6 +33,10 @@ github.com/davecgh/go-spew/spew
 github.com/dgrijalva/jwt-go
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
+# github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+## explicit
+github.com/go-ozzo/ozzo-validation/v4
+github.com/go-ozzo/ozzo-validation/v4/is
 # github.com/go-stack/stack v1.8.0
 github.com/go-stack/stack
 # github.com/golang/snappy v0.0.1

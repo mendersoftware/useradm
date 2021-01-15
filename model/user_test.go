@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 )
 
 func TestValidateNew(t *testing.T) {
+
 	testCases := map[string]struct {
 		inUser User
 
@@ -40,7 +41,7 @@ func TestValidateNew(t *testing.T) {
 				Email:    "foobar",
 				Password: "correcthorsebatterystaple",
 			},
-			outErr: "email: foobar does not validate as email;",
+			outErr: "email: must be a valid email address.",
 		},
 		"email ok (+), pass ok": {
 			inUser: User{
@@ -54,27 +55,27 @@ func TestValidateNew(t *testing.T) {
 				Email:    "ąę@org.com",
 				Password: "correcthorsebatterystaple",
 			},
-			outErr: "email: ąę@org.com does not validate as ascii;",
+			outErr: "email: must contain ASCII characters only.",
 		},
 		"email ok, pass invalid (empty)": {
 			inUser: User{
 				Email:    "foo@bar.com",
 				Password: "",
 			},
-			outErr: "password can't be empty",
+			outErr: "password: cannot be blank.",
 		},
 		"email ok, pass invalid (too short)": {
 			inUser: User{
 				Email:    "foo@bar.com",
 				Password: "asdf",
 			},
-			outErr: "password too short",
+			outErr: "password: must be minimum 8 characters long",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.inUser.ValidateNew()
+			err := tc.inUser.Validate()
 
 			if tc.outErr == "" {
 				assert.NoError(t, err)

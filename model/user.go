@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/asaskevich/govalidator"
+	"github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/useradm/jwt"
@@ -30,8 +31,11 @@ const (
 )
 
 var (
-	ErrPasswordTooShort = errors.New("password too short")
-	ErrEmptyUpdate      = errors.New("no update information provided")
+	ErrPasswordTooShort = errors.Errorf(
+		"password: must be minimum %d characters long",
+		MinPasswordLength,
+	)
+	ErrEmptyUpdate = errors.New("no update information provided")
 )
 
 type User struct {
@@ -39,7 +43,7 @@ type User struct {
 	ID string `json:"id" bson:"_id"`
 
 	// user email address
-	Email string `json:"email" bson:",omitempty" valid:"email,ascii"`
+	Email string `json:"email" bson:"email"`
 
 	// user password
 	Password string `json:"password,omitempty" bson:"password"`
@@ -54,41 +58,40 @@ type User struct {
 	LoginTs *time.Time `json:"login_ts,omitempty" bson:"login_ts,omitempty"`
 }
 
+func (u User) Validate() error {
+	if err := validation.ValidateStruct(&u,
+		validation.Field(&u.Email, validation.Required, lessThan4096, is.ASCII, is.Email),
+		validation.Field(&u.Password, validation.Required, lessThan4096),
+	); err != nil {
+		return err
+	}
+	if len(u.Password) < MinPasswordLength {
+		return ErrPasswordTooShort
+	}
+	return nil
+}
+
 type UserInternal struct {
 	User
 	PasswordHash string `json:"password_hash,omitempty" bson:"-"`
 	Propagate    *bool  `json:"propagate,omitempty" bson:"-"`
 }
 
-func (u *UserInternal) ValidateNew() error {
-	if u.Email == "" {
-		return errors.New("email can't be empty")
-	}
-
-	if _, err := govalidator.ValidateStruct(u); err != nil {
-		return err
-	}
-
-	if err := checkEmail(u.Email); err != nil {
-		return err
-	}
-
+func (u UserInternal) Validate() error {
 	if u.Password == "" && u.PasswordHash == "" ||
 		u.Password != "" && u.PasswordHash != "" {
 		return errors.New("password *or* password_hash must be provided")
-	}
-
-	if u.Password != "" {
-		if err := checkPwd(u.Password); err != nil {
-			return err
+	} else if u.PasswordHash != "" {
+		if u.ShouldPropagate() {
+			return errors.New("password_hash is not supported with 'propagate'; use 'password' instead")
 		}
+		u.User.Password = u.PasswordHash
+		defer func() { u.User.Password = "" }()
 	}
 
-	if u.PasswordHash != "" && u.ShouldPropagate() {
-		return errors.New("password_hash is not supported with 'propagate'; use 'password' instead")
-	}
-
-	return nil
+	return validation.ValidateStruct(&u,
+		validation.Field(&u.User),
+	)
 }
 
 func (u UserInternal) ShouldPropagate() bool {
@@ -112,54 +115,23 @@ type UserUpdate struct {
 	LoginTs *time.Time `json:"-" bson:"login_ts,omitempty"`
 }
 
-func (u User) ValidateNew() error {
-	if u.Email == "" {
-		return errors.New("email can't be empty")
-	}
-
-	if _, err := govalidator.ValidateStruct(u); err != nil {
-		return err
-	}
-
-	if u.Password == "" {
-		return errors.New("password can't be empty")
-	}
-
-	if err := checkEmail(u.Email); err != nil {
-		return err
-	}
-
-	if err := checkPwd(u.Password); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (u UserUpdate) Validate() error {
 	if u.Email == "" && u.Password == "" {
 		return ErrEmptyUpdate
 	}
 
-	if u.Password != "" {
-		if err := checkPwd(u.Password); err != nil {
-			return err
-		}
+	if err := validation.ValidateStruct(&u,
+		validation.Field(&u.Email, lessThan4096, is.Email, is.ASCII),
+		validation.Field(&u.Password,
+			validation.When(len(u.Password) > 0, lessThan4096),
+		),
+	); err != nil {
+		return err
 	}
 
-	return nil
-}
-
-// check password strength
-func checkPwd(password string) error {
-	if len(password) < MinPasswordLength {
+	if len(u.Password) > 0 && len(u.Password) < MinPasswordLength {
 		return ErrPasswordTooShort
 	}
-
-	return nil
-}
-
-func checkEmail(email string) error {
 	return nil
 }
 
