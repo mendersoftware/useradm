@@ -60,7 +60,7 @@ type User struct {
 
 func (u User) Validate() error {
 	if err := validation.ValidateStruct(&u,
-		validation.Field(&u.Email, validation.Required, lessThan4096, is.ASCII, is.Email),
+		validation.Field(&u.Email, validation.Required, lessThan4096, is.ASCII, is.EmailFormat),
 		validation.Field(&u.Password, validation.Required, lessThan4096),
 	); err != nil {
 		return err
@@ -121,7 +121,7 @@ func (u UserUpdate) Validate() error {
 	}
 
 	if err := validation.ValidateStruct(&u,
-		validation.Field(&u.Email, lessThan4096, is.Email, is.ASCII),
+		validation.Field(&u.Email, lessThan4096, is.ASCII, is.EmailFormat),
 		validation.Field(&u.Password,
 			validation.When(len(u.Password) > 0, lessThan4096),
 		),
