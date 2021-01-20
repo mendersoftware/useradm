@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func ExtractResourceAction(r *rest.Request) (*authz.Action, error) {
 	action := authz.Action{}
 
 	// extract original uri
-	uri := r.Header.Get("X-Original-URI")
+	uri := r.Header.Get("X-Forwarded-Uri")
 	if uri == "" {
 		uri = r.Header.Get("X-Forwarded-URI")
 	}
@@ -49,7 +49,7 @@ func ExtractResourceAction(r *rest.Request) (*authz.Action, error) {
 	action.Resource = strings.Join(uriItems[4:], ":")
 
 	// extract original http method
-	action.Method = r.Header.Get("X-Original-Method")
+	action.Method = r.Header.Get("X-Forwarded-Method")
 	if action.Method == "" {
 		action.Method = r.Header.Get("X-Forwarded-Method")
 	}

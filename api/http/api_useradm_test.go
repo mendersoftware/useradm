@@ -878,8 +878,8 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 				nil)
 
 			// set these to make the middleware happy
-			req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
-			req.Header.Add("X-Original-Method", "POST")
+			req.Header.Add("X-Forwarded-Uri", "/api/mgmt/0.1/someservice/some/resource")
+			req.Header.Add("X-Forwarded-Method", "POST")
 
 			//test
 			recorded := test.RunRequest(t, api, req)
@@ -892,8 +892,8 @@ func TestUserAdmApiPostVerify(t *testing.T) {
 				nil)
 
 			// set these to make the middleware happy
-			req.Header.Add("X-Original-URI", "/api/mgmt/0.1/someservice/some/resource")
-			req.Header.Add("X-Original-Method", "GET")
+			req.Header.Add("X-Forwarded-Uri", "/api/mgmt/0.1/someservice/some/resource")
+			req.Header.Add("X-Forwarded-Method", "GET")
 
 			//test
 			recorded = test.RunRequest(t, api, req)
