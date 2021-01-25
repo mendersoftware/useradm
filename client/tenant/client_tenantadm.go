@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ const (
 	URIHealth       = UriBase + "/health"
 	// default request timeout, 10s
 	defaultReqTimeout = time.Duration(10) * time.Second
+
+	redacted = "REDACTED"
 )
 
 var (
@@ -133,11 +135,12 @@ func (c *Client) CheckHealth(ctx context.Context) error {
 }
 
 func (c *Client) GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error) {
+	usernameQ := url.QueryEscape(username)
 	req, err := http.NewRequest(http.MethodGet,
 		JoinURL(c.conf.TenantAdmAddr, GetTenantsUri+"?username="+url.QueryEscape(username)),
 		nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request to tenantadm")
+		return nil, errors.New("failed to prepare request to tenantadm")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
@@ -145,6 +148,8 @@ func (c *Client) GetTenant(ctx context.Context, username string, client apiclien
 
 	rsp, err := client.Do(req.WithContext(ctx))
 	if err != nil {
+		repl := strings.NewReplacer(username, redacted, usernameQ, redacted)
+		err = errors.New(repl.Replace(err.Error()))
 		return nil, errors.Wrap(err, "GET /tenants request failed")
 	}
 	defer rsp.Body.Close()
