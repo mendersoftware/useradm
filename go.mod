@@ -9,7 +9,7 @@ require (
 	github.com/mendersoftware/go-lib-micro v0.0.0-20201013131806-cf1f6a851bcb
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli v1.22.5
 	go.mongodb.org/mongo-driver v1.4.4
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
