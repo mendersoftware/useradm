@@ -1,4 +1,4 @@
-FROM golang:1.15.7-alpine3.12 as builder
+FROM golang:1.15.8-alpine3.12 as builder
 WORKDIR /go/src/github.com/mendersoftware/useradm
 ADD ./ .
 RUN CGO_ENABLED=0 GOARCH=amd64 go build -o useradm .
