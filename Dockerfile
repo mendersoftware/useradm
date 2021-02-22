@@ -4,7 +4,7 @@ ADD ./ .
 RUN CGO_ENABLED=0 GOARCH=amd64 go build -o useradm .
 
 
-FROM alpine:3.13.1
+FROM alpine:3.13.2
 EXPOSE 8080
 RUN mkdir -p /etc/useradm/rsa
 ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
