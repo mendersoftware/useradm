@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -241,7 +241,15 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 	var tenantErr error
 
 	if u.ID == "" {
-		id := oid.NewUUIDv5(u.Email)
+		//technically one of the functions down the oid.NewUUIDv4() stack can panic,
+		//so what we could do is: wrap around it and recover and fall back
+		//to non-rand based generation (NewUUIDv5(u.Email)).
+		//on the other hand if rand failed maybe it is a good idea t not continue
+		//after all.
+		//the previous call to NewUUIDv5 produced exact the same ids for same
+		//emails, which leads to problems once user changes the email address,
+		//and then the old email is used in the new user creation.
+		id := oid.NewUUIDv4()
 		u.ID = id.String()
 	}
 
