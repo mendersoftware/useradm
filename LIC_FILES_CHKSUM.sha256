@@ -9,7 +9,6 @@ d18f6323b71b0b768bb5e9616e36da390fbd39369a81807cca352de4e4e6aa0b  vendor/gopkg.i
 c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4  vendor/go.mongodb.org/mongo-driver/LICENSE
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  vendor/github.com/aws/aws-sdk-go/LICENSE.txt
 03cfaf331a260694d06227a589cdd2b5fcfab474697b72e250736696c313655a  vendor/github.com/jmespath/go-jmespath/LICENSE
-e31497e5f27700c6c7f25c7831641d0af1df47c3d4c6c3699d12d74d75fd0b33  vendor/github.com/magefile/mage/LICENSE
 #
 # MIT license.
 409777def58db7e220011d266bb963259b5d45fc490e58a0d97acad2b591609a  vendor/github.com/ant0ine/go-json-rest/LICENSE
