@@ -68,7 +68,7 @@ def mongo():
 
 
 def mongo_cleanup(mongo):
-    dbs = mongo.database_names()
+    dbs = mongo.list_database_names()
     dbs = [d for d in dbs if d not in ["local", "admin", "config"]]
     for d in dbs:
         mongo.drop_database(d)
@@ -93,7 +93,7 @@ def api_client_int(request):
     )
 
 
-@pytest.yield_fixture(scope="class")
+@pytest.fixture(scope="class")
 def init_users(cli, api_client_mgmt, mongo):
     for i in range(5):
         cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
@@ -102,7 +102,7 @@ def init_users(cli, api_client_mgmt, mongo):
     mongo_cleanup(mongo)
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def init_users_f(cli, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users'.
@@ -114,7 +114,7 @@ def init_users_f(cli, api_client_mgmt, mongo):
     mongo_cleanup(mongo)
 
 
-@pytest.yield_fixture(scope="class")
+@pytest.fixture(scope="class")
 def init_users_mt(cli, api_client_mgmt, mongo):
     tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
@@ -130,7 +130,7 @@ def init_users_mt(cli, api_client_mgmt, mongo):
     mongo_cleanup(mongo)
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def init_users_mt_f(cli, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users_mt'.
@@ -149,7 +149,7 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     mongo_cleanup(mongo)
 
 
-@pytest.yield_fixture(scope="class")
+@pytest.fixture(scope="class")
 def user_tokens(init_users, api_client_mgmt):
     tokens = []
     for user in init_users:
@@ -159,7 +159,7 @@ def user_tokens(init_users, api_client_mgmt):
     yield tokens
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_db(mongo):
     mongo_cleanup(mongo)
     yield mongo

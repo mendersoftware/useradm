@@ -24,8 +24,8 @@ class TestInternalApiTenantCreate:
         _, r = api_client_int.create_tenant("foobar")
         assert r.status_code == 201
 
-        assert "useradm-foobar" in clean_db.database_names()
-        assert "migration_info" in clean_db["useradm-foobar"].collection_names()
+        assert "useradm-foobar" in clean_db.list_database_names()
+        assert "migration_info" in clean_db["useradm-foobar"].list_collection_names()
 
     def test_create_twice(self, api_client_int, clean_db):
 

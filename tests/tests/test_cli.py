@@ -32,10 +32,10 @@ class Migration:
 
     @staticmethod
     def verify_db_and_collections(client, dbname):
-        dbs = client.database_names()
+        dbs = client.list_database_names()
         assert dbname in dbs
 
-        colls = client[dbname].collection_names()
+        colls = client[dbname].list_collection_names()
         assert Migration.MIGRATION_COLLECTION in colls
 
     @staticmethod
