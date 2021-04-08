@@ -23,14 +23,14 @@ from client import CliClient, ManagementApiClient, InternalApiClient
 
 def make_auth(sub, tenant=None):
     """
-        Prepare an almost-valid JWT token header, suitable for consumption by our identity middleware (needs sub and optionally mender.tenant claims).
+    Prepare an almost-valid JWT token header, suitable for consumption by our identity middleware (needs sub and optionally mender.tenant claims).
 
-        The token contains valid base64-encoded payload, but the header/signature are bogus.
-        This is enough for the identity middleware to interpret the identity
-        and select the correct db; note that there is no gateway in the test setup, so the signature
-        is never verified.
+    The token contains valid base64-encoded payload, but the header/signature are bogus.
+    This is enough for the identity middleware to interpret the identity
+    and select the correct db; note that there is no gateway in the test setup, so the signature
+    is never verified.
 
-        If 'tenant' is specified, the 'mender.tenant' claim is added.
+    If 'tenant' is specified, the 'mender.tenant' claim is added.
     """
     try:
         sub_id = uuid.UUID(sub)
@@ -80,13 +80,17 @@ def cli():
 
 
 @pytest.fixture(scope="session")
-def api_client_mgmt():
-    return ManagementApiClient()
+def api_client_mgmt(request):
+    return ManagementApiClient(
+        request.config.getoption("host"), request.config.getoption("management_spec")
+    )
 
 
 @pytest.fixture(scope="session")
-def api_client_int():
-    return InternalApiClient()
+def api_client_int(request):
+    return InternalApiClient(
+        request.config.getoption("host"), request.config.getoption("internal_spec")
+    )
 
 
 @pytest.yield_fixture(scope="class")
@@ -116,7 +120,10 @@ def init_users_mt(cli, api_client_mgmt, mongo):
     for t in tenant_users:
         for i in range(5):
             cli.create_user(
-                "user-{}-{}@foo.com".format(i, t), "correcthorsebatterystaple", None, t,
+                "user-{}-{}@foo.com".format(i, t),
+                "correcthorsebatterystaple",
+                None,
+                t,
             )
         tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
@@ -132,7 +139,10 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     for t in tenant_users:
         for i in range(5):
             cli.create_user(
-                "user-{}-{}@foo.com".format(i, t), "correcthorsebatterystaple", None, t,
+                "user-{}-{}@foo.com".format(i, t),
+                "correcthorsebatterystaple",
+                None,
+                t,
             )
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
@@ -157,8 +167,7 @@ def clean_db(mongo):
 
 
 def b64pad(b64data):
-    """Pad base64 string with '=' to achieve a length that is a multiple of 4
-    """
+    """Pad base64 string with '=' to achieve a length that is a multiple of 4"""
     return b64data + "=" * (4 - (len(b64data) % 4))
 
 

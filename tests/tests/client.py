@@ -24,45 +24,42 @@ import requests
 
 
 class ApiClient:
-    config = {
-        "also_return_response": True,
-        "validate_responses": True,
-        "validate_requests": False,
-        "validate_swagger_spec": False,
-        "use_models": True,
-    }
-
     log = logging.getLogger("client.ApiClient")
-    # override spec_option for internal vs management clients
-    spec_option = "internal-spec"
-    api_url = "http://%s/api/0.1.0/" % pytest.config.getoption("host")
 
     def make_api_url(self, path):
         return os.path.join(
             self.api_url, path if not path.startswith("/") else path[1:]
         )
 
-    def setup_swagger(self):
+    def setup_swagger(self, host, swagger_spec):
+        config = {
+            "also_return_response": True,
+            "validate_responses": True,
+            "validate_requests": False,
+            "validate_swagger_spec": False,
+            "use_models": True,
+        }
+
         self.http_client = RequestsClient()
         self.http_client.session.verify = False
 
-        spec = pytest.config.getoption(self.spec_option)
         self.client = SwaggerClient.from_spec(
-            load_file(spec), config=self.config, http_client=self.http_client
+            load_file(swagger_spec), config=config, http_client=self.http_client
         )
         self.client.swagger_spec.api_url = self.api_url
 
-    def __init__(self):
-        self.setup_swagger()
+    def __init__(self, host, swagger_spec):
+
+        self.setup_swagger(host, swagger_spec)
 
 
 class InternalApiClient(ApiClient):
     log = logging.getLogger("client.InternalClient")
     spec_option = "internal_spec"
-    api_url = "http://%s/api/internal/v1/useradm/" % pytest.config.getoption("host")
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, host, swagger_spec):
+        self.api_url = "http://%s/api/internal/v1/useradm/" % host
+        super().__init__(host, swagger_spec)
 
     def verify(self, token, uri="/api/management/1.0/auth/verify", method="POST"):
         if not token.startswith("Bearer "):
@@ -89,13 +86,13 @@ class InternalApiClient(ApiClient):
 class ManagementApiClient(ApiClient):
     log = logging.getLogger("client.ManagementClient")
     spec_option = "management_spec"
-    api_url = "http://%s/api/management/v1/useradm/" % pytest.config.getoption("host")
 
     # default user auth - single user, single tenant
     auth = {"Authorization": "Bearer foobarbaz"}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, host, swagger_spec):
+        self.api_url = "http://%s/api/management/v1/useradm/" % host
+        super().__init__(host, swagger_spec)
 
     def get_users(self, auth=None):
         if auth is None:
