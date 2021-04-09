@@ -60,7 +60,7 @@ def verify_tokens(api_client_int, tokens, removed_tenant=None, removed_user=None
                 verify_token(api_client_int, t, 200)
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def user_tokens_mt_f(init_users_mt_f, api_client_mgmt):
     tokens = []
     password = "correcthorsebatterystaple"
