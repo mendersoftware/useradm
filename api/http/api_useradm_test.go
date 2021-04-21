@@ -1280,6 +1280,78 @@ func TestUserAdmApiGetUser(t *testing.T) {
 	}
 }
 
+func TestUserAdmApiDeleteTenantUser(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		tenantID string
+		uaError  error
+
+		checker mt.ResponseChecker
+	}{
+		"ok without tenant ID": {
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"ok with tenant ID": {
+			tenantID: "tenant",
+			uaError:  nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusNoContent,
+				nil,
+				nil,
+			),
+		},
+		"error: useradm internal": {
+			uaError: errors.New("some internal error"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("DeleteUser",
+				mock.MatchedBy(func(ctx context.Context) bool {
+					if tc.tenantID == "" {
+						return true
+					}
+					identity := identity.FromContext(ctx)
+					assert.Equal(t, tc.tenantID, identity.Tenant)
+
+					return true
+				}),
+				"foo",
+			).Return(tc.uaError)
+
+			//make handler
+			api := makeMockApiHandler(t, uadm, nil)
+
+			//make request
+			req := makeReq("DELETE",
+				"http://1.2.3.4/api/internal/v1/useradm/tenants/"+tc.tenantID+"/users/foo",
+				"",
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
 func TestUserAdmApiDeleteUser(t *testing.T) {
 	t.Parallel()
 

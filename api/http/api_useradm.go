@@ -46,6 +46,7 @@ const (
 	uriInternalAuthVerify  = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants     = "/api/internal/v1/useradm/tenants"
 	uriInternalTenantUsers = "/api/internal/v1/useradm/tenants/:id/users"
+	uriInternalTenantUser  = "/api/internal/v1/useradm/tenants/:id/users/:userid"
 	uriInternalTokens      = "/api/internal/v1/useradm/tokens"
 )
 
@@ -83,6 +84,7 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
 		rest.Post(uriInternalTenantUsers, i.CreateTenantUserHandler),
+		rest.Delete(uriInternalTenantUser, i.DeleteTenantUserHandler),
 		rest.Get(uriInternalTenantUsers, i.GetTenantUsersHandler),
 		rest.Delete(uriInternalTokens, i.DeleteTokensHandler),
 
@@ -361,6 +363,24 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 		default:
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (u *UserAdmApiHandlers) DeleteTenantUserHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	tenantId := r.PathParam("id")
+	if tenantId != "" {
+		ctx = getTenantContext(ctx, tenantId)
+	}
+
+	l := log.FromContext(ctx)
+	err := u.userAdm.DeleteUser(ctx, r.PathParam("userid"))
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
