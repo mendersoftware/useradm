@@ -242,6 +242,38 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
+  /tenants/{tenant_id}/users/{user_id}:
+    delete:
+      operationId: Delete User
+      tags:
+        - Internal API
+      summary: Delete a user
+      description: |
+         Remove a user from the tenant.
+      parameters:
+        - name: tenant_id
+          in: path
+          type: string
+          description: Tenant ID.
+          required: true
+        - name: user_id
+          in: path
+          type: string
+          description: User ID.
+          required: true
+      responses:
+        204:
+          description: User deleted.
+        400:
+          description: |
+            Invalid parameters.
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
   /tokens:
     delete:
       operationId: Revoke User Tokens
@@ -349,4 +381,3 @@ definitions:
       email: 'user@acme.com'
       password: 'secret'
       propagate: false
-
