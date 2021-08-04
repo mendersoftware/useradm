@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -28,6 +28,9 @@ const (
 	SettingPrivKeyPath        = "server_priv_key_path"
 	SettingPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
 
+	SettingServerFallbackPrivKeyPath        = "server_fallback_priv_key_path"
+	SettingServerFallbackPrivKeyPathDefault = ""
+
 	SettingJWTIssuer        = "jwt_issuer"
 	SettingJWTIssuerDefault = "mender.useradm"
 
@@ -55,6 +58,7 @@ var (
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
+		{Key: SettingServerFallbackPrivKeyPath, Value: SettingServerFallbackPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
 		{Key: SettingDb, Value: SettingDbDefault},
