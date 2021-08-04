@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -329,7 +329,7 @@ func TestAuthzMiddleware(t *testing.T) {
 
 			//finish setting up the middleware
 			privkey := loadPrivKey("../crypto/private.pem", t)
-			jwth := jwt.NewJWTHandlerRS256(privkey)
+			jwth := jwt.NewJWTHandlerRS256(privkey, nil)
 			mw := AuthzMiddleware{
 				Authz:      a,
 				ResFunc:    resfunc,

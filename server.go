@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 package main
 
 import (
+	"crypto/rsa"
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
@@ -55,8 +56,17 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "failed to read rsa private key")
 	}
 
+	fallbackPrivKeyPath := c.GetString(SettingServerFallbackPrivKeyPath)
+	var fallbackPrivKey *rsa.PrivateKey
+	if fallbackPrivKeyPath != "" {
+		fallbackPrivKey, err = keys.LoadRSAPrivate(fallbackPrivKeyPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to read fallback rsa private key")
+		}
+	}
+
 	authz := &SimpleAuthz{}
-	jwth := jwt.NewJWTHandlerRS256(privKey)
+	jwth := jwt.NewJWTHandlerRS256(privKey, fallbackPrivKey)
 
 	db, err := mongo.GetDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
 	if err != nil {
