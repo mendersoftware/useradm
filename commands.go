@@ -28,7 +28,7 @@ import (
 	. "github.com/mendersoftware/useradm/config"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store/mongo"
-	"github.com/mendersoftware/useradm/user"
+	useradm "github.com/mendersoftware/useradm/user"
 )
 
 // safeReadPassword reads a user password from a terminal in a safe way (without
@@ -118,8 +118,7 @@ func getTenantContext(tenantId string) context.Context {
 func commandMigrate(c config.Reader, tenantId string) error {
 	l := log.New(log.Ctx{})
 
-	l.Printf("User Administration Service, version %s starting up",
-		CreateVersionString())
+	l.Printf("User Administration Service starting up")
 
 	if tenantId != "" {
 		l.Printf("migrating tenant %v", tenantId)
