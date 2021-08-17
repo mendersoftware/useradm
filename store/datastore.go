@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ var (
 	ErrTokenNotFound = errors.New("token not found")
 	// duplicated email address
 	ErrDuplicateEmail = errors.New("user with a given email already exists")
+	// password mismatch
+	ErrCurrentPasswordMismatch = errors.New("current password mismatch")
 )
 
 //go:generate ../utils/mockgen.sh
@@ -45,6 +47,7 @@ type DataStore interface {
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
+	GetUserAndPasswordById(ctx context.Context, id string) (*model.User, error)
 	GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	SaveToken(ctx context.Context, token *jwt.Token) error

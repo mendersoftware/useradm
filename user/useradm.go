@@ -313,6 +313,18 @@ func (ua *UserAdm) compensateTenantUser(ctx context.Context, userId, tenantId st
 }
 
 func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
+	if len(u.Password) > 0 {
+		user, err := ua.db.GetUserAndPasswordById(ctx, id)
+		if err != nil {
+			return errors.Wrap(err, "useradm: failed to get user")
+		} else if user == nil {
+			return store.ErrUserNotFound
+		}
+		if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.CurrentPassword)); err != nil {
+			return store.ErrCurrentPasswordMismatch
+		}
+	}
+
 	if ua.verifyTenant && u.Email != "" {
 		ident := identity.FromContext(ctx)
 		err := ua.cTenant.UpdateUser(ctx,

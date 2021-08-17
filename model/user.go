@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/pkg/errors"
 
@@ -105,6 +105,9 @@ type UserUpdate struct {
 
 	// user password
 	Password string `json:"password,omitempty" bson:"password,omitempty"`
+
+	// user password
+	CurrentPassword string `json:"current_password,omitempty" bson:"-"`
 
 	// timestamp of the last user information update
 	UpdatedTs *time.Time `json:"-" bson:"updated_ts,omitempty"`

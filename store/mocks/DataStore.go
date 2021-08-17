@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -154,6 +154,29 @@ func (_m *DataStore) GetTokenById(ctx context.Context, id oid.ObjectID) (*jwt.To
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, oid.ObjectID) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUserAndPasswordById provides a mock function with given fields: ctx, id
+func (_m *DataStore) GetUserAndPasswordById(ctx context.Context, id string) (*model.User, error) {
+	ret := _m.Called(ctx, id)
+
+	var r0 *model.User
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.User); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.User)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)

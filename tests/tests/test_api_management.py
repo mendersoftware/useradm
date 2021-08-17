@@ -43,7 +43,7 @@ class TestManagementApiPostUsersBase:
         assert len(found_user) == 1
         found_user = found_user[0]
 
-    def _do_test_fail_duplicate_email(
+    def _do_test_fail_unprocessable_entity(
         self, api_client_mgmt, init_users, new_user, tenant_id=None
     ):
         auth = None
@@ -98,7 +98,7 @@ class TestManagementApiPostUsers(TestManagementApiPostUsersBase):
 
     def test_fail_duplicate_email(self, api_client_mgmt, init_users):
         new_user = {"email": "foo@bar.com", "password": "asdf"}
-        self._do_test_fail_duplicate_email(api_client_mgmt, init_users, new_user)
+        self._do_test_fail_unprocessable_entity(api_client_mgmt, init_users, new_user)
 
 
 class TestManagementApiPostUsersEnterprise(TestManagementApiPostUsersBase):
@@ -114,7 +114,7 @@ class TestManagementApiPostUsersEnterprise(TestManagementApiPostUsersBase):
     def test_fail_duplicate_email(self, tenant_id, api_client_mgmt, init_users_mt):
         new_user = {"email": "foo@bar.com", "password": "asdf1234zxcv"}
         with tenantadm.run_fake_create_user(new_user, 422):
-            self._do_test_fail_duplicate_email(
+            self._do_test_fail_unprocessable_entity(
                 api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id
             )
 
@@ -251,7 +251,7 @@ class TestManagementApiPutUserBase:
     def _do_test_ok_email(
         self, api_client_mgmt, init_users, user, update, tenant_id=None
     ):
-        _, r = api_client_mgmt.login(user.email, 'correcthorsebatterystaple')
+        _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
         assert r.status_code == 200
         token = r.text
         auth = {"Authorization": "Bearer " + token}
@@ -270,7 +270,7 @@ class TestManagementApiPutUserBase:
     def _do_test_ok_email_or_pass(
         self, api_client_mgmt, init_users, user, update, tenant_id=None
     ):
-        _, r = api_client_mgmt.login(user.email, 'correcthorsebatterystaple')
+        _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
         assert r.status_code == 200
         token = r.text
         auth = {"Authorization": "Bearer " + token}
@@ -300,7 +300,7 @@ class TestManagementApiPutUserBase:
     def _do_test_fail_not_found(
         self, api_client_mgmt, init_users, update, tenant_id=None
     ):
-        _, r = api_client_mgmt.login(init_users[0].email, 'correcthorsebatterystaple')
+        _, r = api_client_mgmt.login(init_users[0].email, "correcthorsebatterystaple")
         assert r.status_code == 200
         token = r.text
         auth = {"Authorization": "Bearer " + token}
@@ -316,10 +316,10 @@ class TestManagementApiPutUserBase:
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 400
 
-    def _do_test_fail_duplicate_email(
+    def _do_test_fail_unprocessable_entity(
         self, api_client_mgmt, init_users, user, update, tenant_id=None
     ):
-        _, r = api_client_mgmt.login(user.email, 'correcthorsebatterystaple')
+        _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
         assert r.status_code == 200
         token = r.text
         auth = {"Authorization": "Bearer " + token}
@@ -336,14 +336,27 @@ class TestManagementApiPutUser(TestManagementApiPutUserBase):
         self._do_test_ok_email(api_client_mgmt, init_users_f, init_users_f[0], update)
 
     def test_ok_pass(self, api_client_mgmt, init_users_f):
-        update = {"password": "secretpassword123"}
+        update = {
+            "current_password": "correcthorsebatterystaple",
+            "password": "secretpassword123",
+        }
         self._do_test_ok_email_or_pass(
             api_client_mgmt, init_users_f, init_users_f[0], update
         )
 
     def test_ok_email_and_pass(self, api_client_mgmt, init_users_f):
-        update = {"email": "definitelyunique@foo.com", "password": "secretpassword123"}
+        update = {
+            "email": "definitelyunique@foo.com",
+            "current_password": "correcthorsebatterystaple",
+            "password": "secretpassword123",
+        }
         self._do_test_ok_email_or_pass(
+            api_client_mgmt, init_users_f, init_users_f[0], update
+        )
+
+    def test_fail_password_mismatch(self, api_client_mgmt, init_users_f):
+        update = {"current_password": "dummy", "password": "secretpassword123"}
+        self._do_test_fail_unprocessable_entity(
             api_client_mgmt, init_users_f, init_users_f[0], update
         )
 
@@ -356,7 +369,7 @@ class TestManagementApiPutUser(TestManagementApiPutUserBase):
 
     def test_fail_duplicate_email(self, api_client_mgmt, init_users_f):
         update = {"email": init_users_f[1].email, "password": "secretpassword123"}
-        self._do_test_fail_duplicate_email(
+        self._do_test_fail_unprocessable_entity(
             api_client_mgmt, init_users_f, init_users_f[0], update
         )
 
@@ -375,7 +388,10 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
     def test_ok_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][1]
         with tenantadm.run_fake_get_tenants(tenant_id):
-            update = {"password": "secretpassword123"}
+            update = {
+                "password": "secretpassword123",
+                "current_password": "correcthorsebatterystaple",
+            }
             self._do_test_ok_email_or_pass(
                 api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
             )
@@ -383,7 +399,11 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_ok_email_and_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][2]
-        update = {"email": "definitelyunique@foo.com", "password": "secretpassword123"}
+        update = {
+            "email": "definitelyunique@foo.com",
+            "current_password": "correcthorsebatterystaple",
+            "password": "secretpassword123",
+        }
         with tenantadm.run_fake_update_user(tenant_id, user.id, update):
             self._do_test_ok_email_or_pass(
                 api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
@@ -392,7 +412,11 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_fail_not_found(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][3]
-        update = {"email": "foo@bar.com", "password": "secretpassword123"}
+        update = {
+            "email": "foo@bar.com",
+            "current_password": "correcthorsebatterystaple",
+            "password": "secretpassword123",
+        }
         with tenantadm.run_fake_update_user(tenant_id, user.id, update, 404):
             self._do_test_fail_not_found(
                 api_client_mgmt, init_users_mt_f[tenant_id], update, tenant_id
@@ -410,7 +434,7 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
             "password": "secretpassword123",
         }
         with tenantadm.run_fake_update_user(tenant_id, user.id, update, 422):
-            self._do_test_fail_duplicate_email(
+            self._do_test_fail_unprocessable_entity(
                 api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
             )
 

@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/crypto/bcrypt"
 
 	ct "github.com/mendersoftware/useradm/client/tenant"
 	mct "github.com/mendersoftware/useradm/client/tenant/mocks"
@@ -667,9 +668,16 @@ func TestUserAdmDoCreateUser(t *testing.T) {
 
 }
 
+func hashPassword(password string) string {
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash)
+}
+
 func TestUserAdmUpdateUser(t *testing.T) {
 	testCases := map[string]struct {
-		inUserUpdate model.UserUpdate
+		inUserUpdate   model.UserUpdate
+		getUserById    *model.User
+		getUserByIdErr error
 
 		verifyTenant bool
 		tenantErr    error
@@ -680,17 +688,26 @@ func TestUserAdmUpdateUser(t *testing.T) {
 	}{
 		"ok": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
 			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
+			},
+
 			dbErr:  nil,
 			outErr: nil,
 		},
 		"ok with current token": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
-				Token:    &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
 			},
 
 			verifyTenant: true,
@@ -701,8 +718,12 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"ok, multitenant": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
 			},
 
 			verifyTenant: true,
@@ -713,8 +734,12 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"error, multitenant: duplicate user": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
 			},
 
 			verifyTenant: true,
@@ -725,8 +750,12 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"error, multitenant: not found": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
 			},
 
 			verifyTenant: true,
@@ -737,8 +766,12 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"error, multitenant: generic": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
 			},
 
 			verifyTenant: true,
@@ -751,17 +784,56 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			inUserUpdate: model.UserUpdate{
 				Email: "foo@bar.com",
 			},
+
 			dbErr:  store.ErrDuplicateEmail,
 			outErr: store.ErrDuplicateEmail,
 		},
 		"db error: general": {
 			inUserUpdate: model.UserUpdate{
-				Email:    "foo@bar.com",
-				Password: "correcthorsebatterystaple",
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
 			},
-			dbErr: errors.New("no reachable servers"),
+			getUserById: &model.User{
+				Password: hashPassword("current"),
+			},
 
+			dbErr:  errors.New("no reachable servers"),
 			outErr: errors.New("useradm: failed to update user information: no reachable servers"),
+		},
+		"error: getUserById": {
+			inUserUpdate: model.UserUpdate{
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+			},
+			getUserByIdErr: errors.New("error"),
+
+			dbErr:  nil,
+			outErr: errors.New("useradm: failed to get user: error"),
+		},
+		"error: getUserById not found": {
+			inUserUpdate: model.UserUpdate{
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+			},
+
+			dbErr:  nil,
+			outErr: store.ErrUserNotFound,
+		},
+		"error: password mismatch": {
+			inUserUpdate: model.UserUpdate{
+				Email:           "foo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "wrong",
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
+			},
+
+			dbErr:  nil,
+			outErr: store.ErrCurrentPasswordMismatch,
 		},
 	}
 
@@ -773,7 +845,16 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			db := &mstore.DataStore{}
 			defer db.AssertExpectations(t)
 
-			if !tc.verifyTenant || tc.tenantErr == nil {
+			if len(tc.inUserUpdate.Password) > 0 {
+				db.On("GetUserAndPasswordById",
+					ContextMatcher(),
+					mock.AnythingOfType("string"),
+				).Return(tc.getUserById, tc.getUserByIdErr)
+			}
+
+			if tc.getUserByIdErr == nil && tc.outErr != store.ErrCurrentPasswordMismatch &&
+				(len(tc.inUserUpdate.Password) == 0 || tc.getUserById != nil) &&
+				(!tc.verifyTenant || tc.tenantErr == nil) {
 				db.On("UpdateUser",
 					ContextMatcher(),
 					mock.AnythingOfType("string"),
