@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -254,14 +254,19 @@ func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*mo
 }
 
 func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.User, error) {
-	var user model.User
+	user, err := db.GetUserAndPasswordById(ctx, id)
+	if user != nil {
+		user.Password = ""
+	}
+	return user, err
+}
 
-	o := mopts.FindOne()
-	o.SetProjection(bson.M{DbUserPass: 0})
+func (db *DataStoreMongo) GetUserAndPasswordById(ctx context.Context, id string) (*model.User, error) {
+	var user model.User
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbUsersColl).
-		FindOne(ctx, bson.M{"_id": id}, o).
+		FindOne(ctx, bson.M{"_id": id}).
 		Decode(&user)
 
 	if err != nil {

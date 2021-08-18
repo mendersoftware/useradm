@@ -199,7 +199,7 @@ paths:
             $ref: '#/definitions/Error'
         422:
           description: |
-                The email address is duplicated or password is too short.
+                The email address is duplicated, password is too short or current password doesn't match.
           schema:
             $ref: '#/definitions/Error'
         500:
@@ -391,10 +391,15 @@ definitions:
         description: A unique email address.
         type: string
       password:
-        description: Password.
+        description: New password.
+        type: string
+      current_password:
+        description: Current password.
         type: string
     example:
       email: 'new_email@acme.com'
+      password: 'new password'
+      current_password: 'old password'
   User:
     description: User descriptor.
     type: object

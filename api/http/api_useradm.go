@@ -356,7 +356,7 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 	err = u.userAdm.UpdateUser(ctx, id, userUpdate)
 	if err != nil {
 		switch err {
-		case store.ErrDuplicateEmail:
+		case store.ErrDuplicateEmail, store.ErrCurrentPasswordMismatch:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
 		case store.ErrUserNotFound:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusNotFound)
