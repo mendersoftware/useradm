@@ -55,6 +55,10 @@ const (
 	pathParamMe    = "me"
 )
 
+const (
+	uriUIRoot = "/"
+)
+
 var (
 	ErrAuthHeader   = errors.New("invalid or missing auth header")
 	ErrUserNotFound = errors.New("user not found")
@@ -158,8 +162,16 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/jwt")
-	w.(http.ResponseWriter).Write([]byte(raw))
+	writer := w.(http.ResponseWriter)
+	writer.Header().Set("Content-Type", "application/jwt")
+	http.SetCookie(writer, &http.Cookie{
+		Name:    "JWT",
+		Value:   raw,
+		Path:    uriUIRoot,
+		Secure:  true,
+		Expires: token.ExpiresAt.Time,
+	})
+	writer.Write([]byte(raw))
 }
 
 func (u *UserAdmApiHandlers) AuthLogoutHandler(w rest.ResponseWriter, r *rest.Request) {
