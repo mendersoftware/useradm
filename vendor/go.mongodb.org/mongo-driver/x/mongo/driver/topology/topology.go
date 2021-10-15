@@ -56,7 +56,7 @@ const (
 
 // Topology represents a MongoDB deployment.
 type Topology struct {
-	connectionstate int32
+	connectionstate int64
 
 	cfg *config
 
@@ -133,7 +133,7 @@ func New(opts ...Option) (*Topology, error) {
 	}
 
 	if t.cfg.uri != "" {
-		t.pollingRequired = strings.HasPrefix(t.cfg.uri, "mongodb+srv://")
+		t.pollingRequired = strings.HasPrefix(t.cfg.uri, "mongodb+srv://") && !t.cfg.loadBalanced
 	}
 
 	t.publishTopologyOpeningEvent()
@@ -144,7 +144,7 @@ func New(opts ...Option) (*Topology, error) {
 // Connect initializes a Topology and starts the monitoring process. This function
 // must be called to properly monitor the topology.
 func (t *Topology) Connect() error {
-	if !atomic.CompareAndSwapInt32(&t.connectionstate, disconnected, connecting) {
+	if !atomic.CompareAndSwapInt64(&t.connectionstate, disconnected, connecting) {
 		return ErrTopologyConnected
 	}
 
@@ -169,23 +169,56 @@ func (t *Topology) Connect() error {
 		t.fsm.Servers = append(t.fsm.Servers, description.NewDefaultServer(addr))
 	}
 
-	// store new description
-	newDesc := description.Topology{
-		Kind:                  t.fsm.Kind,
-		Servers:               t.fsm.Servers,
-		SessionTimeoutMinutes: t.fsm.SessionTimeoutMinutes,
-	}
-	t.desc.Store(newDesc)
-	t.publishTopologyDescriptionChangedEvent(description.Topology{}, t.fsm.Topology)
-	for _, a := range t.cfg.seedList {
-		addr := address.Address(a).Canonicalize()
-		err = t.addServer(addr)
-		if err != nil {
+	switch {
+	case t.cfg.loadBalanced:
+		// In LoadBalanced mode, we mock a series of events: TopologyDescriptionChanged from Unknown to LoadBalanced,
+		// ServerDescriptionChanged from Unknown to LoadBalancer, and then TopologyDescriptionChanged to reflect the
+		// previous ServerDescriptionChanged event. We publish all of these events here because we don't start server
+		// monitoring routines in this mode, so we have to mock state changes.
+
+		// Transition from Unknown with no servers to LoadBalanced with a single Unknown server.
+		t.fsm.Kind = description.LoadBalanced
+		t.publishTopologyDescriptionChangedEvent(description.Topology{}, t.fsm.Topology)
+
+		addr := address.Address(t.cfg.seedList[0]).Canonicalize()
+		if err := t.addServer(addr); err != nil {
+			t.serversLock.Unlock()
 			return err
 		}
-	}
-	t.serversLock.Unlock()
 
+		// Transition the server from Unknown to LoadBalancer.
+		newServerDesc := t.servers[addr].Description()
+		t.publishServerDescriptionChangedEvent(t.fsm.Servers[0], newServerDesc)
+
+		// Transition from LoadBalanced with an Unknown server to LoadBalanced with a LoadBalancer.
+		oldDesc := t.fsm.Topology
+		t.fsm.Servers = []description.Server{newServerDesc}
+		t.desc.Store(t.fsm.Topology)
+		t.publishTopologyDescriptionChangedEvent(oldDesc, t.fsm.Topology)
+	default:
+		// In non-LB mode, we only publish an initial TopologyDescriptionChanged event from Unknown with no servers to
+		// the current state (e.g. Unknown with one or more servers if we're discovering or Single with one server if
+		// we're connecting directly). Other events are published when state changes occur due to responses in the
+		// server monitoring goroutines.
+
+		newDesc := description.Topology{
+			Kind:                  t.fsm.Kind,
+			Servers:               t.fsm.Servers,
+			SessionTimeoutMinutes: t.fsm.SessionTimeoutMinutes,
+		}
+		t.desc.Store(newDesc)
+		t.publishTopologyDescriptionChangedEvent(description.Topology{}, t.fsm.Topology)
+		for _, a := range t.cfg.seedList {
+			addr := address.Address(a).Canonicalize()
+			err = t.addServer(addr)
+			if err != nil {
+				t.serversLock.Unlock()
+				return err
+			}
+		}
+	}
+
+	t.serversLock.Unlock()
 	if t.pollingRequired {
 		go t.pollSRVRecords()
 		t.pollingwg.Add(1)
@@ -193,14 +226,14 @@ func (t *Topology) Connect() error {
 
 	t.subscriptionsClosed = false // explicitly set in case topology was disconnected and then reconnected
 
-	atomic.StoreInt32(&t.connectionstate, connected)
+	atomic.StoreInt64(&t.connectionstate, connected)
 	return nil
 }
 
 // Disconnect closes the topology. It stops the monitoring thread and
 // closes all open subscriptions.
 func (t *Topology) Disconnect(ctx context.Context) error {
-	if !atomic.CompareAndSwapInt32(&t.connectionstate, connected, disconnecting) {
+	if !atomic.CompareAndSwapInt64(&t.connectionstate, connected, disconnecting) {
 		return ErrTopologyClosed
 	}
 
@@ -232,7 +265,7 @@ func (t *Topology) Disconnect(ctx context.Context) error {
 
 	t.desc.Store(description.Topology{})
 
-	atomic.StoreInt32(&t.connectionstate, disconnected)
+	atomic.StoreInt64(&t.connectionstate, disconnected)
 	t.publishTopologyClosedEvent()
 	return nil
 }
@@ -254,7 +287,7 @@ func (t *Topology) Kind() description.TopologyKind { return t.Description().Kind
 // and will be pre-populated with the current description.Topology.
 // Subscribe implements the driver.Subscriber interface.
 func (t *Topology) Subscribe() (*driver.Subscription, error) {
-	if atomic.LoadInt32(&t.connectionstate) != connected {
+	if atomic.LoadInt64(&t.connectionstate) != connected {
 		return nil, errors.New("cannot subscribe to Topology that is not connected")
 	}
 	ch := make(chan description.Topology, 1)
@@ -302,7 +335,7 @@ func (t *Topology) Unsubscribe(sub *driver.Subscription) error {
 // RequestImmediateCheck will send heartbeats to all the servers in the
 // topology right away, instead of waiting for the heartbeat timeout.
 func (t *Topology) RequestImmediateCheck() {
-	if atomic.LoadInt32(&t.connectionstate) != connected {
+	if atomic.LoadInt64(&t.connectionstate) != connected {
 		return
 	}
 	t.serversLock.Lock()
@@ -316,7 +349,7 @@ func (t *Topology) RequestImmediateCheck() {
 // server selection spec, and will time out after severSelectionTimeout or when the
 // parent context is done.
 func (t *Topology) SelectServer(ctx context.Context, ss description.ServerSelector) (driver.Server, error) {
-	if atomic.LoadInt32(&t.connectionstate) != connected {
+	if atomic.LoadInt64(&t.connectionstate) != connected {
 		return nil, ErrTopologyClosed
 	}
 	var ssTimeoutCh <-chan time.Time
@@ -378,54 +411,10 @@ func (t *Topology) SelectServer(ctx context.Context, ss description.ServerSelect
 	}
 }
 
-// SelectServerLegacy selects a server with given a selector. SelectServerLegacy complies with the
-// server selection spec, and will time out after severSelectionTimeout or when the
-// parent context is done.
-func (t *Topology) SelectServerLegacy(ctx context.Context, ss description.ServerSelector) (*SelectedServer, error) {
-	if atomic.LoadInt32(&t.connectionstate) != connected {
-		return nil, ErrTopologyClosed
-	}
-	var ssTimeoutCh <-chan time.Time
-
-	if t.cfg.serverSelectionTimeout > 0 {
-		ssTimeout := time.NewTimer(t.cfg.serverSelectionTimeout)
-		ssTimeoutCh = ssTimeout.C
-		defer ssTimeout.Stop()
-	}
-
-	sub, err := t.Subscribe()
-	if err != nil {
-		return nil, err
-	}
-	defer t.Unsubscribe(sub)
-
-	selectionState := newServerSelectionState(ss, ssTimeoutCh)
-	for {
-		suitable, err := t.selectServerFromSubscription(ctx, sub.Updates, selectionState)
-		if err != nil {
-			return nil, err
-		}
-
-		selected := suitable[rand.Intn(len(suitable))]
-		selectedS, err := t.FindServer(selected)
-		switch {
-		case err != nil:
-			return nil, err
-		case selectedS != nil:
-			return selectedS, nil
-		default:
-			// We don't have an actual server for the provided description.
-			// This could happen for a number of reasons, including that the
-			// server has since stopped being a part of this topology, or that
-			// the server selector returned no suitable servers.
-		}
-	}
-}
-
 // FindServer will attempt to find a server that fits the given server description.
 // This method will return nil, nil if a matching server could not be found.
 func (t *Topology) FindServer(selected description.Server) (*SelectedServer, error) {
-	if atomic.LoadInt32(&t.connectionstate) != connected {
+	if atomic.LoadInt64(&t.connectionstate) != connected {
 		return nil, ErrTopologyClosed
 	}
 	t.serversLock.Lock()
@@ -479,6 +468,13 @@ func (t *Topology) selectServerFromDescription(desc description.Topology,
 
 	if desc.CompatibilityErr != nil {
 		return nil, desc.CompatibilityErr
+	}
+
+	// If the topology kind is LoadBalanced, the LB is the only server and it is always considered selectable. The
+	// selectors exported by the driver should already return the LB as a candidate, so this but this check ensures that
+	// the LB is always selectable even if a user of the low-level driver provides a custom selector.
+	if desc.Kind == description.LoadBalanced {
+		return desc.Servers, nil
 	}
 
 	var allowed []description.Server
