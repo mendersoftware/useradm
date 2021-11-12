@@ -75,7 +75,12 @@ var (
 	}
 )
 
-func SetupMiddleware(api *rest.Api, mwtype string, authorizer authz.Authorizer, jwth jwt.Handler) error {
+func SetupMiddleware(
+	api *rest.Api,
+	mwtype string,
+	authorizer authz.Authorizer,
+	jwth jwt.Handler,
+) error {
 
 	l := log.New(log.Ctx{})
 

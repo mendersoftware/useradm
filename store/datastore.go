@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
+
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 )
@@ -59,7 +60,11 @@ type DataStore interface {
 
 	// deletes user tokens
 	DeleteTokensByUserId(ctx context.Context, userId string) error
-	DeleteTokensByUserIdExceptCurrentOne(ctx context.Context, userId string, tokenID oid.ObjectID) error
+	DeleteTokensByUserIdExceptCurrentOne(
+		ctx context.Context,
+		userId string,
+		tokenID oid.ObjectID,
+	) error
 
 	SaveSettings(ctx context.Context, s map[string]interface{}) error
 	GetSettings(ctx context.Context) (map[string]interface{}, error)
@@ -67,6 +72,7 @@ type DataStore interface {
 
 // TenantDataKeeper is an interface for executing administrative opeartions on
 // tenants
+//go:generate ../utils/mockgen.sh
 type TenantDataKeeper interface {
 	// MigrateTenant migrates given tenant to the latest DB version
 	MigrateTenant(ctx context.Context, id string) error

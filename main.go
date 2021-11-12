@@ -38,8 +38,9 @@ func doMain(args []string) {
 	app.Usage = "user administration service"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:        "config",
-			Usage:       "Configuration `FILE`. Supports JSON, TOML, YAML and HCL formatted configs.",
+			Name: "config",
+			Usage: "Configuration `FILE`." +
+				" Supports JSON, TOML, YAML and HCL formatted configs.",
 			Destination: &configPath,
 		},
 		cli.BoolFlag{
@@ -138,7 +139,7 @@ func doMain(args []string) {
 
 		return nil
 	}
-	app.Run(args)
+	_ = app.Run(args)
 }
 
 func runServer(args *cli.Context) error {
@@ -184,8 +185,13 @@ func runServer(args *cli.Context) error {
 }
 
 func runCreateUser(args *cli.Context) error {
-	err := commandCreateUser(config.Config,
-		args.String("username"), args.String("password"), args.String("user-id"), args.String("tenant-id"))
+	err := commandCreateUser(
+		config.Config,
+		args.String("username"),
+		args.String("password"),
+		args.String("user-id"),
+		args.String("tenant-id"),
+	)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 5)
 	}

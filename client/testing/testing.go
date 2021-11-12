@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ func NewMockServer(status int, body interface{}) (*httptest.Server, *TestReqData
 		w.WriteHeader(status)
 		if body != nil {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(json)
+			_, _ = w.Write(json)
 		}
 	}))
 	return srv, rdata

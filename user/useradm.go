@@ -276,7 +276,11 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 			return errors.Wrap(err, "tenant data out of sync: failed to get user from db")
 		}
 		if user == nil {
-			if compensateErr := ua.compensateTenantUser(ctx, u.ID, id.Tenant); compensateErr != nil {
+			if compensateErr := ua.compensateTenantUser(
+				ctx,
+				u.ID,
+				id.Tenant,
+			); compensateErr != nil {
 				tenantErr = compensateErr
 			}
 			return errors.Wrap(tenantErr, "tenant data out of sync")
@@ -291,7 +295,11 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 		if ua.verifyTenant && propagate {
 			// if the user could not be created in the useradm database
 			// try to remove the user from tenantadm
-			if compensateErr := ua.compensateTenantUser(ctx, u.ID, id.Tenant); compensateErr != nil {
+			if compensateErr := ua.compensateTenantUser(
+				ctx,
+				u.ID,
+				id.Tenant,
+			); compensateErr != nil {
 				err = errors.Wrap(err, compensateErr.Error())
 			}
 		}
@@ -320,7 +328,10 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 		} else if user == nil {
 			return store.ErrUserNotFound
 		}
-		if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.CurrentPassword)); err != nil {
+		if err = bcrypt.CompareHashAndPassword(
+			[]byte(user.Password),
+			[]byte(u.CurrentPassword),
+		); err != nil {
 			return store.ErrCurrentPasswordMismatch
 		}
 	}
@@ -376,7 +387,7 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 
 	l := log.FromContext(ctx)
 
-	if token.Claims.User != true {
+	if !token.Claims.User {
 		l.Errorf("not a user token")
 		return ErrUnauthorized
 	}
@@ -507,7 +518,12 @@ func (ua *UserAdm) DeleteTokens(ctx context.Context, tenantId, userId string) er
 	}
 
 	if err != nil && err != store.ErrTokenNotFound {
-		return errors.Wrapf(err, "failed to delete tokens for tenant: %v, user id: %v", tenantId, userId)
+		return errors.Wrapf(
+			err,
+			"failed to delete tokens for tenant: %v, user id: %v",
+			tenantId,
+			userId,
+		)
 	}
 
 	return nil

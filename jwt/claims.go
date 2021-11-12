@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -64,7 +64,8 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 
 // Valid checks if claims are valid. Returns error if validation fails.
 // Note that for now we're only using iss, exp, sub, scp.
-// Basic checks are done here, field correctness (e.g. issuer) - at the service level, where this info is available.
+// Basic checks are done here, field correctness (e.g. issuer) - at the service level, where this
+// info is available.
 func (c *Claims) Valid() error {
 	if c.Issuer == "" ||
 		c.Subject.Type() == oid.TypeNil ||

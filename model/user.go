@@ -83,7 +83,9 @@ func (u UserInternal) Validate() error {
 		return errors.New("password *or* password_hash must be provided")
 	} else if u.PasswordHash != "" {
 		if u.ShouldPropagate() {
-			return errors.New("password_hash is not supported with 'propagate'; use 'password' instead")
+			return errors.New(
+				"password_hash is not supported with 'propagate'; use 'password' instead",
+			)
 		}
 		u.User.Password = u.PasswordHash
 		defer func() { u.User.Password = "" }()

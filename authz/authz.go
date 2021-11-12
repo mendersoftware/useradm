@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -28,9 +28,12 @@ var (
 	ErrAuthzTokenInvalid = errors.New("invalid jwt")
 )
 
-// Authorizer defines the interface for checking the permissions of a given user(token) vs an action on a resource.
+// Authorizer defines the interface for checking the permissions of a given user(token) vs an action
+// on a resource.
+//go:generate ../utils/mockgen.sh
 type Authorizer interface {
-	// Authorize checks if the given user (identified by token) has permissions to an action on a resource.
+	// Authorize checks if the given user (identified by token) has permissions to an action on a
+	// resource.
 	// returns:
 	// nil if authorization is granted
 	// ErrAuthzUnauthorized otherwise

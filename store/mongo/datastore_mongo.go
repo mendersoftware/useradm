@@ -261,7 +261,10 @@ func (db *DataStoreMongo) GetUserById(ctx context.Context, id string) (*model.Us
 	return user, err
 }
 
-func (db *DataStoreMongo) GetUserAndPasswordById(ctx context.Context, id string) (*model.User, error) {
+func (db *DataStoreMongo) GetUserAndPasswordById(
+	ctx context.Context,
+	id string,
+) (*model.User, error) {
 	var user model.User
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
@@ -440,7 +443,11 @@ func (db *DataStoreMongo) DeleteTokensByUserId(ctx context.Context, userId strin
 }
 
 // deletes all user's tokens except the current one
-func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(ctx context.Context, userId string, tokenID oid.ObjectID) error {
+func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(
+	ctx context.Context,
+	userId string,
+	tokenID oid.ObjectID,
+) error {
 	c := db.client.
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl)
