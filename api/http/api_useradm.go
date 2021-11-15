@@ -15,7 +15,6 @@ package http
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -71,7 +70,11 @@ type UserAdmApiHandlers struct {
 }
 
 // return an ApiHandler for user administration and authentiacation app
-func NewUserAdmApiHandlers(userAdm useradm.App, db store.DataStore, jwth *jwt.JWTHandlerRS256) ApiHandler {
+func NewUserAdmApiHandlers(
+	userAdm useradm.App,
+	db store.DataStore,
+	jwth *jwt.JWTHandlerRS256,
+) ApiHandler {
 	return &UserAdmApiHandlers{
 		userAdm: userAdm,
 		db:      db,
@@ -171,7 +174,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		Secure:  true,
 		Expires: token.ExpiresAt.Time,
 	})
-	writer.Write([]byte(raw))
+	_, _ = writer.Write([]byte(raw))
 }
 
 func (u *UserAdmApiHandlers) AuthLogoutHandler(w rest.ResponseWriter, r *rest.Request) {
@@ -299,7 +302,7 @@ func (u *UserAdmApiHandlers) GetUsersHandler(w rest.ResponseWriter, r *rest.Requ
 		return
 	}
 
-	w.WriteJson(users)
+	_ = w.WriteJson(users)
 }
 
 func (u *UserAdmApiHandlers) GetTenantUsersHandler(w rest.ResponseWriter, r *rest.Request) {
@@ -336,7 +339,7 @@ func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Reque
 		return
 	}
 
-	w.WriteJson(user)
+	_ = w.WriteJson(user)
 }
 
 func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Request) {
@@ -460,20 +463,6 @@ func parseUserUpdate(r *rest.Request) (*model.UserUpdate, error) {
 	return &userUpdate, nil
 }
 
-func readBodyRaw(r *rest.Request) ([]byte, error) {
-	content, err := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return content, nil
-}
-
-type newTenantRequest struct {
-	TenantID string `json:"tenant_id" valid:"required"`
-}
-
 func (u *UserAdmApiHandlers) CreateTenantHandler(w rest.ResponseWriter, r *rest.Request) {
 	ctx := r.Context()
 
@@ -525,7 +514,13 @@ func (u *UserAdmApiHandlers) DeleteTokensHandler(w rest.ResponseWriter, r *rest.
 
 	tenantId := r.URL.Query().Get("tenant_id")
 	if tenantId == "" {
-		rest_utils.RestErrWithLog(w, r, l, errors.New("tenant_id must be provided"), http.StatusBadRequest)
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			errors.New("tenant_id must be provided"),
+			http.StatusBadRequest,
+		)
 		return
 	}
 	userId := r.URL.Query().Get("user_id")
@@ -548,7 +543,13 @@ func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.
 
 	err := r.DecodeJsonPayload(&settings)
 	if err != nil {
-		rest_utils.RestErrWithLog(w, r, l, errors.New("cannot parse request body as json"), http.StatusBadRequest)
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			errors.New("cannot parse request body as json"),
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -572,5 +573,5 @@ func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.R
 		return
 	}
 
-	w.WriteJson(settings)
+	_ = w.WriteJson(settings)
 }

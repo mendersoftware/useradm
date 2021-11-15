@@ -26,6 +26,7 @@ var (
 )
 
 // JWTHandler jwt generator/verifier
+//go:generate ../utils/mockgen.sh
 type Handler interface {
 	ToJWT(t *Token) (string, error)
 	// FromJWT parses the token and does basic validity checks (Claims.Valid().

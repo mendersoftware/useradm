@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@ package mongo
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
+
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
+
 	mstore "github.com/mendersoftware/go-lib-micro/store"
-	"github.com/pkg/errors"
 )
 
 const (

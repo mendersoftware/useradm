@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -21,21 +21,18 @@ import (
 	"github.com/mendersoftware/useradm/scope"
 )
 
-const (
-	ServiceName = "useradm"
-
-	ResourceLogin       = ServiceName + ":auth:login"
-	ResourceVerify      = ServiceName + ":auth:verify"
-	ResourceInitialUser = ServiceName + ":users:initial"
-)
-
 // SimpleAuthz is a trivial authorizer, mostly ensuring
 // proper permission check for the 'create initial user' case.
 type SimpleAuthz struct {
 }
 
 // Authorize makes SimpleAuthz implement the Authorizer interface.
-func (sa *SimpleAuthz) Authorize(_ context.Context, token *jwt.Token, resource, action string) error {
+func (sa *SimpleAuthz) Authorize(
+	_ context.Context,
+	token *jwt.Token,
+	resource,
+	action string,
+) error {
 	if token == nil {
 		return authz.ErrAuthzUnauthorized
 	}

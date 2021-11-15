@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@ const (
 )
 
 // AuthzMiddleware checks the authorization on a given request.
-// It retrieves the token + requested resource and action, and delegates the authz check to an Authorizer.
+// It retrieves the token + requested resource and action, and delegates the authz check to an
+// Authorizer.
 type AuthzMiddleware struct {
 	Authz      Authorizer
 	ResFunc    ResourceActionExtractor

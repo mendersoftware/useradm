@@ -59,7 +59,13 @@ type ClientRunner interface {
 	CheckHealth(ctx context.Context) error
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)
 	CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error
-	UpdateUser(ctx context.Context, tenantId, userId string, u *UserUpdate, client apiclient.HttpRunner) error
+	UpdateUser(
+		ctx context.Context,
+		tenantId,
+		userId string,
+		u *UserUpdate,
+		client apiclient.HttpRunner,
+	) error
 	DeleteUser(ctx context.Context, tenantId, clientId string, client apiclient.HttpRunner) error
 }
 
@@ -134,7 +140,11 @@ func (c *Client) CheckHealth(ctx context.Context) error {
 	return &apiErr
 }
 
-func (c *Client) GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error) {
+func (c *Client) GetTenant(
+	ctx context.Context,
+	username string,
+	client apiclient.HttpRunner,
+) (*Tenant, error) {
 	usernameQ := url.QueryEscape(username)
 	req, err := http.NewRequest(http.MethodGet,
 		JoinURL(c.conf.TenantAdmAddr, GetTenantsUri+"?username="+url.QueryEscape(username)),
@@ -155,7 +165,10 @@ func (c *Client) GetTenant(ctx context.Context, username string, client apiclien
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("GET /tenants request failed with unexpected status %v", rsp.StatusCode)
+		return nil, errors.Errorf(
+			"GET /tenants request failed with unexpected status %v",
+			rsp.StatusCode,
+		)
 	}
 
 	tenants := []Tenant{}
@@ -211,7 +224,13 @@ func (c *Client) CreateUser(ctx context.Context, user *User, client apiclient.Ht
 	}
 }
 
-func (c *Client) UpdateUser(ctx context.Context, tenantId, userId string, u *UserUpdate, client apiclient.HttpRunner) error {
+func (c *Client) UpdateUser(
+	ctx context.Context,
+	tenantId,
+	userId string,
+	u *UserUpdate,
+	client apiclient.HttpRunner,
+) error {
 	// prepare request body
 	json, err := json.Marshal(u)
 	if err != nil {
@@ -250,11 +269,19 @@ func (c *Client) UpdateUser(ctx context.Context, tenantId, userId string, u *Use
 	case http.StatusNotFound:
 		return ErrUserNotFound
 	default:
-		return errors.Errorf("PUT /tenants/:id/users/:id request failed with unexpected status %v", rsp.StatusCode)
+		return errors.Errorf(
+			"PUT /tenants/:id/users/:id request failed with unexpected status %v",
+			rsp.StatusCode,
+		)
 	}
 }
 
-func (c *Client) DeleteUser(ctx context.Context, tenantId, userId string, client apiclient.HttpRunner) error {
+func (c *Client) DeleteUser(
+	ctx context.Context,
+	tenantId,
+	userId string,
+	client apiclient.HttpRunner,
+) error {
 
 	repl := strings.NewReplacer(":tid", tenantId, ":uid", userId)
 	uri := repl.Replace(TenantsUsersUri)
@@ -276,15 +303,17 @@ func (c *Client) DeleteUser(ctx context.Context, tenantId, userId string, client
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusNoContent {
-		return errors.Errorf("DELETE %s request failed with unexpected status %v", uri, rsp.StatusCode)
+		return errors.Errorf(
+			"DELETE %s request failed with unexpected status %v",
+			uri,
+			rsp.StatusCode,
+		)
 	}
 	return nil
 }
 
 func JoinURL(base, url string) string {
-	if strings.HasPrefix(url, "/") {
-		url = url[1:]
-	}
+	url = strings.TrimPrefix(url, "/")
 	if !strings.HasSuffix(base, "/") {
 		base = base + "/"
 	}
