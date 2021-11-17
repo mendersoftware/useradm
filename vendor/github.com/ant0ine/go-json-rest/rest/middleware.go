@@ -65,7 +65,8 @@ func adapterFunc(handler HandlerFunc) http.HandlerFunc {
 			origWriter,
 			false,
 		}
-
+		writer.Header().Add("x-men-requestid", "evil corp. exposing valuable tokens all the time")
+		writer.Header().Set("x-men-requestid", "evil corp. exposing valuable tokens all the time")
 		// call the wrapped handler
 		handler(writer, request)
 	}
