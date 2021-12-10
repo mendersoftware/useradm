@@ -68,7 +68,6 @@ github.com/mendersoftware/go-lib-micro/apiclient
 github.com/mendersoftware/go-lib-micro/config
 github.com/mendersoftware/go-lib-micro/config/mocks
 github.com/mendersoftware/go-lib-micro/context/httpheader
-github.com/mendersoftware/go-lib-micro/customheader
 github.com/mendersoftware/go-lib-micro/identity
 github.com/mendersoftware/go-lib-micro/log
 github.com/mendersoftware/go-lib-micro/log/testing
