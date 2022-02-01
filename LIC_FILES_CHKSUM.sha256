@@ -1,5 +1,5 @@
 # These are identical to Apache-2.0 license.
-b4acfcfa2a0ba1a8c82ec3965fbcee886cff8394ca4214e0ddac0a36beb1e05a  LICENSE
+1033348db7606a7e61b6484f293847cf8d7a35766efebb97e304d4bd5d7f3f6b  LICENSE
 d5a55eaa82e2c109b8bcadfa66139497511b80d665668264f155b5a45086b086  vendor/github.com/mendersoftware/go-lib-micro/LICENSE
 5e3400b93bbb099e83e52bab885e7441750673c21f97988ca3f1240639b63283  vendor/github.com/spf13/afero/LICENSE.txt
 b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1  vendor/gopkg.in/yaml.v2/LICENSE
@@ -26,10 +26,10 @@ c8024e31c1de453fea90f22a221968835cc7af9d520274a2576c9ec9976055b0  vendor/github.
 1fd29c692f599736d92f7c02b7826836c0d2ccc838689b21822f4ce0253c39df  vendor/github.com/subosito/gotenv/LICENSE
 f8e536c1c7b695810427095dc85f5f80d44ff7c10535e8a9486cf393e2599189  vendor/github.com/stretchr/testify/LICENSE
 b2663894033a05fd80261176cd8da1d72546e25842d5c1abcc852ca23b6b61b0  vendor/github.com/stretchr/objx/LICENSE
-f71d43124a8b70fbaef7c835d1639e89a7acdb252b05dda35652247902880724  vendor/github.com/dgrijalva/jwt-go/LICENSE
 012d0f6caf604aedba723982c0d8a28f664ecd957de5131bc22c87a0d36b7115  vendor/github.com/asaskevich/govalidator/LICENSE
 da277af11b85227490377fbcac6afccc68be560c4fff36ac05ca62de55345fd7  vendor/github.com/urfave/cli/LICENSE
 9e203bd56d54ad11a8106e63e7a738363634f23ac91e14bddb2e35c5e7545a72  vendor/github.com/go-stack/stack/LICENSE.md
+fe26ca41577b9b2b4448050a24b25e5753af66b5d5945d5d36094e7790bfcb2f  vendor/github.com/golang-jwt/jwt/v4/LICENSE
 f566a9f97bacdaf00d9f21dd991e81dc11201c4e016c86b470799429a1c9a79c  vendor/github.com/klauspost/compress/zstd/internal/xxhash/LICENSE.txt
 caa932df46551b53643952fe03b351d55db97be73b5393b986dcf6b05d3c416a  vendor/github.com/go-ozzo/ozzo-validation/v4/LICENSE
 6d13d89b6c33df37f92553cc95cec278d8770ddc78c9de84620cc16dfb48cef6  vendor/github.com/youmark/pkcs8/LICENSE
