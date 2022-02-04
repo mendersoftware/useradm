@@ -10,6 +10,11 @@ host: "mender-useradm:8080"
 schemes:
   - http
 
+consumes:
+  - application/json
+produces:
+  - application/json
+
 paths:
   /health:
     get:
