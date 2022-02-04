@@ -1,12 +1,12 @@
-swagger: '2.0'
+swagger: "2.0"
 info:
-  version: '0.1'
+  version: "0.1"
   title: User administration and authentication
   description: |
     An API for user administration and user authentication handling. Not exposed via the API Gateway - intended for internal use only.
 
-basePath: '/api/internal/v1/useradm'
-host: 'mender-useradm:8080'
+basePath: "/api/internal/v1/useradm"
+host: "mender-useradm:8080"
 schemes:
   - http
 
@@ -20,22 +20,22 @@ paths:
       responses:
         204:
           description: >
-              Service is healthy and all dependencies are up and running.
+            Service is healthy and all dependencies are up and running.
         500:
           description: >
-              Unexpected internal error
+            Unexpected internal error
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
           examples:
             application/json:
               error: "internal error"
               request_id: "ffd712be-d697-4cb7-814b-88ff1e2eb5f6"
         503:
           description: >
-              Service unhealthy / not ready to accept traffic. At least one
-              dependency is not running.
+            Service unhealthy / not ready to accept traffic. At least one
+            dependency is not running.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
           examples:
             application/json:
               error: "error reaching MongoDB: context deadline exceeded"
@@ -47,16 +47,16 @@ paths:
       tags:
         - Internal API
       summary: >
-          Trivial endpoint that unconditionally returns an empty 200 response
-          whenever the API handler is running correctly.
+        Trivial endpoint that unconditionally returns an empty 200 response
+        whenever the API handler is running correctly.
       responses:
         204:
           description: Service is up and running.
         500:
           description: >
-              Internal API error
+            Internal API error
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
 
   /auth/verify:
     post:
@@ -99,19 +99,19 @@ paths:
         400:
           description: Missing or malformed request parameters.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
         401:
           description: Verification failed, authentication should not be granted.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
         403:
           description: Token has expired - apply for a new one.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
         500:
           description: Unexpected error.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
   /tenants:
     post:
       operationId: Create Tenant
@@ -132,7 +132,7 @@ paths:
         500:
           description: Unexpected error.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
   /tenants/{tenant_id}/users:
     post:
       operationId: Create User
@@ -156,19 +156,19 @@ paths:
           description: The user was successfully created.
         400:
           description: |
-              The request body is malformed.
+            The request body is malformed.
           schema:
             $ref: "#/definitions/Error"
         404:
           description: |
-                Tenant with given ID does not exist.
+            Tenant with given ID does not exist.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
         422:
           description: |
-                User name or ID is duplicated.
+            User name or ID is duplicated.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
         500:
           description: Internal server error.
           schema:
@@ -231,12 +231,12 @@ paths:
             title: ListOfUsers
             type: array
             items:
-              $ref: '#/definitions/User'
+              $ref: "#/definitions/User"
         401:
           description: |
-                The user cannot be granted authentication.
+            The user cannot be granted authentication.
           schema:
-            $ref: '#/definitions/Error'
+            $ref: "#/definitions/Error"
         500:
           description: Internal server error.
           schema:
@@ -249,7 +249,7 @@ paths:
         - Internal API
       summary: Delete a user
       description: |
-         Remove a user from the tenant.
+        Remove a user from the tenant.
       parameters:
         - name: tenant_id
           in: path
@@ -281,10 +281,10 @@ paths:
         - Internal API
       summary: Delete all user tokens
       description: |
-         This endpoint is designed to be used for tenant account suspension purpose.
-         When only tenant_id parameter is set, tokens for all tenant users will be removed.
-         It is also possible to remove tokens for user with given user_id by setting
-         optional user_id parameter.
+        This endpoint is designed to be used for tenant account suspension purpose.
+        When only tenant_id parameter is set, tokens for all tenant users will be removed.
+        It is also possible to remove tokens for user with given user_id by setting
+        optional user_id parameter.
       parameters:
         - name: tenant_id
           in: query
@@ -340,12 +340,12 @@ definitions:
         type: string
       created_ts:
         description: |
-            Server-side timestamp of the user creation.
+          Server-side timestamp of the user creation.
         type: string
         format: date-time
       updated_ts:
         description: |
-            Server-side timestamp of the last user information update.
+          Server-side timestamp of the last user information update.
         type: string
         format: date-time
     required:
@@ -378,6 +378,6 @@ definitions:
       - email
       - password
     example:
-      email: 'user@acme.com'
-      password: 'secret'
+      email: "user@acme.com"
+      password: "secret"
       propagate: false
