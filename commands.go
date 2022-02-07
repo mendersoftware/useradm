@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/mendersoftware/useradm/client/tenant"
 	. "github.com/mendersoftware/useradm/config"
@@ -36,12 +36,12 @@ import (
 func safeReadPassword() (string, error) {
 	stdinfd := int(os.Stdin.Fd())
 
-	if !terminal.IsTerminal(stdinfd) {
+	if !term.IsTerminal(stdinfd) {
 		return "", errors.New("stdin is not a terminal")
 	}
 
 	fmt.Fprintf(os.Stderr, "Enter password: ")
-	raw, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	raw, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read password")
 	}

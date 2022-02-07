@@ -1,6 +1,6 @@
 module github.com/mendersoftware/useradm
 
-go 1.14
+go 1.16
 
 require (
 	github.com/ant0ine/go-json-rest v3.3.3-0.20170913041208-ebb33769ae01+incompatible
@@ -13,4 +13,5 @@ require (
 	github.com/urfave/cli v1.22.5
 	go.mongodb.org/mongo-driver v1.8.3
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
+	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
 )
