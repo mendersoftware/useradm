@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
 import json
 import pytest
 import uuid
+
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from client import CliClient, ManagementApiClient, InternalApiClient
+
+import tenantadm
 
 
 def make_auth(sub, tenant=None):
@@ -119,12 +122,14 @@ def init_users_mt(cli, api_client_mgmt, mongo):
     tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
         for i in range(5):
-            cli.create_user(
-                "user-{}-{}@foo.com".format(i, t),
-                "correcthorsebatterystaple",
-                None,
-                t,
-            )
+            user = {
+                "email": f"user={i}-{t}@foo.com",
+                "password": "correcthorsebatterystaple",
+            }
+            with tenantadm.run_fake_create_user(user):
+                cli.create_user(
+                    user["email"], user["password"], None, t,
+                )
         tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
@@ -138,12 +143,14 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
         for i in range(5):
-            cli.create_user(
-                "user-{}-{}@foo.com".format(i, t),
-                "correcthorsebatterystaple",
-                None,
-                t,
-            )
+            user = {
+                "email": f"user={i}-{t}@foo.com",
+                "password": "correcthorsebatterystaple",
+            }
+            with tenantadm.run_fake_create_user(user):
+                cli.create_user(
+                    user["email"], user["password"], tenant_id=t,
+                )
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
     mongo_cleanup(mongo)
