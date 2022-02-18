@@ -51,6 +51,7 @@ func safeReadPassword() (string, error) {
 }
 
 func commandCreateUser(c config.Reader, username, password, userId, tenantId string) error {
+	ctx := context.Background()
 	l := log.NewEmpty()
 
 	l.Debugf("create user '%s'", username)
@@ -90,9 +91,11 @@ func commandCreateUser(c config.Reader, username, password, userId, tenantId str
 		})
 
 		ua = ua.WithTenantVerification(tc)
+		ctx = identity.WithContext(ctx, &identity.Identity{
+			Tenant: tenantId,
+		})
 	}
 
-	ctx := getTenantContext(tenantId)
 	if err := ua.CreateUser(ctx, &u); err != nil {
 		return errors.Wrap(err, "creating user failed")
 	}

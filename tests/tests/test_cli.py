@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -113,7 +113,10 @@ class TestCli:
 
 class TestCliEnterprise:
     def test_create_user(self, api_client_mgmt, cli):
-        cli.create_user("foo-tenant1id@bar.com", "1234youseeme", tenant_id="tenant1id")
+        user = {"email": "foo-tenant1id@bar.com", "password": "1234youseeme"}
+
+        with tenantadm.run_fake_create_user(user):
+            cli.create_user(user["email"], user["password"], tenant_id="tenant1id")
 
         users = api_client_mgmt.get_users(make_auth("foo", tenant="tenant1id"))
         assert [user for user in users if user.email == "foo-tenant1id@bar.com"]
@@ -124,52 +127,54 @@ class TestCliEnterprise:
         assert not other_tenant_users
 
     def test_create_user_login(self, api_client_mgmt, cli, clean_db):
-        email = "foo@bar.com"
-        password = "1234youseeme"
-        tenant = "tenant1id"
+        user = {"email": "foo@bar.com", "password": "1234youseeme"}
 
-        users_db = {tenant: [email]}
+        users_db = {"tenant1id": [user["email"]]}
 
-        cli.create_user(email, password, tenant_id=tenant)
+        with tenantadm.run_fake_create_user(user):
+            cli.create_user(user["email"], user["password"], tenant_id="tenant1id")
 
         with tenantadm.run_fake_user_tenants(users_db):
-            _, r = api_client_mgmt.login(email, password)
+            _, r = api_client_mgmt.login(user["email"], user["password"])
             assert r.status_code == 200
 
             token = r.text
             assert token
             _, claims, _ = explode_jwt(token)
-            assert claims["mender.tenant"] == tenant
+            assert claims["mender.tenant"] == "tenant1id"
 
     def test_set_password(self, api_client_mgmt, cli, clean_db):
-        password = "1234youseeme"
-        new_password = "5678youseeme"
-        email = "foo@bar.com"
-        tenant = "tenant1id"
+        user = {
+            "password": "1234youseeme",
+            "new_password": "5678youseeme",
+            "email": "foo@bar.com",
+            "tenant": "tenant1id",
+        }
 
-        users_db = {tenant: [email]}
+        users_db = {user["tenant"]: [user["email"]]}
 
-        cli.create_user(email, password, tenant_id=tenant)
+        with tenantadm.run_fake_create_user(user):
+            cli.create_user(user["email"], user["password"], tenant_id=user["tenant"])
 
         with tenantadm.run_fake_user_tenants(users_db):
-            _, r = api_client_mgmt.login(email, password)
+            _, r = api_client_mgmt.login(user["email"], user["password"])
             assert r.status_code == 200
 
-            cli.set_password(email, new_password, tenant)
+            cli.set_password(user["email"], user["new_password"], user["tenant"])
             status_code = 200
             try:
-                _, r = api_client_mgmt.login(email, password)
+                _, r = api_client_mgmt.login(user["email"], user["password"])
             except bravado.exception.HTTPError as e:
                 assert e.response.status_code == 401
                 status_code = 401
             assert status_code == 401
-            _, r = api_client_mgmt.login(email, new_password)
+            _, r = api_client_mgmt.login(user["email"], user["new_password"])
             assert r.status_code == 200
 
             token = r.text
             assert token
             _, claims, _ = explode_jwt(token)
-            assert claims["mender.tenant"] == tenant
+            assert claims["mender.tenant"] == user["tenant"]
 
     def test_migrate(self, cli, clean_db, mongo):
         cli.migrate(tenant_id="0000000000000000000000")

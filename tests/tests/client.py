@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,14 +13,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os.path
 import logging
+import os.path
 import pytest
-import common
-from bravado.swagger_model import load_file
-from bravado.client import SwaggerClient, RequestsClient
+import socket
 import subprocess
+
+import docker
 import requests
+
+from bravado.client import SwaggerClient, RequestsClient
+from bravado.swagger_model import load_file
+
+import common
 
 
 class ApiClient:
@@ -166,7 +171,26 @@ class ManagementApiClient(ApiClient):
 
 
 class CliClient:
-    cmd = "/testing/useradm"
+    cmd = "useradm"
+
+    def __init__(self):
+        self.client = docker.from_env()
+        # Inspect the container we're running in
+        hostname = socket.gethostname()
+        res = self.client.containers.list(filters={"id": hostname}, limit=1)
+        assert len(res) > 0, "Failed to resolve my own container!"
+        _self = res[0]
+
+        self.useradm = self.client.containers.list(
+            filters={
+                "label": [
+                    "com.docker.compose.project=%s"
+                    % _self.labels.get("com.docker.compose.project"),
+                    "com.docker.compose.service=mender-useradm",
+                ]
+            },
+            limit=1,
+        )[0]
 
     def create_user(self, name, pwd, user_id=None, tenant_id=None):
         args = [self.cmd, "create-user", "--username", name, "--password", pwd]
@@ -177,7 +201,8 @@ class CliClient:
         if tenant_id is not None:
             args.extend(["--tenant-id", tenant_id])
 
-        subprocess.run(args, check=True)
+        res = self.useradm.exec_run(args)
+        assert res.exit_code == 0, res
 
     def set_password(self, name, pwd, tenant_id=None):
         args = [self.cmd, "set-password", "--username", name, "--password", pwd]
@@ -185,7 +210,8 @@ class CliClient:
         if tenant_id is not None:
             args.extend(["--tenant-id", tenant_id])
 
-        subprocess.run(args, check=True)
+        res = self.useradm.exec_run(args)
+        assert res.exit_code == 0, res
 
     def migrate(self, tenant_id=None):
         args = [self.cmd, "migrate"]
@@ -193,4 +219,5 @@ class CliClient:
         if tenant_id:
             args += ["--tenant", tenant_id]
 
-        subprocess.run(args, check=True)
+        res = self.useradm.exec_run(args)
+        assert res.exit_code == 0, res
