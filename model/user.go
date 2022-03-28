@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -54,8 +54,12 @@ type User struct {
 	// timestamp of the last user information update
 	UpdatedTs *time.Time `json:"updated_ts,omitempty" bson:"updated_ts,omitempty"`
 
-	// LoginTs is the timestamp of the last login for this user.
+	// LoginTs is the timestamp of the last successful login for this user.
 	LoginTs *time.Time `json:"login_ts,omitempty" bson:"login_ts,omitempty"`
+
+	// LoginAttemptTS records the last login attempt timestamp used for
+	// rate limiting.
+	LoginAttemptTS *time.Time `json:"-" bson:"login_attempt_ts,omitempty"`
 }
 
 func (u User) Validate() error {
@@ -118,6 +122,8 @@ type UserUpdate struct {
 	Token *jwt.Token `json:"-" bson:"-"`
 
 	LoginTs *time.Time `json:"-" bson:"login_ts,omitempty"`
+
+	LoginAttemptTs *time.Time `json:"-" bson:"login_attempt_ts,omitempty"`
 }
 
 func (u UserUpdate) Validate() error {

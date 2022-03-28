@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -328,6 +328,35 @@ func TestUserAdmLogin(t *testing.T) {
 				ExpirationTime: 10,
 			},
 		},
+		"error, rate limited": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbUser: &model.User{
+				ID:       oid.NewUUIDv5("1234").String(),
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+				LoginAttemptTS: func() *time.Time {
+					now := time.Now()
+					return &now
+				}(),
+			},
+			dbUserErr: nil,
+
+			outErr: LoginRateError(time.Hour),
+			outToken: &jwt.Token{
+				Claims: jwt.Claims{
+					Subject: oid.NewUUIDv5("1234"),
+					Scope:   scope.All,
+				},
+			},
+
+			config: Config{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+				LoginRateLimit: time.Hour,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -335,7 +364,9 @@ func TestUserAdmLogin(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
+			db.On("GetUserForLogin", ContextMatcher(),
+				tc.inEmail, mock.AnythingOfType("time.Time")).
+				Return(tc.dbUser, tc.dbUserErr)
 
 			db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
 			if tc.dbUser != nil {

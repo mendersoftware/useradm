@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -38,9 +38,10 @@ const (
 	DbTokensColl   = "tokens"
 	DbSettingsColl = "settings"
 
-	DbUserEmail   = "email"
-	DbUserPass    = "password"
-	DbUserLoginTs = "login_ts"
+	DbUserEmail          = "email"
+	DbUserPass           = "password"
+	DbUserLoginTs        = "login_ts"
+	DbUserLoginAttemptTS = "login_attempt_ts"
 
 	DbUniqueEmailIndexName = "email_1"
 )
@@ -192,6 +193,9 @@ func (db *DataStoreMongo) UpdateUser(
 				"failed to generate password hash")
 		}
 		u.Password = string(hash)
+		// Reset rate limit timestamp (bson uses unix timestamps)
+		loginAttemptTS := time.Unix(0, 0)
+		u.LoginAttemptTs = &loginAttemptTS
 	}
 
 	now := time.Now().UTC()
@@ -232,6 +236,36 @@ func (db *DataStoreMongo) UpdateLoginTs(ctx context.Context, id string) error {
 		}},
 	)
 	return err
+}
+
+func (db *DataStoreMongo) GetUserForLogin(
+	ctx context.Context,
+	email string,
+	loginTS time.Time,
+) (*model.User, error) {
+	var user model.User
+
+	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUsersColl).
+		FindOneAndUpdate(ctx,
+			bson.D{{Key: DbUserEmail, Value: email}},
+			bson.D{{Key: "$set", Value: bson.D{
+				{Key: DbUserLoginAttemptTS, Value: loginTS},
+			}}},
+			mopts.FindOneAndUpdate().
+				SetReturnDocument(mopts.Before),
+		).
+		Decode(&user)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		} else {
+			return nil, errors.Wrap(err, "failed to fetch user")
+		}
+	}
+
+	return &user, nil
 }
 
 func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {

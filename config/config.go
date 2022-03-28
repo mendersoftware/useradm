@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -51,6 +51,9 @@ const (
 
 	SettingDbUsername = "mongo_username"
 	SettingDbPassword = "mongo_password"
+
+	SettingLoginRateLimit        = "login_rate_limit"
+	SettingLoginRateLimitDefault = "1s"
 )
 
 var (
@@ -65,5 +68,6 @@ var (
 		{Key: SettingTenantAdmAddr, Value: SettingTenantAdmAddrDefault},
 		{Key: SettingDbSSL, Value: SettingDbSSLDefault},
 		{Key: SettingDbSSLSkipVerify, Value: SettingDbSSLSkipVerifyDefault},
+		{Key: SettingLoginRateLimit, Value: SettingLoginRateLimitDefault},
 	}
 )

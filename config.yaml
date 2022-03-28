@@ -54,3 +54,11 @@ listen: :8080
 # Overwrites password set in connection string.
 # Defaults to: none
 # mongo_password: secret
+
+## Login rate limit
+## Defines the number of milliseconds the user MUST wait between unsuccessful
+## login attempts. For string values, time.ParseDuration is used for parsing
+## duration, numerical values are treated as nanoseconds.
+## Defaults to: 1s (1 second)
+## Overwrite with environment variable: USERADM_LOGIN_RATE_LIMIT
+# login_rate_limit: 1s

@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package store
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 
@@ -47,6 +48,8 @@ type DataStore interface {
 	UpdateLoginTs(ctx context.Context, id string) error
 	//GetUserByEmail returns nil,nil if not found
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	// GetUserForLogin
+	GetUserForLogin(ctx context.Context, email string, loginTS time.Time) (*model.User, error)
 	GetUserById(ctx context.Context, id string) (*model.User, error)
 	GetUserAndPasswordById(ctx context.Context, id string) (*model.User, error)
 	GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error)

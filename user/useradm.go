@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package useradm
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
@@ -40,6 +41,15 @@ var (
 	ErrTenantAccountSuspended = errors.New("tenant account suspended")
 	ErrInvalidTenantID        = errors.New("invalid tenant id")
 )
+
+type LoginRateError time.Duration
+
+func (r LoginRateError) Error() string {
+	return fmt.Sprintf(
+		"login request blocked: wait %s before retrying",
+		time.Duration(r),
+	)
+}
 
 const (
 	TenantStatusSuspended = "suspended"
@@ -74,6 +84,8 @@ type Config struct {
 	Issuer string
 	// token expiration time
 	ExpirationTime int64
+	// The duration between login attempts.
+	LoginRateLimit time.Duration
 }
 
 type ApiClientGetter func() apiclient.HttpRunner
@@ -150,14 +162,15 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 	}
 
 	//get user
-	user, err := u.db.GetUserByEmail(ctx, email)
-
+	now := time.Now()
+	user, err := u.db.GetUserForLogin(ctx, email, now)
 	if user == nil && err == nil {
 		return nil, ErrUnauthorized
-	}
-
-	if err != nil {
+	} else if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to get user")
+	} else if user.LoginAttemptTS != nil &&
+		now.Sub(*user.LoginAttemptTS) < u.config.LoginRateLimit {
+		return nil, LoginRateError(u.config.LoginRateLimit)
 	}
 
 	//verify password
@@ -314,7 +327,7 @@ func (ua *UserAdm) compensateTenantUser(ctx context.Context, userId, tenantId st
 	err := ua.cTenant.DeleteUser(ctx, tenantId, userId, ua.clientGetter())
 
 	if err != nil {
-		return errors.Wrap(err, "faield to delete tenant user")
+		return errors.Wrap(err, "failed to delete tenant user")
 	}
 
 	return nil

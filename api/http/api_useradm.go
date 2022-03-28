@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -154,7 +154,15 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		case err == useradm.ErrUnauthorized || err == useradm.ErrTenantAccountSuspended:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnauthorized)
 		default:
-			rest_utils.RestErrWithLogInternal(w, r, l, err)
+			if _, ok := err.(useradm.LoginRateError); ok {
+				rest_utils.RestErrWithWarningMsg(w, r, l,
+					err,
+					http.StatusTooManyRequests,
+					"login attempt rate limited",
+				)
+			} else {
+				rest_utils.RestErrWithLogInternal(w, r, l, err)
+			}
 		}
 		return
 	}

@@ -64,6 +64,10 @@ paths:
           description: Unauthorized.
           schema:
             $ref: '#/definitions/Error'
+        429:
+          description: Login attempt rate limited
+          schema:
+            $def: '#/defineitions/Error'
         500:
           description: Internal server error.
           schema:

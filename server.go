@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ func RunServer(c config.Reader) error {
 		useradm.Config{
 			Issuer:         c.GetString(SettingJWTIssuer),
 			ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+			LoginRateLimit: c.GetDuration(SettingLoginRateLimit),
 		})
 
 	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {
