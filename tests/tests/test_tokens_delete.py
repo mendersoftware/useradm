@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 import json
 from common import (
     init_users,
-    init_users_f,
+    init_users,
     init_users_mt,
-    init_users_mt_f,
+    init_users_mt,
     cli,
     api_client_mgmt,
     api_client_int,
@@ -61,13 +61,13 @@ def verify_tokens(api_client_int, tokens, removed_tenant=None, removed_user=None
 
 
 @pytest.fixture(scope="function")
-def user_tokens_mt_f(init_users_mt_f, api_client_mgmt):
+def user_tokens_mt_f(init_users_mt, api_client_mgmt):
     tokens = []
     password = "correcthorsebatterystaple"
 
     users_db = {
         tenant: [user.email for user in users]
-        for tenant, users in init_users_mt_f.items()
+        for tenant, users in init_users_mt.items()
     }
 
     with tenantadm.run_fake_user_tenants(users_db):

@@ -17,9 +17,9 @@ import time
 
 from common import (
     init_users,
-    init_users_f,
+    init_users,
     init_users_mt,
-    init_users_mt_f,
+    init_users_mt,
     clean_db,
     cli,
     api_client_mgmt,
@@ -336,74 +336,74 @@ class TestManagementApiPutUserBase:
 
 
 class TestManagementApiPutUser(TestManagementApiPutUserBase):
-    def test_ok_email(self, api_client_mgmt, init_users_f):
+    def test_ok_email(self, api_client_mgmt, init_users):
         update = {"email": "unique1@foo.com"}
-        self._do_test_ok_email(api_client_mgmt, init_users_f, init_users_f[0], update)
+        self._do_test_ok_email(api_client_mgmt, init_users, init_users[0], update)
 
-    def test_ok_pass(self, api_client_mgmt, init_users_f):
+    def test_ok_pass(self, api_client_mgmt, init_users):
         update = {
             "current_password": "correcthorsebatterystaple",
             "password": "secretpassword123",
         }
         self._do_test_ok_email_or_pass(
-            api_client_mgmt, init_users_f, init_users_f[0], update
+            api_client_mgmt, init_users, init_users[0], update
         )
 
-    def test_ok_email_and_pass(self, api_client_mgmt, init_users_f):
+    def test_ok_email_and_pass(self, api_client_mgmt, init_users):
         update = {
             "email": "definitelyunique@foo.com",
             "current_password": "correcthorsebatterystaple",
             "password": "secretpassword123",
         }
         self._do_test_ok_email_or_pass(
-            api_client_mgmt, init_users_f, init_users_f[0], update
+            api_client_mgmt, init_users, init_users[0], update
         )
 
-    def test_fail_password_mismatch(self, api_client_mgmt, init_users_f):
+    def test_fail_password_mismatch(self, api_client_mgmt, init_users):
         update = {"current_password": "dummy", "password": "secretpassword123"}
         self._do_test_fail_unprocessable_entity(
-            api_client_mgmt, init_users_f, init_users_f[0], update
+            api_client_mgmt, init_users, init_users[0], update
         )
 
-    def test_fail_not_found(self, api_client_mgmt, init_users_f):
+    def test_fail_not_found(self, api_client_mgmt, init_users):
         update = {"email": "foo@bar.com", "password": "secretpassword123"}
-        self._do_test_fail_not_found(api_client_mgmt, init_users_f, update)
+        self._do_test_fail_not_found(api_client_mgmt, init_users, update)
 
-    def test_fail_bad_update(self, api_client_mgmt, init_users_f):
-        self._do_test_fail_bad_update(api_client_mgmt, init_users_f)
+    def test_fail_bad_update(self, api_client_mgmt, init_users):
+        self._do_test_fail_bad_update(api_client_mgmt, init_users)
 
-    def test_fail_duplicate_email(self, api_client_mgmt, init_users_f):
-        update = {"email": init_users_f[1].email, "password": "secretpassword123"}
+    def test_fail_duplicate_email(self, api_client_mgmt, init_users):
+        update = {"email": init_users[1].email, "password": "secretpassword123"}
         self._do_test_fail_unprocessable_entity(
-            api_client_mgmt, init_users_f, init_users_f[0], update
+            api_client_mgmt, init_users, init_users[0], update
         )
 
 
 class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_ok_email(self, api_client_mgmt, init_users_mt_f, tenant_id):
-        user = init_users_mt_f[tenant_id][0]
+    def test_ok_email(self, api_client_mgmt, init_users_mt, tenant_id):
+        user = init_users_mt[tenant_id][0]
         update = {"email": "unique1@foo.com"}
         with tenantadm.run_fake_update_user(tenant_id, user.id, update):
             self._do_test_ok_email(
-                api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
+                api_client_mgmt, init_users_mt[tenant_id], user, update, tenant_id
             )
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_ok_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
-        user = init_users_mt_f[tenant_id][1]
+    def test_ok_pass(self, api_client_mgmt, init_users_mt, tenant_id):
+        user = init_users_mt[tenant_id][1]
         with tenantadm.run_fake_get_tenants(tenant_id):
             update = {
                 "password": "secretpassword123",
                 "current_password": "correcthorsebatterystaple",
             }
             self._do_test_ok_email_or_pass(
-                api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
+                api_client_mgmt, init_users_mt[tenant_id], user, update, tenant_id
             )
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_ok_email_and_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
-        user = init_users_mt_f[tenant_id][2]
+    def test_ok_email_and_pass(self, api_client_mgmt, init_users_mt, tenant_id):
+        user = init_users_mt[tenant_id][2]
         update = {
             "email": "definitelyunique@foo.com",
             "current_password": "correcthorsebatterystaple",
@@ -411,12 +411,12 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
         }
         with tenantadm.run_fake_update_user(tenant_id, user.id, update):
             self._do_test_ok_email_or_pass(
-                api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
+                api_client_mgmt, init_users_mt[tenant_id], user, update, tenant_id
             )
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_fail_not_found(self, api_client_mgmt, init_users_mt_f, tenant_id):
-        user = init_users_mt_f[tenant_id][3]
+    def test_fail_not_found(self, api_client_mgmt, init_users_mt, tenant_id):
+        user = init_users_mt[tenant_id][3]
         update = {
             "email": "foo@bar.com",
             "current_password": "correcthorsebatterystaple",
@@ -424,23 +424,23 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
         }
         with tenantadm.run_fake_update_user(tenant_id, user.id, update, 404):
             self._do_test_fail_not_found(
-                api_client_mgmt, init_users_mt_f[tenant_id], update, tenant_id
+                api_client_mgmt, init_users_mt[tenant_id], update, tenant_id
             )
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_fail_bad_update(self, api_client_mgmt, init_users_mt_f, tenant_id):
-        self._do_test_fail_bad_update(api_client_mgmt, init_users_mt_f[tenant_id])
+    def test_fail_bad_update(self, api_client_mgmt, init_users_mt, tenant_id):
+        self._do_test_fail_bad_update(api_client_mgmt, init_users_mt[tenant_id])
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_fail_duplicate_email(self, api_client_mgmt, init_users_mt_f, tenant_id):
-        user = init_users_mt_f[tenant_id][0]
+    def test_fail_duplicate_email(self, api_client_mgmt, init_users_mt, tenant_id):
+        user = init_users_mt[tenant_id][0]
         update = {
-            "email": init_users_mt_f[tenant_id][1].email,
+            "email": init_users_mt[tenant_id][1].email,
             "password": "secretpassword123",
         }
         with tenantadm.run_fake_update_user(tenant_id, user.id, update, 422):
             self._do_test_fail_unprocessable_entity(
-                api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
+                api_client_mgmt, init_users_mt[tenant_id], user, update, tenant_id
             )
 
 
@@ -497,7 +497,7 @@ class TestManagementApiSettings(TestManagementApiSettingsBase):
 
 class TestManagementApiSettingsEnterprise(TestManagementApiSettingsBase):
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
-    def test_ok(self, api_client_mgmt, init_users_mt_f, tenant_id):
+    def test_ok(self, api_client_mgmt, init_users_mt, tenant_id):
         self._do_test_ok(api_client_mgmt, tenant_id)
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
