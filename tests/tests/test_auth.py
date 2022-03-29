@@ -58,6 +58,27 @@ class TestAuthLogin:
         _, claims, _ = explode_jwt(token)
         assert "mender.user" in claims and claims["mender.user"] == True
 
+    def test_rate_limit(self, api_client_mgmt, init_users):
+        email = "user-1@foo.com"
+        password = "correcthorsebatterystaple"
+
+        _, r = api_client_mgmt.login(email, password)
+        assert r.status_code == 200
+
+        for pwd_guess in [
+            "password123",
+            "password",
+            "123456",
+            "12345678",
+            "qwerty",
+            "asdasd123",
+            "secretpasswordyouwillneverguess",
+        ]:
+            try:
+                _, r = api_client_mgmt.login(email, pwd_guess)
+            except bravado.exception.HTTPError as ex:
+                assert ex.response.status_code == 429
+
 
 class TestAuthLogout:
     def test_ok(self, api_client_int, api_client_mgmt, init_users):
@@ -142,6 +163,34 @@ class TestAuthLoginEnterprise:
                 except bravado.exception.HTTPError as herr:
                     assert herr.response.status_code == 401
                     assert herr.swagger_result.error == "tenant account suspended"
+
+    def test_rate_limit(self, api_client_mgmt, init_users_mt):
+
+        users_db = {
+            tenant: [user.email for user in users]
+            for tenant, users in init_users_mt.items()
+        }
+        tenant_id = next(iter(users_db))
+        email = next(iter(users_db[tenant_id]))
+        password = "correcthorsebatterystaple"
+
+        with tenantadm.run_fake_user_tenants(users_db):
+            _, r = api_client_mgmt.login(email, password)
+            assert r.status_code == 200
+
+            for pwd_guess in [
+                "password123",
+                "password",
+                "123456",
+                "12345678",
+                "qwerty",
+                "asdasd123",
+                "secretpasswordyouwillneverguess",
+            ]:
+                try:
+                    _, r = api_client_mgmt.login(email, pwd_guess)
+                except bravado.exception.HTTPError as ex:
+                    assert ex.response.status_code == 429
 
 
 class TestAuthVerify:
