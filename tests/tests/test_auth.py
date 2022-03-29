@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
 import json
 from common import (
     init_users,
-    init_users_f,
     init_users_mt,
-    init_users_mt_f,
     cli,
     api_client_mgmt,
     api_client_int,
@@ -148,12 +146,7 @@ class TestAuthLoginEnterprise:
 
 class TestAuthVerify:
     @pytest.mark.parametrize(
-        "token",
-        [
-            "garbage",
-            "",
-            make_auth("user-1@foo.com")["Authorization"],
-        ],
+        "token", ["garbage", "", make_auth("user-1@foo.com")["Authorization"],],
     )
     def test_fail(self, api_client_int, init_users, token):
         try:

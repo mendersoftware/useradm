@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,11 +12,15 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+import time
+
 from common import (
     init_users,
     init_users_f,
     init_users_mt,
     init_users_mt_f,
+    clean_db,
     cli,
     api_client_mgmt,
     mongo,
@@ -112,7 +116,7 @@ class TestManagementApiPostUsersEnterprise(TestManagementApiPostUsersBase):
 
     @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
     def test_fail_duplicate_email(self, tenant_id, api_client_mgmt, init_users_mt):
-        new_user = {"email": "foo@bar.com", "password": "asdf1234zxcv"}
+        new_user = {"email": f"user=1-{tenant_id}@foo.com", "password": "asdf1234zxcv"}
         with tenantadm.run_fake_create_user(new_user, 422):
             self._do_test_fail_unprocessable_entity(
                 api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id
@@ -187,7 +191,7 @@ class TestManagementApiGetUsersOk(TestManagementApiGetUsersBase):
 
 
 class TestManagementApiGetUsersNoUsers(TestManagementApiGetUsersBase):
-    def test_no_users(self, api_client_mgmt):
+    def test_no_users(self, api_client_mgmt, clean_db):
         self._do_test_no_users(api_client_mgmt)
 
 
@@ -293,6 +297,7 @@ class TestManagementApiPutUserBase:
         assert len(found) == 1
 
         # try if login still works
+        time.sleep(1)  # Wait a second so we don't get rate limited
         _, r = api_client_mgmt.login(email, update["password"])
 
         assert r.status_code == 200

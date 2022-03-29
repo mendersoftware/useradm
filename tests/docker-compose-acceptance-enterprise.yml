@@ -25,6 +25,7 @@ services:
             # acceptance container will be running mocks for a couple of
             # services, direct deviceauth there
             USERADM_TENANTADM_ADDR: "http://acceptance:9997"
+            USERADM_LOGIN_RATE_LIMIT: "500ms"
             # enable service logs
             TESTING_LOGS: 1
         working_dir: "/testing"

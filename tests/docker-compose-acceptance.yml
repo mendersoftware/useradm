@@ -21,4 +21,5 @@ services:
         environment:
             # enable service logs
             TESTING_LOGS: 1
+            USERADM_LOGIN_RATE_LIMIT: "500ms"
         working_dir: "/testing"

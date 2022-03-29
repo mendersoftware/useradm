@@ -12,6 +12,9 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+import time
+
 from common import (
     cli,
     api_client_mgmt,
@@ -93,16 +96,16 @@ class TestCli:
         cli.create_user(email, password)
         _, r = api_client_mgmt.login(email, password)
         assert r.status_code == 200
+
         cli.set_password(email, new_password)
-        status_code = 200
+        _, r = api_client_mgmt.login(email, new_password)
+        assert r.status_code == 200
+
+        time.sleep(1)  # Wait so the request won't get rate limited
         try:
             _, r = api_client_mgmt.login(email, password)
         except bravado.exception.HTTPError as e:
             assert e.response.status_code == 401
-            status_code = 401
-        assert status_code == 401
-        _, r = api_client_mgmt.login(email, new_password)
-        assert r.status_code == 200
 
     def test_migrate(self, cli, clean_db, mongo):
         cli.migrate()
@@ -112,7 +115,7 @@ class TestCli:
 
 
 class TestCliEnterprise:
-    def test_create_user(self, api_client_mgmt, cli):
+    def test_create_user(self, api_client_mgmt, cli, clean_db):
         user = {"email": "foo-tenant1id@bar.com", "password": "1234youseeme"}
 
         with tenantadm.run_fake_create_user(user):
@@ -157,24 +160,34 @@ class TestCliEnterprise:
             cli.create_user(user["email"], user["password"], tenant_id=user["tenant"])
 
         with tenantadm.run_fake_user_tenants(users_db):
+            # Verify password works
             _, r = api_client_mgmt.login(user["email"], user["password"])
             assert r.status_code == 200
 
-            cli.set_password(user["email"], user["new_password"], user["tenant"])
-            status_code = 200
+            # Check that new password does not apply yet
+            time.sleep(1)  # Wait so we don't get rate limited
             try:
-                _, r = api_client_mgmt.login(user["email"], user["password"])
+                _, r = api_client_mgmt.login(user["email"], user["new_password"])
             except bravado.exception.HTTPError as e:
                 assert e.response.status_code == 401
-                status_code = 401
-            assert status_code == 401
+
+            # Change password using CLI
+            cli.set_password(user["email"], user["new_password"], user["tenant"])
+
+            # Verify new password and returned authentication token
             _, r = api_client_mgmt.login(user["email"], user["new_password"])
             assert r.status_code == 200
-
             token = r.text
             assert token
             _, claims, _ = explode_jwt(token)
             assert claims["mender.tenant"] == user["tenant"]
+
+            # Check that the old password no longer applies
+            time.sleep(1)  # Wait so the request won't get rate limited
+            try:
+                _, r = api_client_mgmt.login(user["email"], user["password"])
+            except bravado.exception.HTTPError as e:
+                assert e.response.status_code == 401
 
     def test_migrate(self, cli, clean_db, mongo):
         cli.migrate(tenant_id="0000000000000000000000")

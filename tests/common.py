@@ -96,13 +96,13 @@ def api_client_int(request):
     )
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def init_users(cli, api_client_mgmt, mongo):
+    mongo_cleanup(mongo)
     for i in range(5):
         cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
 
     yield api_client_mgmt.get_users()
-    mongo_cleanup(mongo)
 
 
 @pytest.fixture(scope="function")
@@ -110,15 +110,16 @@ def init_users_f(cli, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users'.
     """
+    mongo_cleanup(mongo)
     for i in range(5):
         cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
 
     yield api_client_mgmt.get_users()
-    mongo_cleanup(mongo)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def init_users_mt(cli, api_client_mgmt, mongo):
+    mongo_cleanup(mongo)
     tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
         for i in range(5):
@@ -132,7 +133,6 @@ def init_users_mt(cli, api_client_mgmt, mongo):
                 )
         tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
-    mongo_cleanup(mongo)
 
 
 @pytest.fixture(scope="function")
@@ -140,6 +140,7 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users_mt'.
     """
+    mongo_cleanup(mongo)
     tenant_users = {"tenant1id": [], "tenant2id": []}
     for t in tenant_users:
         for i in range(5):
@@ -153,10 +154,9 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
                 )
             tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
     yield tenant_users
-    mongo_cleanup(mongo)
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def user_tokens(init_users, api_client_mgmt):
     tokens = []
     for user in init_users:
