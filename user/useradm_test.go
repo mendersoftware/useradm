@@ -552,12 +552,12 @@ func TestUserAdmDoCreateUser(t *testing.T) {
 			withTenantVerification:     true,
 			propagate:                  true,
 			tenantCreateUserErr:        ct.ErrDuplicateUser,
-			tenantDeleteUserErr:        errors.New("delate user error"),
+			tenantDeleteUserErr:        errors.New("delete user error"),
 			shouldVerifyTenant:         true,
 			shouldCompensateTenantUser: true,
 
 			dbErr:  nil,
-			outErr: errors.New("tenant data out of sync: faield to delete tenant user: delate user error"),
+			outErr: errors.New("tenant data out of sync: failed to delete tenant user: delete user error"),
 		},
 		"error, multitenant: duplicate user, get user error": {
 			inUser: model.User{
@@ -638,10 +638,10 @@ func TestUserAdmDoCreateUser(t *testing.T) {
 			propagate:                  true,
 			shouldVerifyTenant:         true,
 			shouldCompensateTenantUser: true,
-			tenantDeleteUserErr:        errors.New("delate user error"),
+			tenantDeleteUserErr:        errors.New("delete user error"),
 
 			dbErr:  errors.New("no reachable servers"),
-			outErr: errors.New("useradm: failed to create user in the db: faield to delete tenant user: delate user error: no reachable servers"),
+			outErr: errors.New("useradm: failed to create user in the db: failed to delete tenant user: delete user error: no reachable servers"),
 		},
 	}
 
