@@ -171,7 +171,7 @@ class ManagementApiClient(ApiClient):
 
 
 class CliClient:
-    cmd = "useradm"
+    cmd = "/usr/bin/useradm"
 
     def __init__(self):
         self.client = docker.from_env()
