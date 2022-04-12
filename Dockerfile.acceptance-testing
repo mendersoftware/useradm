@@ -1,17 +1,16 @@
 FROM golang:1.16.5-alpine3.12 as builder
-RUN mkdir -p /go/src/github.com/mendersoftware/useradm
-COPY . /go/src/github.com/mendersoftware/useradm
-RUN cd /go/src/github.com/mendersoftware/useradm && \
-    env CGO_ENABLED=0 go test -c -o useradm \
+WORKDIR /go/src/github.com/mendersoftware/useradm
+COPY ./ .
+RUN env CGO_ENABLED=0 go test -c -o useradm \
     -tags main -cover -covermode=atomic \
     -coverpkg $(go list ./... | grep -v vendor | grep -v mock | grep -v test | tr  '\n' ,)
 
-FROM alpine:3.15.0
-
+FROM scratch
 EXPOSE 8080
-RUN mkdir -p /etc/useradm/rsa
-ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
+WORKDIR /etc/useradm/rsa
 COPY ./config.yaml /etc/useradm/
 COPY --from=builder /go/src/github.com/mendersoftware/useradm/useradm /usr/bin/
+
+ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
 
 STOPSIGNAL SIGINT
