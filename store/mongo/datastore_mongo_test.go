@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -354,7 +354,7 @@ func TestMongoGetUserByEmail(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inEmail string
+		inEmail model.Email
 		tenant  string
 		outUser *model.User
 	}{
@@ -700,7 +700,7 @@ func TestMongoGetUsers(t *testing.T) {
 			},
 			filter: model.UserFilter{
 				ID: []string{"1", "2"},
-				Email: []string{
+				Email: []model.Email{
 					"foo@bar.com",
 					"bar@bar.com",
 					"baz@bar.com",

@@ -50,7 +50,11 @@ func safeReadPassword() (string, error) {
 	return string(raw), nil
 }
 
-func commandCreateUser(c config.Reader, username, password, userId, tenantId string) error {
+func commandCreateUser(
+	c config.Reader,
+	username model.Email,
+	password, userId, tenantId string,
+) error {
 	ctx := context.Background()
 	l := log.NewEmpty()
 
@@ -153,7 +157,11 @@ func commandMigrate(c config.Reader, tenantId string) error {
 
 }
 
-func commandSetPassword(c config.Reader, username, password, tenantId string) error {
+func commandSetPassword(
+	c config.Reader,
+	username model.Email,
+	password, tenantId string,
+) error {
 	l := log.NewEmpty()
 
 	l.Debugf("set password for '%s'", username)

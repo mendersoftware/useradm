@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ const (
 type App interface {
 	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
-	Login(ctx context.Context, email, pass string) (*jwt.Token, error)
+	Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error)
 	Logout(ctx context.Context, token *jwt.Token) error
 	CreateUser(ctx context.Context, u *model.User) error
 	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
@@ -121,7 +121,7 @@ func (u *UserAdm) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, error) {
+func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error) {
 	var ident identity.Identity
 	l := log.FromContext(ctx)
 
@@ -131,7 +131,7 @@ func (u *UserAdm) Login(ctx context.Context, email, pass string) (*jwt.Token, er
 
 	if u.verifyTenant {
 		// check the user's tenant
-		tenant, err := u.cTenant.GetTenant(ctx, email, u.clientGetter())
+		tenant, err := u.cTenant.GetTenant(ctx, string(email), u.clientGetter())
 
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to check user's tenant")
@@ -258,7 +258,7 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bo
 		tenantErr = ua.cTenant.CreateUser(ctx,
 			&tenant.User{
 				ID:       u.ID,
-				Name:     u.Email,
+				Name:     string(u.Email),
 				TenantID: id.Tenant,
 			},
 			ua.clientGetter())
@@ -342,7 +342,7 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 			ident.Tenant,
 			id,
 			&tenant.UserUpdate{
-				Name: u.Email,
+				Name: string(u.Email),
 			},
 			ua.clientGetter())
 

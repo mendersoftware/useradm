@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ func TestUserAdmSignToken(t *testing.T) {
 
 func TestUserAdmLogin(t *testing.T) {
 	testCases := map[string]struct {
-		inEmail    string
+		inEmail    model.Email
 		inPassword string
 
 		verifyTenant bool
@@ -346,7 +346,7 @@ func TestUserAdmLogin(t *testing.T) {
 			useradm := NewUserAdm(nil, db, nil, tc.config)
 			if tc.verifyTenant {
 				cTenant := &mct.ClientRunner{}
-				cTenant.On("GetTenant", ContextMatcher(), tc.inEmail, &apiclient.HttpApi{}).
+				cTenant.On("GetTenant", ContextMatcher(), string(tc.inEmail), &apiclient.HttpApi{}).
 					Return(tc.tenant, tc.tenantErr)
 				useradm = useradm.WithTenantVerification(cTenant)
 			}
@@ -624,7 +624,7 @@ func TestUserAdmDoCreateUser(t *testing.T) {
 				mock.AnythingOfType("*model.User")).
 				Return(tc.dbErr)
 
-			db.On("GetUserByEmail", ContextMatcher(), mock.AnythingOfType("string")).
+			db.On("GetUserByEmail", ContextMatcher(), mock.AnythingOfType("model.Email")).
 				Return(tc.dbUser, tc.dbGetUserErr)
 
 			useradm := NewUserAdm(nil, db, nil, Config{})

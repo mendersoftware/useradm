@@ -221,7 +221,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("Login", ctx,
-				mock.AnythingOfType("string"),
+				mock.AnythingOfType("model.Email"),
 				mock.AnythingOfType("string")).
 				Return(tc.uaToken, tc.uaError)
 
@@ -685,6 +685,7 @@ func TestUpdateUser(t *testing.T) {
 			inReq: test.MakeSimpleRequest("PUT",
 				"http://1.2.3.4/api/management/v1/useradm/users/123",
 				map[string]interface{}{
+					"email":    "foo@foo.com",
 					"password": "foobar",
 				},
 			),
