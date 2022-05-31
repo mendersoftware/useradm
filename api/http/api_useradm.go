@@ -38,6 +38,8 @@ const (
 	uriManagementUser       = "/api/management/v1/useradm/users/:id"
 	uriManagementUsers      = "/api/management/v1/useradm/users"
 	uriManagementSettings   = "/api/management/v1/useradm/settings"
+	uriManagementTokens     = "/api/management/v1/useradm/settings/tokens"
+	uriManagementToken      = "/api/management/v1/useradm/settings/tokens/:id"
 
 	uriInternalAlive  = "/api/internal/v1/useradm/alive"
 	uriInternalHealth = "/api/internal/v1/useradm/health"
@@ -104,6 +106,9 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 		rest.Get(uriManagementSettings, i.GetSettingsHandler),
+		rest.Post(uriManagementTokens, i.IssueTokenHandler),
+		rest.Get(uriManagementTokens, i.GetTokensHandler),
+		rest.Delete(uriManagementToken, i.DeleteTokenHandler),
 	}
 
 	app, err := rest.MakeRouter(
@@ -575,4 +580,91 @@ func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.R
 	}
 
 	_ = w.WriteJson(settings)
+}
+
+func (u *UserAdmApiHandlers) IssueTokenHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	var tokenRequest model.TokenRequest
+
+	if err := r.DecodeJsonPayload(&tokenRequest); err != nil {
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			errors.New("cannot parse request body as json"),
+			http.StatusBadRequest,
+		)
+		return
+	}
+	if err := tokenRequest.Validate(); err != nil {
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			err,
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	token, err := u.userAdm.IssuePersonalAccessToken(ctx, &tokenRequest)
+	switch err {
+	case nil:
+		writer := w.(http.ResponseWriter)
+		writer.Header().Set("Content-Type", "application/jwt")
+		_, _ = writer.Write([]byte(token))
+	case useradm.ErrTooManyTokens:
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			err,
+			http.StatusUnprocessableEntity,
+		)
+	case useradm.ErrDuplicateTokenName:
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			err,
+			http.StatusConflict,
+		)
+	default:
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+	}
+}
+
+func (u *UserAdmApiHandlers) GetTokensHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	l := log.FromContext(ctx)
+	id := identity.FromContext(ctx)
+	if id == nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New("identity not present"))
+		return
+	}
+
+	tokens, err := u.userAdm.GetPersonalAccessTokens(ctx, id.Subject)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	_ = w.WriteJson(tokens)
+}
+
+func (u *UserAdmApiHandlers) DeleteTokenHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	err := u.userAdm.DeleteToken(ctx, r.PathParam("id"))
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
