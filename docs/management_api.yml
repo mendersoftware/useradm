@@ -366,6 +366,105 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
+  /settings/tokens:
+    get:
+      operationId: List User Personal Access Tokens
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Get user Personal Access Tokens
+      responses:
+        200:
+          description: Endpoint returns a list of tokens.
+          schema:
+            title: ListOfTokens
+            type: array
+            items:
+              $ref: '#/definitions/PersonalAccessToken'
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      operationId: Create Personal Access Token
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Create new Personal Access Token
+      description: |
+        Create new Personal Access Token with given name and expiration.
+      parameters:
+        - name: token
+          in: body
+          description: The token object.
+          required: true
+          schema:
+            $ref: "#/definitions/PersonalAccessTokenRequest"
+      responses:
+        200:
+          description: Token has been created.
+          schema:
+            type: string
+            example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0NzYxMTkxMzYsImlzcyI6Ik1lbmRlciIsInN1YiI6Ijg1NGIzMTA5LTQ4NjItNGEyNS1hMWZiLWYxMTE2MWNlN2E4NCIsInNjcCI6WyJtZW5kZXIuKiJdfQ.X7Ief4PhPLlR6mA2wh3G3K0Z2tud0rK1QJesxu52NfICSeARmlujczs-_1YZxMwI0s-HgpXHbXIjaSVK80BjxjAM1rqpRGvgqSqG-dU5KmglDpAaTr4VaJci3VFPlVUVTRpI7bfqNMnKZtjmOUAGwjvroDUwX1RwayEmms-efGI
+        400:
+          description: |
+              The request body is malformed or expiration time is too big.
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        409:
+          description: |
+                Personal Access Token with the same name already exists.
+          schema:
+            $ref: '#/definitions/Error'
+        422:
+          description: |
+              Maximum number of Personal Acess Tokens reached for this user.
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
+  /settings/tokens/{id}:
+    delete:
+      operationId: Revoke Personal Access Token
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Revoke Personal Access Token
+      parameters:
+        - name: id
+          in: path
+          type: string
+          description: Token identifier.
+          required: true
+      responses:
+        204:
+          description: Token removed.
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
 definitions:
   UserNew:
     description: New user descriptor.
@@ -433,6 +532,51 @@ definitions:
       id: "806603def19d417d004a4b67e"
       created_ts: "2020-07-06T15:04:49.114046203+02:00"
       updated_ts: "2020-07-07T01:04:49.114046203+02:00"
+  PersonalAccessTokenRequest:
+    description: Personal Access Token Request.
+    type: object
+    properties:
+      name:
+        description: Name of a token.
+        type: string
+      expires_in:
+        description: Expiration time in seconds (maximum one year - 31536000s).
+        type: number
+    required:
+      - name
+      - expires_in
+    example:
+      name: 'my_personal_token'
+      expires_in: 28800
+  PersonalAccessToken:
+    description: Personal Access Token Object.
+    type: object
+    properties:
+      id:
+        description: Token identifier.
+        type: string
+      name:
+        description: Name of a token.
+        type: string
+      last_used:
+        description: |
+            Date of last usage of a token. The accuracy is 5 minutes.
+        type: string
+        format: date-time
+      expiration_date:
+        description: Expiration date.
+        type: string
+        format: date-time
+    required:
+      - id
+      - name
+      - last_used
+      - expiration_date
+    example:
+      id: "806603def19d417d004a4b67e"
+      name: 'my_personal_token'
+      last_used: '2022-07-05T11:11:35.725Z'
+      expiration_date: '2023-10-16T07:28:34.725Z'
 
   Error:
     description: Error descriptor.
