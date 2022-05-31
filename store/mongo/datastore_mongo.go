@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -38,11 +38,25 @@ const (
 	DbTokensColl   = "tokens"
 	DbSettingsColl = "settings"
 
-	DbUserEmail   = "email"
-	DbUserPass    = "password"
-	DbUserLoginTs = "login_ts"
+	DbUserEmail      = "email"
+	DbUserPass       = "password"
+	DbUserLoginTs    = "login_ts"
+	DbTokenSubject   = "sub"
+	DbTokenExpiresAt = "exp"
+	DbTokenIssuedAt  = "iat"
+	DbTokenTenant    = "tenant"
+	DbTokenUser      = "user"
+	DbTokenIssuer    = "iss"
+	DbTokenScope     = "scp"
+	DbTokenAudience  = "aud"
+	DbTokenNotBefore = "nbf"
+	DbTokenLastUsed  = "last_used"
+	DbTokenName      = "name"
+	DbID             = "_id"
 
-	DbUniqueEmailIndexName = "email_1"
+	DbUniqueEmailIndexName     = "email_1"
+	DbUniqueTokenNameIndexName = "token_name_1"
+	DbTokenSubjectIndexName    = "token_subject_1"
 )
 
 type DataStoreMongoConfig struct {
@@ -384,7 +398,9 @@ func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error
 		Collection(DbTokensColl).
 		InsertOne(ctx, token)
 
-	if err != nil {
+	if isDuplicateKeyError(err) {
+		return store.ErrDuplicateTokenName
+	} else if err != nil {
 		return errors.Wrap(err, "failed to store token")
 	}
 
@@ -507,4 +523,75 @@ func (db *DataStoreMongo) GetSettings(ctx context.Context) (map[string]interface
 	default:
 		return nil, errors.Wrapf(err, "failed to get settings")
 	}
+}
+
+func (db *DataStoreMongo) GetPersonalAccessTokens(
+	ctx context.Context,
+	userID string,
+) ([]model.PersonalAccessToken, error) {
+	findOpts := mopts.Find().
+		SetProjection(
+			bson.M{
+				DbID:             1,
+				DbTokenName:      1,
+				DbTokenExpiresAt: 1,
+				DbTokenLastUsed:  1,
+			},
+		)
+
+	collTokens := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl)
+
+	var mgoFltr = bson.M{
+		DbTokenSubject: oid.FromString(userID),
+		DbTokenName:    bson.M{"$exists": true},
+	}
+	cur, err := collTokens.Find(ctx, mgoFltr, findOpts)
+	if err != nil {
+		return nil, errors.Wrap(err, "store: failed to fetch tokens")
+	}
+
+	tokens := []model.PersonalAccessToken{}
+	err = cur.All(ctx, &tokens)
+	switch err {
+	case nil, mongo.ErrNoDocuments:
+		return tokens, nil
+	default:
+		return nil, errors.Wrap(err, "store: failed to decode tokens")
+	}
+}
+
+func (db *DataStoreMongo) UpdateTokenLastUsed(ctx context.Context, id oid.ObjectID) error {
+	collTokens := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl)
+
+	_, err := collTokens.UpdateOne(ctx,
+		bson.D{{Key: DbID, Value: id}},
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: DbTokenLastUsed, Value: time.Now()}},
+		}},
+	)
+
+	return err
+}
+
+func (db *DataStoreMongo) CountPersonalAccessTokens(
+	ctx context.Context,
+	userID string,
+) (int64, error) {
+	collTokens := db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl)
+
+	var mgoFltr = bson.M{
+		DbTokenSubject: oid.FromString(userID),
+		DbTokenName:    bson.M{"$exists": true},
+	}
+	count, err := collTokens.CountDocuments(ctx, mgoFltr)
+	if err != nil {
+		return -1, errors.Wrap(err, "store: failed to count tokens")
+	}
+	return count, nil
 }

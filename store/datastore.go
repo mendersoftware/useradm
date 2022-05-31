@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ var (
 	ErrDuplicateEmail = errors.New("user with a given email already exists")
 	// password mismatch
 	ErrCurrentPasswordMismatch = errors.New("current password mismatch")
+	// duplicated Personal Access Token name
+	ErrDuplicateTokenName = errors.New("Personal Access Token with a given name already exists")
 )
 
 //go:generate ../utils/mockgen.sh
@@ -57,6 +59,10 @@ type DataStore interface {
 
 	// deletes all tenant's tokens (identity in context)
 	DeleteTokens(ctx context.Context) error
+
+	GetPersonalAccessTokens(ctx context.Context, userID string) ([]model.PersonalAccessToken, error)
+	UpdateTokenLastUsed(ctx context.Context, id oid.ObjectID) error
+	CountPersonalAccessTokens(ctx context.Context, userID string) (int64, error)
 
 	// deletes user tokens
 	DeleteTokensByUserId(ctx context.Context, userId string) error

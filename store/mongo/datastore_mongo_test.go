@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -1105,7 +1105,7 @@ func TestMigrate(t *testing.T) {
 					assert.NoError(t, err)
 
 					if tc.automigrate {
-						assert.Len(t, out, 2)
+						assert.Len(t, out, 3)
 						assert.NoError(t, err)
 
 						v, _ := migrate.NewVersion(tc.version)
@@ -2094,6 +2094,407 @@ func TestMongoGetSettings(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tc.settingsOut, out)
+		})
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
+func TestMongoGetPersonalAccessTokens(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	tokens := []jwt.Token{
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-1"),
+				Subject:  oid.NewUUIDv5("sub-1"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-1",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-1",
+				User:  true,
+			},
+		},
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-2"),
+				Subject:  oid.NewUUIDv5("sub-1"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-1",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-1",
+				User:  true,
+			},
+			TokenName: strPtr("my_personal_access_token"),
+		},
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-3"),
+				Subject:  oid.NewUUIDv5("sub-2"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-2",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-2",
+				User:  true,
+			},
+		},
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		inTokens []jwt.Token
+
+		outTokens []model.PersonalAccessToken
+		outError  string
+	}{
+		"ok": {
+			inTokens: tokens,
+			outTokens: []model.PersonalAccessToken{
+				{
+					ID:   tokens[1].ID,
+					Name: tokens[1].TokenName,
+				},
+			},
+		},
+		"ok, tenant": {
+			tenant:   "tenant-1",
+			inTokens: tokens,
+			outTokens: []model.PersonalAccessToken{
+				{
+					ID:   tokens[1].ID,
+					Name: tokens[1].TokenName,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
+
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			inputData := make([]interface{}, len(tc.inTokens))
+			for i, v := range tc.inTokens {
+				inputData[i] = v
+			}
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, inputData)
+				assert.NoError(t, err)
+			}
+
+			dbTokens, err := store.GetPersonalAccessTokens(ctx, tokens[1].Subject.String())
+			assert.NoError(t, err)
+			//clear the date
+			for i, _ := range dbTokens {
+				dbTokens[i].ExpirationDate = jwt.Time{}
+			}
+
+			assert.Equal(t, tc.outTokens, dbTokens)
+		})
+	}
+}
+
+func TestMongoCountPersonalAccessTokens(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	tokens := []jwt.Token{
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-1"),
+				Subject:  oid.NewUUIDv5("sub-1"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-1",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-1",
+				User:  true,
+			},
+		},
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-2"),
+				Subject:  oid.NewUUIDv5("sub-1"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-1",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-1",
+				User:  true,
+			},
+			TokenName: strPtr("my_personal_access_token"),
+		},
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-3"),
+				Subject:  oid.NewUUIDv5("sub-2"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-2",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-2",
+				User:  true,
+			},
+		},
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		inTokens []jwt.Token
+
+		expectedCount int64
+		outError      string
+	}{
+		"ok": {
+			inTokens:      tokens,
+			expectedCount: 1,
+		},
+		"ok, tenant": {
+			tenant:        "tenant-1",
+			inTokens:      tokens,
+			expectedCount: 1,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
+
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			inputData := make([]interface{}, len(tc.inTokens))
+			for i, v := range tc.inTokens {
+				inputData[i] = v
+			}
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, inputData)
+				assert.NoError(t, err)
+			}
+
+			count, err := store.CountPersonalAccessTokens(ctx, tokens[1].Subject.String())
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedCount, count)
+		})
+	}
+}
+
+func TestMongoUpdateTokenLastUsed(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	tokens := []jwt.Token{
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-1"),
+				Subject:  oid.NewUUIDv5("sub-1"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-1",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-1",
+				User:  true,
+			},
+		},
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-2"),
+				Subject:  oid.NewUUIDv5("sub-1"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-1",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-1",
+				User:  true,
+			},
+			TokenName: strPtr("my_personal_access_token"),
+		},
+		{
+			Claims: jwt.Claims{
+				ID:       oid.NewUUIDv5("id-3"),
+				Subject:  oid.NewUUIDv5("sub-2"),
+				Audience: "audience",
+				ExpiresAt: jwt.Time{
+					Time: time.Now().
+						Add(time.Hour),
+				},
+				IssuedAt: jwt.Time{
+					Time: time.Now(),
+				},
+				Issuer: "iss-2",
+				NotBefore: jwt.Time{
+					Time: time.Unix(7890, 0),
+				},
+				Scope: "scope-2",
+				User:  true,
+			},
+		},
+	}
+
+	testCases := map[string]struct {
+		tenant   string
+		inTokens []jwt.Token
+
+		outTokens []model.PersonalAccessToken
+		outError  string
+	}{
+		"ok": {
+			inTokens: tokens,
+			outTokens: []model.PersonalAccessToken{
+				{
+					ID:   tokens[1].ID,
+					Name: tokens[1].TokenName,
+				},
+			},
+		},
+		"ok, tenant": {
+			tenant:   "tenant-1",
+			inTokens: tokens,
+			outTokens: []model.PersonalAccessToken{
+				{
+					ID:   tokens[1].ID,
+					Name: tokens[1].TokenName,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
+
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			inputData := make([]interface{}, len(tc.inTokens))
+			for i, v := range tc.inTokens {
+				inputData[i] = v
+			}
+			if len(tc.inTokens) > 0 {
+				_, err = client.
+					Database(mstore.DbFromContext(ctx, DbName)).
+					Collection(DbTokensColl).
+					InsertMany(ctx, inputData)
+				assert.NoError(t, err)
+			}
+
+			//get the token
+			dbTokens, err := store.GetPersonalAccessTokens(ctx, tokens[1].Subject.String())
+			assert.NoError(t, err)
+			assert.Equal(t, len(dbTokens), 1)
+			assert.Nil(t, dbTokens[0].LastUsed)
+			// update last used timestamp
+			err = store.UpdateTokenLastUsed(ctx, dbTokens[0].ID)
+			assert.NoError(t, err)
+			//get the token once again
+			dbTokens, err = store.GetPersonalAccessTokens(ctx, tokens[1].Subject.String())
+			assert.NoError(t, err)
+			assert.NotNil(t, dbTokens[0].LastUsed)
 		})
 	}
 }
