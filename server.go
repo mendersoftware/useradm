@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -75,8 +75,10 @@ func RunServer(c config.Reader) error {
 
 	ua := useradm.NewUserAdm(jwth, db, mongo.NewTenantStoreMongo(db),
 		useradm.Config{
-			Issuer:         c.GetString(SettingJWTIssuer),
-			ExpirationTime: int64(c.GetInt(SettingJWTExpirationTimeout)),
+			Issuer:                         c.GetString(SettingJWTIssuer),
+			ExpirationTime:                 int64(c.GetInt(SettingJWTExpirationTimeout)),
+			LimitTokensPerUser:             c.GetInt(SettingLimitTokensPerUser),
+			TokenLastUsedUpdateFreqMinutes: c.GetInt(SettingTokenLastUsedUpdateFreqMinutes),
 		})
 
 	if tadmAddr := c.GetString(SettingTenantAdmAddr); tadmAddr != "" {

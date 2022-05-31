@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -39,6 +39,10 @@ var (
 	ErrUserNotFound           = errors.New("user not found")
 	ErrTenantAccountSuspended = errors.New("tenant account suspended")
 	ErrInvalidTenantID        = errors.New("invalid tenant id")
+	ErrTooManyTokens          = errors.New(
+		"maximum number of personal acess tokens reached for this user")
+	ErrDuplicateTokenName = errors.New(
+		"Personal Access Token with a given name already exists")
 )
 
 const (
@@ -63,6 +67,12 @@ type App interface {
 	// SignToken generates a signed
 	// token using configuration & method set up in UserAdmApp
 	SignToken(ctx context.Context, t *jwt.Token) (string, error)
+	DeleteToken(ctx context.Context, id string) error
+
+	// IssuePersonalAccessToken issues Personal Access Token
+	IssuePersonalAccessToken(ctx context.Context, tr *model.TokenRequest) (string, error)
+	// GetPersonalAccessTokens returns list of Personal Access Tokens
+	GetPersonalAccessTokens(ctx context.Context, userID string) ([]model.PersonalAccessToken, error)
 
 	DeleteTokens(ctx context.Context, tenantId, userId string) error
 
@@ -74,6 +84,12 @@ type Config struct {
 	Issuer string
 	// token expiration time
 	ExpirationTime int64
+	// maximum number of personal access tokens per user
+	// zero means no limit
+	LimitTokensPerUser int
+	// how often we should update personal access token
+	// with last used timestamp
+	TokenLastUsedUpdateFreqMinutes int
 }
 
 type ApiClientGetter func() apiclient.HttpRunner
@@ -423,6 +439,20 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 		return errors.Wrap(err, "useradm: failed to get token")
 	}
 
+	// in case the token is a personal access token, update last used timestam
+	// to not overload the database with writes to tokens collection, we do not
+	// update the timestamp every time, but instead we wait some configurable
+	// amount of time between updates
+	if dbToken.TokenName != nil && ua.config.TokenLastUsedUpdateFreqMinutes > 0 {
+		t := time.Now().Add(
+			(-time.Minute * time.Duration(ua.config.TokenLastUsedUpdateFreqMinutes)))
+		if dbToken.LastUsed == nil || dbToken.LastUsed.Before(t) {
+			if err := ua.db.UpdateTokenLastUsed(ctx, token.ID); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -524,6 +554,68 @@ func (ua *UserAdm) DeleteTokens(ctx context.Context, tenantId, userId string) er
 			tenantId,
 			userId,
 		)
+	}
+
+	return nil
+}
+
+func (u *UserAdm) IssuePersonalAccessToken(
+	ctx context.Context,
+	tr *model.TokenRequest,
+) (string, error) {
+	id := identity.FromContext(ctx)
+	if id == nil {
+		return "", errors.New("identity not present in the context")
+	}
+	if u.config.LimitTokensPerUser > 0 {
+		count, err := u.db.CountPersonalAccessTokens(ctx, id.Subject)
+		if err != nil {
+			return "", errors.Wrap(err, "useradm: failed to count personal access tokens")
+		}
+		if count >= int64(u.config.LimitTokensPerUser) {
+			return "", ErrTooManyTokens
+		}
+	}
+	//generate and save token
+	t, err := u.generateToken(id.Subject, scope.All, id.Tenant)
+	if err != nil {
+		return "", errors.Wrap(err, "useradm: failed to generate token")
+	}
+	// update claims
+	t.TokenName = tr.Name
+	now := jwt.Time{Time: time.Now()}
+	t.ExpiresAt = jwt.Time{
+		Time: now.Add(time.Second *
+			time.Duration(tr.ExpiresIn)),
+	}
+
+	err = u.db.SaveToken(ctx, t)
+	if err == store.ErrDuplicateTokenName {
+		return "", ErrDuplicateTokenName
+	} else if err != nil {
+		return "", errors.Wrap(err, "useradm: failed to save token")
+	}
+
+	// sign token
+	return u.jwtHandler.ToJWT(t)
+}
+
+func (ua *UserAdm) GetPersonalAccessTokens(
+	ctx context.Context,
+	userID string,
+) ([]model.PersonalAccessToken, error) {
+	tokens, err := ua.db.GetPersonalAccessTokens(ctx, userID)
+	if err != nil {
+		return nil, errors.Wrap(err, "useradm: failed to get tokens")
+	}
+
+	return tokens, nil
+}
+
+func (ua *UserAdm) DeleteToken(ctx context.Context, id string) error {
+	err := ua.db.DeleteToken(ctx, oid.FromString(id))
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to delete token")
 	}
 
 	return nil
