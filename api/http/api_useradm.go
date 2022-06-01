@@ -69,6 +69,12 @@ type UserAdmApiHandlers struct {
 	userAdm useradm.App
 	db      store.DataStore
 	jwth    *jwt.JWTHandlerRS256
+	config  Config
+}
+
+type Config struct {
+	// maximum expiration time for Personal Access Token
+	TokenMaxExp int
 }
 
 // return an ApiHandler for user administration and authentiacation app
@@ -76,11 +82,13 @@ func NewUserAdmApiHandlers(
 	userAdm useradm.App,
 	db store.DataStore,
 	jwth *jwt.JWTHandlerRS256,
+	config Config,
 ) ApiHandler {
 	return &UserAdmApiHandlers{
 		userAdm: userAdm,
 		db:      db,
 		jwth:    jwth,
+		config:  config,
 	}
 }
 
@@ -599,7 +607,7 @@ func (u *UserAdmApiHandlers) IssueTokenHandler(w rest.ResponseWriter, r *rest.Re
 		)
 		return
 	}
-	if err := tokenRequest.Validate(); err != nil {
+	if err := tokenRequest.Validate(u.config.TokenMaxExp); err != nil {
 		rest_utils.RestErrWithLog(
 			w,
 			r,

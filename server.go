@@ -91,7 +91,10 @@ func RunServer(c config.Reader) error {
 		ua = ua.WithTenantVerification(tc)
 	}
 
-	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwth)
+	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwth,
+		api_http.Config{
+			TokenMaxExp: c.GetInt(SettingTokenMaxExpirationSeconds),
+		})
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
 	if err != nil {

@@ -765,7 +765,7 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	jwth := jwt.NewJWTHandlerRS256(privkey, nil)
 
 	// API handler
-	handlers := NewUserAdmApiHandlers(uadm, db, jwth)
+	handlers := NewUserAdmApiHandlers(uadm, db, jwth, Config{})
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()

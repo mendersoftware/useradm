@@ -57,6 +57,9 @@ const (
 
 	SettingTokenLastUsedUpdateFreqMinutes        = "token_last_used_update_freq_minutes"
 	SettingTokenLastUsedUpdateFreqMinutesDefault = 5
+
+	SettingTokenMaxExpirationSeconds        = "token_max_expiration_seconds"
+	SettingTokenMaxExpirationSecondsDefault = 31536000
 )
 
 var (
@@ -74,5 +77,7 @@ var (
 		{Key: SettingLimitTokensPerUser, Value: SettingLimitTokensPerUserDefault},
 		{Key: SettingTokenLastUsedUpdateFreqMinutes,
 			Value: SettingTokenLastUsedUpdateFreqMinutesDefault},
+		{Key: SettingTokenMaxExpirationSeconds,
+			Value: SettingTokenMaxExpirationSecondsDefault},
 	}
 )

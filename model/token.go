@@ -29,11 +29,16 @@ type TokenRequest struct {
 	ExpiresIn int64   `json:"expires_in"`
 }
 
-func (tr TokenRequest) Validate() error {
+const defaultTokenMaxExpiration = 31536000
+
+func (tr TokenRequest) Validate(maxExpiration int) error {
+	if maxExpiration <= 0 {
+		maxExpiration = defaultTokenMaxExpiration
+	}
 	return validation.ValidateStruct(&tr,
 		validation.Field(&tr.Name, validation.Required, lessThan4096),
 		validation.Field(
-			&tr.ExpiresIn, validation.Required, validation.Min(1), validation.Max(31536000)))
+			&tr.ExpiresIn, validation.Required, validation.Min(1), validation.Max(maxExpiration)))
 }
 
 type PersonalAccessToken struct {
