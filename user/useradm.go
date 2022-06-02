@@ -489,6 +489,12 @@ func (ua *UserAdm) DeleteUser(ctx context.Context, id string) error {
 		return errors.Wrap(err, "useradm: failed to delete user")
 	}
 
+	// remove user tokens
+	err = ua.db.DeleteTokensByUserId(ctx, id)
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to delete user tokens")
+	}
+
 	return nil
 }
 

@@ -1176,29 +1176,31 @@ func TestUserAdmDeleteUser(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		verifyTenant bool
-		tenantErr    error
-		dbErr        error
-		err          error
+		verifyTenant      bool
+		tenantErr         error
+		dbDeleteUserErr   error
+		dbDeleteTokensErr error
+		err               error
 	}{
 		"ok": {
-			dbErr: nil,
-			err:   nil,
+			err: nil,
 		},
 		"ok, multitenant": {
 			verifyTenant: true,
-			dbErr:        nil,
 			err:          nil,
 		},
 		"multitenant, tenantadm error": {
 			verifyTenant: true,
 			tenantErr:    errors.New("http 500"),
-			dbErr:        nil,
 			err:          errors.New("useradm: failed to delete user in tenantadm: http 500"),
 		},
-		"error": {
-			dbErr: errors.New("db connection failed"),
-			err:   errors.New("useradm: failed to delete user: db connection failed"),
+		"error deleting user": {
+			dbDeleteUserErr: errors.New("db connection failed"),
+			err:             errors.New("useradm: failed to delete user: db connection failed"),
+		},
+		"error deleting user tokens": {
+			dbDeleteTokensErr: errors.New("db connection failed"),
+			err:               errors.New("useradm: failed to delete user tokens: db connection failed"),
 		},
 	}
 
@@ -1211,7 +1213,8 @@ func TestUserAdmDeleteUser(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("DeleteUser", ContextMatcher(), "foo").Return(tc.dbErr)
+			db.On("DeleteUser", ContextMatcher(), "foo").Return(tc.dbDeleteUserErr)
+			db.On("DeleteTokensByUserId", ContextMatcher(), "foo").Return(tc.dbDeleteTokensErr)
 
 			useradm := NewUserAdm(nil, db, nil, Config{})
 			if tc.verifyTenant {
