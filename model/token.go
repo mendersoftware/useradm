@@ -50,6 +50,8 @@ type PersonalAccessToken struct {
 	LastUsed *time.Time `json:"last_used,omitempty" bson:"last_used,omitempty"`
 	// the absolute time when the token expires.
 	ExpirationDate jwt.Time `json:"expiration_date,omitempty" bson:"exp,omitempty"`
+	// CreatedTs is the absolute time the token was created.
+	CreatedTs jwt.Time `json:"created_ts,omitempty" bson:"iat,omitempty"`
 }
 
 type apiToken struct {
@@ -59,8 +61,10 @@ type apiToken struct {
 	Name *string `json:"name,omitempty"`
 	// timestamp of the last usage
 	LastUsed *time.Time `json:"last_used,omitempty"`
-	// the absolute time when the token expires.
-	ExpirationDate time.Time `json:"expiration_date,omitempty"`
+	// the absolute time when the token expires
+	ExpirationDate *time.Time `json:"expiration_date,omitempty"`
+	// timestamp of the token creation
+	CreatedTs *time.Time `json:"created_ts,omitempty"`
 }
 
 func newApiToken(t PersonalAccessToken) apiToken {
@@ -68,7 +72,8 @@ func newApiToken(t PersonalAccessToken) apiToken {
 		t.ID,
 		t.Name,
 		t.LastUsed,
-		t.ExpirationDate.Time,
+		&t.ExpirationDate.Time,
+		&t.CreatedTs.Time,
 	}
 }
 

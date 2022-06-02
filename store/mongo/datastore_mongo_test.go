@@ -2228,9 +2228,10 @@ func TestMongoGetPersonalAccessTokens(t *testing.T) {
 
 			dbTokens, err := store.GetPersonalAccessTokens(ctx, tokens[1].Subject.String())
 			assert.NoError(t, err)
-			//clear the date
+			//clear dates
 			for i, _ := range dbTokens {
 				dbTokens[i].ExpirationDate = jwt.Time{}
+				dbTokens[i].CreatedTs = jwt.Time{}
 			}
 
 			assert.Equal(t, tc.outTokens, dbTokens)

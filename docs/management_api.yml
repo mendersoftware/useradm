@@ -567,6 +567,11 @@ definitions:
         description: Expiration date.
         type: string
         format: date-time
+      created_ts:
+        description: |
+            Server-side timestamp of the token creation.
+        type: string
+        format: date-time
     required:
       - id
       - name
@@ -577,6 +582,7 @@ definitions:
       name: 'my_personal_token'
       last_used: '2022-07-05T11:11:35.725Z'
       expiration_date: '2023-10-16T07:28:34.725Z'
+      created_ts: '2022-07-05T11:03:27.725Z'
 
   Error:
     description: Error descriptor.

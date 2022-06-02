@@ -536,6 +536,7 @@ func (db *DataStoreMongo) GetPersonalAccessTokens(
 				DbTokenName:      1,
 				DbTokenExpiresAt: 1,
 				DbTokenLastUsed:  1,
+				DbTokenIssuedAt:  1,
 			},
 		)
 
