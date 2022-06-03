@@ -407,7 +407,12 @@ func TestUserAdmLogout(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("DeleteToken", ContextMatcher(), tc.token.ID).Return(tc.deleteTokenError)
+			db.On(
+				"DeleteToken",
+				ContextMatcher(),
+				tc.token.Subject,
+				tc.token.ID,
+			).Return(tc.deleteTokenError)
 			defer db.AssertExpectations(t)
 
 			useradm := NewUserAdm(nil, db, nil, Config{})

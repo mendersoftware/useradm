@@ -1151,6 +1151,7 @@ func TestMongoDeleteToken(t *testing.T) {
 	}
 
 	tokenID := oid.NewUUIDv5("id-1")
+	tokenSubject := oid.NewUUIDv5("sub-1")
 
 	testCases := map[string]struct {
 		tenant   string
@@ -1162,14 +1163,15 @@ func TestMongoDeleteToken(t *testing.T) {
 		"ok": {
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID: tokenID,
+					ID:      tokenID,
+					Subject: tokenSubject,
 				},
 			},
 			inTokens: []interface{}{
 				jwt.Token{
 					Claims: jwt.Claims{
 						ID:       tokenID,
-						Subject:  oid.NewUUIDv5("sub-1"),
+						Subject:  tokenSubject,
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1232,14 +1234,15 @@ func TestMongoDeleteToken(t *testing.T) {
 			tenant: "tenant-1",
 			token: &jwt.Token{
 				Claims: jwt.Claims{
-					ID: tokenID,
+					ID:      tokenID,
+					Subject: tokenSubject,
 				},
 			},
 			inTokens: []interface{}{
 				jwt.Token{
 					Claims: jwt.Claims{
 						ID:       tokenID,
-						Subject:  oid.NewUUIDv5("sub-1"),
+						Subject:  tokenSubject,
 						Audience: "audience",
 						ExpiresAt: jwt.Time{
 							Time: time.Now().
@@ -1305,7 +1308,7 @@ func TestMongoDeleteToken(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			err = store.DeleteToken(ctx, tc.token.ID)
+			err = store.DeleteToken(ctx, tc.token.Subject, tc.token.ID)
 			assert.NoError(t, err)
 
 			var tokens []jwt.Token

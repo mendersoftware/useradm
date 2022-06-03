@@ -226,7 +226,7 @@ func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
 }
 
 func (u *UserAdm) Logout(ctx context.Context, token *jwt.Token) error {
-	return u.db.DeleteToken(ctx, token.ID)
+	return u.db.DeleteToken(ctx, token.Subject, token.ID)
 }
 
 func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
@@ -619,7 +619,11 @@ func (ua *UserAdm) GetPersonalAccessTokens(
 }
 
 func (ua *UserAdm) DeleteToken(ctx context.Context, id string) error {
-	err := ua.db.DeleteToken(ctx, oid.FromString(id))
+	identity := identity.FromContext(ctx)
+	if identity == nil {
+		return errors.New("identity not present in the context")
+	}
+	err := ua.db.DeleteToken(ctx, oid.FromString(identity.Subject), oid.FromString(id))
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to delete token")
 	}

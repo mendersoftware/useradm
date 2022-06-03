@@ -67,13 +67,13 @@ func (_m *DataStore) CreateUser(ctx context.Context, u *model.User) error {
 	return r0
 }
 
-// DeleteToken provides a mock function with given fields: ctx, tokenID
-func (_m *DataStore) DeleteToken(ctx context.Context, tokenID oid.ObjectID) error {
-	ret := _m.Called(ctx, tokenID)
+// DeleteToken provides a mock function with given fields: ctx, userID, tokenID
+func (_m *DataStore) DeleteToken(ctx context.Context, userID oid.ObjectID, tokenID oid.ObjectID) error {
+	ret := _m.Called(ctx, userID, tokenID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID) error); ok {
-		r0 = rf(ctx, tokenID)
+	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID, oid.ObjectID) error); ok {
+		r0 = rf(ctx, userID, tokenID)
 	} else {
 		r0 = ret.Error(0)
 	}

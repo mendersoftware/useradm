@@ -427,11 +427,11 @@ func (db *DataStoreMongo) WithAutomigrate() *DataStoreMongo {
 	}
 }
 
-func (db *DataStoreMongo) DeleteToken(ctx context.Context, tokenID oid.ObjectID) error {
+func (db *DataStoreMongo) DeleteToken(ctx context.Context, userID, tokenID oid.ObjectID) error {
 	_, err := db.client.
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl).
-		DeleteOne(ctx, bson.M{"_id": tokenID})
+		DeleteOne(ctx, bson.M{DbID: tokenID, DbTokenSubject: userID})
 	return err
 }
 
