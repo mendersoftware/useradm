@@ -76,7 +76,7 @@ type UserAdmApiHandlers struct {
 
 type Config struct {
 	// maximum expiration time for Personal Access Token
-	TokenMaxExp int
+	TokenMaxExpSeconds int
 }
 
 // return an ApiHandler for user administration and authentiacation app
@@ -609,7 +609,7 @@ func (u *UserAdmApiHandlers) IssueTokenHandler(w rest.ResponseWriter, r *rest.Re
 		)
 		return
 	}
-	if err := tokenRequest.Validate(u.config.TokenMaxExp); err != nil {
+	if err := tokenRequest.Validate(u.config.TokenMaxExpSeconds); err != nil {
 		rest_utils.RestErrWithLog(
 			w,
 			r,

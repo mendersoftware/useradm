@@ -93,7 +93,7 @@ func RunServer(c config.Reader) error {
 
 	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwth,
 		api_http.Config{
-			TokenMaxExp: c.GetInt(SettingTokenMaxExpirationSeconds),
+			TokenMaxExpSeconds: c.GetInt(SettingTokenMaxExpirationSeconds),
 		})
 
 	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
