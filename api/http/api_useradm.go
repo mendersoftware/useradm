@@ -33,22 +33,24 @@ import (
 )
 
 const (
-	uriManagementAuthLogin  = "/api/management/v1/useradm/auth/login"
-	uriManagementAuthLogout = "/api/management/v1/useradm/auth/logout"
-	uriManagementUser       = "/api/management/v1/useradm/users/:id"
-	uriManagementUsers      = "/api/management/v1/useradm/users"
-	uriManagementSettings   = "/api/management/v1/useradm/settings"
-	uriManagementTokens     = "/api/management/v1/useradm/settings/tokens"
-	uriManagementToken      = "/api/management/v1/useradm/settings/tokens/:id"
+	apiUrlManagementV1      = "/api/management/v1/useradm"
+	uriManagementAuthLogin  = apiUrlManagementV1 + "/auth/login"
+	uriManagementAuthLogout = apiUrlManagementV1 + "/auth/logout"
+	uriManagementUser       = apiUrlManagementV1 + "/users/:id"
+	uriManagementUsers      = apiUrlManagementV1 + "/users"
+	uriManagementSettings   = apiUrlManagementV1 + "/settings"
+	uriManagementTokens     = apiUrlManagementV1 + "/settings/tokens"
+	uriManagementToken      = apiUrlManagementV1 + "/settings/tokens/:id"
 
-	uriInternalAlive  = "/api/internal/v1/useradm/alive"
-	uriInternalHealth = "/api/internal/v1/useradm/health"
+	apiUrlInternalV1  = "/api/internal/v1/useradm"
+	uriInternalAlive  = apiUrlInternalV1 + "/alive"
+	uriInternalHealth = apiUrlInternalV1 + "/health"
 
-	uriInternalAuthVerify  = "/api/internal/v1/useradm/auth/verify"
-	uriInternalTenants     = "/api/internal/v1/useradm/tenants"
-	uriInternalTenantUsers = "/api/internal/v1/useradm/tenants/:id/users"
-	uriInternalTenantUser  = "/api/internal/v1/useradm/tenants/:id/users/:userid"
-	uriInternalTokens      = "/api/internal/v1/useradm/tokens"
+	uriInternalAuthVerify  = apiUrlInternalV1 + "/auth/verify"
+	uriInternalTenants     = apiUrlInternalV1 + "/tenants"
+	uriInternalTenantUsers = apiUrlInternalV1 + "/tenants/:id/users"
+	uriInternalTenantUser  = apiUrlInternalV1 + "/tenants/:id/users/:userid"
+	uriInternalTokens      = apiUrlInternalV1 + "/tokens"
 )
 
 const (
