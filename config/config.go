@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -51,6 +51,15 @@ const (
 
 	SettingDbUsername = "mongo_username"
 	SettingDbPassword = "mongo_password"
+
+	SettingLimitTokensPerUser        = "limit_tokens_per_user"
+	SettingLimitTokensPerUserDefault = 10
+
+	SettingTokenLastUsedUpdateFreqMinutes        = "token_last_used_update_freq_minutes"
+	SettingTokenLastUsedUpdateFreqMinutesDefault = 5
+
+	SettingTokenMaxExpirationSeconds        = "token_max_expiration_seconds"
+	SettingTokenMaxExpirationSecondsDefault = 31536000
 )
 
 var (
@@ -65,5 +74,10 @@ var (
 		{Key: SettingTenantAdmAddr, Value: SettingTenantAdmAddrDefault},
 		{Key: SettingDbSSL, Value: SettingDbSSLDefault},
 		{Key: SettingDbSSLSkipVerify, Value: SettingDbSSLSkipVerifyDefault},
+		{Key: SettingLimitTokensPerUser, Value: SettingLimitTokensPerUserDefault},
+		{Key: SettingTokenLastUsedUpdateFreqMinutes,
+			Value: SettingTokenLastUsedUpdateFreqMinutesDefault},
+		{Key: SettingTokenMaxExpirationSeconds,
+			Value: SettingTokenMaxExpirationSecondsDefault},
 	}
 )

@@ -25,6 +25,7 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/ant0ine/go-json-rest/rest/test"
+	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/mendersoftware/go-lib-micro/requestid"
 	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
@@ -764,7 +765,7 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	jwth := jwt.NewJWTHandlerRS256(privkey, nil)
 
 	// API handler
-	handlers := NewUserAdmApiHandlers(uadm, db, jwth)
+	handlers := NewUserAdmApiHandlers(uadm, db, jwth, Config{})
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()
@@ -1732,6 +1733,186 @@ func TestUserAdmApiDeleteTokens(t *testing.T) {
 
 			//test
 			recorded := test.RunRequest(t, api, req)
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
+func TestIssueToken(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		inReq *http.Request
+
+		issueTokenErr error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
+				map[string]interface{}{
+					"name":       "foo",
+					"expires_in": 3600,
+				},
+			),
+			checker: &mt.BaseResponse{
+				Status:      http.StatusOK,
+				ContentType: "application/jwt",
+				Body:        "foo",
+			},
+		},
+		"error: token with the same name already exist": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
+				map[string]interface{}{
+					"name":       "foo",
+					"expires_in": 3600,
+				},
+			),
+			issueTokenErr: useradm.ErrDuplicateTokenName,
+			checker: mt.NewJSONResponse(
+				http.StatusConflict,
+				nil,
+				restError("Personal Access Token with a given name already exists")),
+		},
+		"error: too many tokens": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
+				map[string]interface{}{
+					"name":       "foo",
+					"expires_in": 31536000,
+				},
+			),
+			issueTokenErr: useradm.ErrTooManyTokens,
+			checker: mt.NewJSONResponse(
+				http.StatusUnprocessableEntity,
+				nil,
+				restError("maximum number of personal acess tokens reached for this user")),
+		},
+		"error: expires_in too low": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
+				map[string]interface{}{
+					"name":       "foo",
+					"expires_in": -1,
+				},
+			),
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("expires_in: must be no less than 1.")),
+		},
+		"error: expires_in too high": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
+				map[string]interface{}{
+					"name":       "foo",
+					"expires_in": 31536001,
+				},
+			),
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("expires_in: must be no greater than 31536000.")),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			//make mock useradm
+			uadm := &museradm.App{}
+			uadm.On("IssuePersonalAccessToken", mtesting.ContextMatcher(),
+				mock.AnythingOfType("*model.TokenRequest")).
+				Return("foo", tc.issueTokenErr)
+
+			api := makeMockApiHandler(t, uadm, nil)
+
+			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
+			recorded := test.RunRequest(t, api, tc.inReq)
+
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
+func TestUserAdmApiGetTokens(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		uaTokens []model.PersonalAccessToken
+		uaError  error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			uaTokens: []model.PersonalAccessToken{
+				{
+					ID:   oid.FromString("1"),
+					Name: strPtr("foo"),
+				},
+				{
+					ID:   oid.FromString("2"),
+					Name: strPtr("bar"),
+				},
+			},
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				[]model.PersonalAccessToken{
+					{
+						ID:   oid.FromString("1"),
+						Name: strPtr("foo"),
+					},
+					{
+						ID:   oid.FromString("2"),
+						Name: strPtr("bar"),
+					},
+				},
+			),
+		},
+		"error: useradm internal": {
+			uaTokens: nil,
+			uaError:  errors.New("some internal error"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			defer uadm.AssertExpectations(t)
+
+			if tc.uaTokens != nil || tc.uaError != nil {
+				uadm.On("GetPersonalAccessTokens", mtesting.ContextMatcher(), "123").
+					Return(tc.uaTokens, tc.uaError)
+			}
+
+			//make handler
+			api := makeMockApiHandler(t, uadm, nil)
+
+			//make request
+			req := makeReq("GET",
+				"http://1.2.3.4"+uriManagementTokens,
+				"",
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req.WithContext(ctx))
 			mt.CheckResponse(t, tc.checker, recorded)
 		})
 	}

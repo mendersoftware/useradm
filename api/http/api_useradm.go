@@ -33,20 +33,24 @@ import (
 )
 
 const (
-	uriManagementAuthLogin  = "/api/management/v1/useradm/auth/login"
-	uriManagementAuthLogout = "/api/management/v1/useradm/auth/logout"
-	uriManagementUser       = "/api/management/v1/useradm/users/:id"
-	uriManagementUsers      = "/api/management/v1/useradm/users"
-	uriManagementSettings   = "/api/management/v1/useradm/settings"
+	apiUrlManagementV1      = "/api/management/v1/useradm"
+	uriManagementAuthLogin  = apiUrlManagementV1 + "/auth/login"
+	uriManagementAuthLogout = apiUrlManagementV1 + "/auth/logout"
+	uriManagementUser       = apiUrlManagementV1 + "/users/:id"
+	uriManagementUsers      = apiUrlManagementV1 + "/users"
+	uriManagementSettings   = apiUrlManagementV1 + "/settings"
+	uriManagementTokens     = apiUrlManagementV1 + "/settings/tokens"
+	uriManagementToken      = apiUrlManagementV1 + "/settings/tokens/:id"
 
-	uriInternalAlive  = "/api/internal/v1/useradm/alive"
-	uriInternalHealth = "/api/internal/v1/useradm/health"
+	apiUrlInternalV1  = "/api/internal/v1/useradm"
+	uriInternalAlive  = apiUrlInternalV1 + "/alive"
+	uriInternalHealth = apiUrlInternalV1 + "/health"
 
-	uriInternalAuthVerify  = "/api/internal/v1/useradm/auth/verify"
-	uriInternalTenants     = "/api/internal/v1/useradm/tenants"
-	uriInternalTenantUsers = "/api/internal/v1/useradm/tenants/:id/users"
-	uriInternalTenantUser  = "/api/internal/v1/useradm/tenants/:id/users/:userid"
-	uriInternalTokens      = "/api/internal/v1/useradm/tokens"
+	uriInternalAuthVerify  = apiUrlInternalV1 + "/auth/verify"
+	uriInternalTenants     = apiUrlInternalV1 + "/tenants"
+	uriInternalTenantUsers = apiUrlInternalV1 + "/tenants/:id/users"
+	uriInternalTenantUser  = apiUrlInternalV1 + "/tenants/:id/users/:userid"
+	uriInternalTokens      = apiUrlInternalV1 + "/tokens"
 )
 
 const (
@@ -67,6 +71,12 @@ type UserAdmApiHandlers struct {
 	userAdm useradm.App
 	db      store.DataStore
 	jwth    *jwt.JWTHandlerRS256
+	config  Config
+}
+
+type Config struct {
+	// maximum expiration time for Personal Access Token
+	TokenMaxExpSeconds int
 }
 
 // return an ApiHandler for user administration and authentiacation app
@@ -74,11 +84,13 @@ func NewUserAdmApiHandlers(
 	userAdm useradm.App,
 	db store.DataStore,
 	jwth *jwt.JWTHandlerRS256,
+	config Config,
 ) ApiHandler {
 	return &UserAdmApiHandlers{
 		userAdm: userAdm,
 		db:      db,
 		jwth:    jwth,
+		config:  config,
 	}
 }
 
@@ -104,6 +116,9 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 		rest.Get(uriManagementSettings, i.GetSettingsHandler),
+		rest.Post(uriManagementTokens, i.IssueTokenHandler),
+		rest.Get(uriManagementTokens, i.GetTokensHandler),
+		rest.Delete(uriManagementToken, i.DeleteTokenHandler),
 	}
 
 	app, err := rest.MakeRouter(
@@ -575,4 +590,91 @@ func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.R
 	}
 
 	_ = w.WriteJson(settings)
+}
+
+func (u *UserAdmApiHandlers) IssueTokenHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	var tokenRequest model.TokenRequest
+
+	if err := r.DecodeJsonPayload(&tokenRequest); err != nil {
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			errors.New("cannot parse request body as json"),
+			http.StatusBadRequest,
+		)
+		return
+	}
+	if err := tokenRequest.Validate(u.config.TokenMaxExpSeconds); err != nil {
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			err,
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	token, err := u.userAdm.IssuePersonalAccessToken(ctx, &tokenRequest)
+	switch err {
+	case nil:
+		writer := w.(http.ResponseWriter)
+		writer.Header().Set("Content-Type", "application/jwt")
+		_, _ = writer.Write([]byte(token))
+	case useradm.ErrTooManyTokens:
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			err,
+			http.StatusUnprocessableEntity,
+		)
+	case useradm.ErrDuplicateTokenName:
+		rest_utils.RestErrWithLog(
+			w,
+			r,
+			l,
+			err,
+			http.StatusConflict,
+		)
+	default:
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+	}
+}
+
+func (u *UserAdmApiHandlers) GetTokensHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	l := log.FromContext(ctx)
+	id := identity.FromContext(ctx)
+	if id == nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, errors.New("identity not present"))
+		return
+	}
+
+	tokens, err := u.userAdm.GetPersonalAccessTokens(ctx, id.Subject)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	_ = w.WriteJson(tokens)
+}
+
+func (u *UserAdmApiHandlers) DeleteTokenHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+
+	l := log.FromContext(ctx)
+
+	err := u.userAdm.DeleteToken(ctx, r.PathParam("id"))
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

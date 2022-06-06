@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -32,6 +32,27 @@ type DataStore struct {
 	mock.Mock
 }
 
+// CountPersonalAccessTokens provides a mock function with given fields: ctx, userID
+func (_m *DataStore) CountPersonalAccessTokens(ctx context.Context, userID string) (int64, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func(context.Context, string) int64); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateUser provides a mock function with given fields: ctx, u
 func (_m *DataStore) CreateUser(ctx context.Context, u *model.User) error {
 	ret := _m.Called(ctx, u)
@@ -46,13 +67,13 @@ func (_m *DataStore) CreateUser(ctx context.Context, u *model.User) error {
 	return r0
 }
 
-// DeleteToken provides a mock function with given fields: ctx, tokenID
-func (_m *DataStore) DeleteToken(ctx context.Context, tokenID oid.ObjectID) error {
-	ret := _m.Called(ctx, tokenID)
+// DeleteToken provides a mock function with given fields: ctx, userID, tokenID
+func (_m *DataStore) DeleteToken(ctx context.Context, userID oid.ObjectID, tokenID oid.ObjectID) error {
+	ret := _m.Called(ctx, userID, tokenID)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID) error); ok {
-		r0 = rf(ctx, tokenID)
+	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID, oid.ObjectID) error); ok {
+		r0 = rf(ctx, userID, tokenID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -114,6 +135,29 @@ func (_m *DataStore) DeleteUser(ctx context.Context, id string) error {
 	}
 
 	return r0
+}
+
+// GetPersonalAccessTokens provides a mock function with given fields: ctx, userID
+func (_m *DataStore) GetPersonalAccessTokens(ctx context.Context, userID string) ([]model.PersonalAccessToken, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 []model.PersonalAccessToken
+	if rf, ok := ret.Get(0).(func(context.Context, string) []model.PersonalAccessToken); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.PersonalAccessToken)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetSettings provides a mock function with given fields: ctx
@@ -302,6 +346,20 @@ func (_m *DataStore) UpdateLoginTs(ctx context.Context, id string) error {
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateTokenLastUsed provides a mock function with given fields: ctx, id
+func (_m *DataStore) UpdateTokenLastUsed(ctx context.Context, id oid.ObjectID) error {
+	ret := _m.Called(ctx, id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID) error); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Error(0)

@@ -169,6 +169,32 @@ class ManagementApiClient(ApiClient):
 
         return requests.get(self.make_api_url("/settings"), headers=auth)
 
+    def create_token(self, token_request, auth=None):
+        if auth is None:
+            auth = self.auth
+
+        return self.client.Management_API.Create_Personal_Access_Token(
+            token=token_request, _request_options={"headers": auth}
+        ).result()
+
+    def list_tokens(self, auth=None):
+        if auth is None:
+            auth = self.auth
+
+        return self.client.Management_API.List_User_Personal_Access_Tokens(
+            _request_options={"headers": auth}
+        ).result()
+
+    def delete_token(self, tid, auth=None, headers={}):
+        if auth is None:
+            auth = self.auth
+
+        headers["Authorization"] = auth["Authorization"]
+        rsp = requests.delete(
+            self.make_api_url("/settings/tokens/{}".format(tid)), headers=headers
+        )
+        return rsp
+
 
 class CliClient:
     cmd = "/usr/bin/useradm"

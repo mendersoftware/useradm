@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -72,6 +72,20 @@ func (_m *App) CreateUserInternal(ctx context.Context, u *model.UserInternal) er
 	return r0
 }
 
+// DeleteToken provides a mock function with given fields: ctx, id
+func (_m *App) DeleteToken(ctx context.Context, id string) error {
+	ret := _m.Called(ctx, id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteTokens provides a mock function with given fields: ctx, tenantId, userId
 func (_m *App) DeleteTokens(ctx context.Context, tenantId string, userId string) error {
 	ret := _m.Called(ctx, tenantId, userId)
@@ -98,6 +112,29 @@ func (_m *App) DeleteUser(ctx context.Context, id string) error {
 	}
 
 	return r0
+}
+
+// GetPersonalAccessTokens provides a mock function with given fields: ctx, userID
+func (_m *App) GetPersonalAccessTokens(ctx context.Context, userID string) ([]model.PersonalAccessToken, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 []model.PersonalAccessToken
+	if rf, ok := ret.Get(0).(func(context.Context, string) []model.PersonalAccessToken); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.PersonalAccessToken)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetUser provides a mock function with given fields: ctx, id
@@ -158,6 +195,27 @@ func (_m *App) HealthCheck(ctx context.Context) error {
 	}
 
 	return r0
+}
+
+// IssuePersonalAccessToken provides a mock function with given fields: ctx, tr
+func (_m *App) IssuePersonalAccessToken(ctx context.Context, tr *model.TokenRequest) (string, error) {
+	ret := _m.Called(ctx, tr)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, *model.TokenRequest) string); ok {
+		r0 = rf(ctx, tr)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *model.TokenRequest) error); ok {
+		r1 = rf(ctx, tr)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Login provides a mock function with given fields: ctx, email, pass

@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -407,7 +407,12 @@ func TestUserAdmLogout(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("DeleteToken", ContextMatcher(), tc.token.ID).Return(tc.deleteTokenError)
+			db.On(
+				"DeleteToken",
+				ContextMatcher(),
+				tc.token.Subject,
+				tc.token.ID,
+			).Return(tc.deleteTokenError)
 			defer db.AssertExpectations(t)
 
 			useradm := NewUserAdm(nil, db, nil, Config{})
@@ -1176,29 +1181,31 @@ func TestUserAdmDeleteUser(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		verifyTenant bool
-		tenantErr    error
-		dbErr        error
-		err          error
+		verifyTenant      bool
+		tenantErr         error
+		dbDeleteUserErr   error
+		dbDeleteTokensErr error
+		err               error
 	}{
 		"ok": {
-			dbErr: nil,
-			err:   nil,
+			err: nil,
 		},
 		"ok, multitenant": {
 			verifyTenant: true,
-			dbErr:        nil,
 			err:          nil,
 		},
 		"multitenant, tenantadm error": {
 			verifyTenant: true,
 			tenantErr:    errors.New("http 500"),
-			dbErr:        nil,
 			err:          errors.New("useradm: failed to delete user in tenantadm: http 500"),
 		},
-		"error": {
-			dbErr: errors.New("db connection failed"),
-			err:   errors.New("useradm: failed to delete user: db connection failed"),
+		"error deleting user": {
+			dbDeleteUserErr: errors.New("db connection failed"),
+			err:             errors.New("useradm: failed to delete user: db connection failed"),
+		},
+		"error deleting user tokens": {
+			dbDeleteTokensErr: errors.New("db connection failed"),
+			err:               errors.New("useradm: failed to delete user tokens: db connection failed"),
 		},
 	}
 
@@ -1211,7 +1218,8 @@ func TestUserAdmDeleteUser(t *testing.T) {
 			ctx := context.Background()
 
 			db := &mstore.DataStore{}
-			db.On("DeleteUser", ContextMatcher(), "foo").Return(tc.dbErr)
+			db.On("DeleteUser", ContextMatcher(), "foo").Return(tc.dbDeleteUserErr)
+			db.On("DeleteTokensByUserId", ContextMatcher(), "foo").Return(tc.dbDeleteTokensErr)
 
 			useradm := NewUserAdm(nil, db, nil, Config{})
 			if tc.verifyTenant {
@@ -1450,4 +1458,155 @@ func TestUserAdmDeleteTokens(t *testing.T) {
 			}
 		})
 	}
+}
+
+func stringPtr(s string) *string {
+	return &s
+}
+
+func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
+	testCases := map[string]struct {
+		tokenRequest model.TokenRequest
+
+		callDbSaveToken   bool
+		dbSaveTokenErr    error
+		callDbCountTokens bool
+		dbCountTokens     int64
+		dbCountTokensErr  error
+
+		config Config
+
+		outErr error
+	}{
+		"ok": {
+			tokenRequest: model.TokenRequest{
+				Name:      stringPtr("foo"),
+				ExpiresIn: 3600,
+			},
+			callDbSaveToken:   true,
+			callDbCountTokens: true,
+			dbCountTokens:     9,
+			config: Config{
+				Issuer:             "foobar",
+				ExpirationTime:     10,
+				LimitTokensPerUser: 10,
+			},
+		},
+		"ok, no limit": {
+			tokenRequest: model.TokenRequest{
+				Name:      stringPtr("foo"),
+				ExpiresIn: 3600,
+			},
+			callDbSaveToken: true,
+			config: Config{
+				Issuer:         "foobar",
+				ExpirationTime: 10,
+			},
+		},
+		"error: too many tokens": {
+			tokenRequest: model.TokenRequest{
+				Name:      stringPtr("foo"),
+				ExpiresIn: 3600,
+			},
+			callDbCountTokens: true,
+			dbCountTokens:     10,
+			config: Config{
+				Issuer:             "foobar",
+				ExpirationTime:     10,
+				LimitTokensPerUser: 10,
+			},
+			outErr: ErrTooManyTokens,
+		},
+		"error: count tokens error": {
+			tokenRequest: model.TokenRequest{
+				Name:      stringPtr("foo"),
+				ExpiresIn: 3600,
+			},
+			callDbCountTokens: true,
+			dbCountTokens:     0,
+			dbCountTokensErr:  errors.New("count tokens error"),
+			config: Config{
+				Issuer:             "foobar",
+				ExpirationTime:     10,
+				LimitTokensPerUser: 10,
+			},
+			outErr: errors.New(
+				"useradm: failed to count personal access tokens: count tokens error"),
+		},
+		"error: duplicate token name": {
+			tokenRequest: model.TokenRequest{
+				Name:      stringPtr("foo"),
+				ExpiresIn: 3600,
+			},
+			callDbSaveToken:   true,
+			dbSaveTokenErr:    store.ErrDuplicateTokenName,
+			callDbCountTokens: true,
+			dbCountTokens:     9,
+			config: Config{
+				Issuer:             "foobar",
+				ExpirationTime:     10,
+				LimitTokensPerUser: 10,
+			},
+			outErr: ErrDuplicateTokenName,
+		},
+		"error: save token error": {
+			tokenRequest: model.TokenRequest{
+				Name:      stringPtr("foo"),
+				ExpiresIn: 3600,
+			},
+			callDbSaveToken:   true,
+			dbSaveTokenErr:    errors.New("save token error"),
+			callDbCountTokens: true,
+			dbCountTokens:     9,
+			config: Config{
+				Issuer:             "foobar",
+				ExpirationTime:     10,
+				LimitTokensPerUser: 10,
+			},
+			outErr: errors.New("useradm: failed to save token: save token error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+
+			db := &mstore.DataStore{}
+			defer db.AssertExpectations(t)
+			if tc.callDbSaveToken {
+				db.On("SaveToken",
+					ContextMatcher(),
+					mock.AnythingOfType("*jwt.Token")).
+					Return(tc.dbSaveTokenErr)
+			}
+			if tc.callDbCountTokens {
+				db.On("CountPersonalAccessTokens",
+					ContextMatcher(),
+					"foo").
+					Return(tc.dbCountTokens, tc.dbCountTokensErr)
+			}
+
+			mockJWTHandler := mjwt.Handler{}
+			mockJWTHandler.On("ToJWT",
+				mock.AnythingOfType("*jwt.Token"),
+			).Return("signed", nil)
+
+			useradm := NewUserAdm(&mockJWTHandler, db, nil, tc.config)
+
+			id := &identity.Identity{
+				Subject: "foo",
+				Tenant:  "bar",
+			}
+			ctx = identity.WithContext(ctx, id)
+
+			_, err := useradm.IssuePersonalAccessToken(ctx, &tc.tokenRequest)
+
+			if tc.outErr != nil {
+				assert.EqualError(t, err, tc.outErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
 }
