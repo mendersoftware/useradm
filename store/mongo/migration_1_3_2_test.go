@@ -26,7 +26,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func TestMigration_3_1_2(t *testing.T) {
+func TestMigration_1_3_2(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping TestMigration_3_1_2 in short mode")
 	}
@@ -63,7 +63,7 @@ func TestMigration_3_1_2(t *testing.T) {
 			dbName := ctxstore.DbFromContext(ctx, DbName)
 
 			migrations := []migrate.Migration{
-				&migration_3_1_2{
+				&migration_1_3_2{
 					ds:  ds,
 					ctx: ctx,
 				},
@@ -73,7 +73,7 @@ func TestMigration_3_1_2(t *testing.T) {
 				Db:          dbName,
 				Automigrate: true,
 			}
-			err = m.Apply(ctx, migrate.MakeVersion(3, 1, 2), migrations)
+			err = m.Apply(ctx, migrate.MakeVersion(1, 3, 2), migrations)
 			assert.NoError(t, err)
 
 			c := client.Database(dbName).Collection(DbTokensColl)
