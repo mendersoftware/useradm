@@ -45,7 +45,10 @@ func (m *migration_1_3_2) Up(from migrate.Version) error {
 	tokenNameIndexOptions.SetName(DbUniqueTokenNameIndexName)
 
 	uniqueTokenNameIndex := mongo.IndexModel{
-		Keys:    bson.D{{Key: DbTokenName, Value: 1}},
+		Keys: bson.D{
+			{Key: DbTokenName, Value: 1},
+			{Key: DbTokenSubject, Value: 1},
+		},
 		Options: tokenNameIndexOptions,
 	}
 
