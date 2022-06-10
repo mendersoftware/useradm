@@ -575,7 +575,7 @@ definitions:
     required:
       - id
       - name
-      - last_used
+      - created_ts
       - expiration_date
     example:
       id: "806603def19d417d004a4b67e"
