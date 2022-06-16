@@ -230,11 +230,11 @@ func (_m *DataStore) GetUserAndPasswordById(ctx context.Context, id string) (*mo
 }
 
 // GetUserByEmail provides a mock function with given fields: ctx, email
-func (_m *DataStore) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+func (_m *DataStore) GetUserByEmail(ctx context.Context, email model.Email) (*model.User, error) {
 	ret := _m.Called(ctx, email)
 
 	var r0 *model.User
-	if rf, ok := ret.Get(0).(func(context.Context, string) *model.User); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, model.Email) *model.User); ok {
 		r0 = rf(ctx, email)
 	} else {
 		if ret.Get(0) != nil {
@@ -243,7 +243,7 @@ func (_m *DataStore) GetUserByEmail(ctx context.Context, email string) (*model.U
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, model.Email) error); ok {
 		r1 = rf(ctx, email)
 	} else {
 		r1 = ret.Error(1)

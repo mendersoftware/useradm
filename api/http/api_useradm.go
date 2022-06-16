@@ -16,6 +16,7 @@ package http
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
@@ -156,12 +157,13 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 	l := log.FromContext(ctx)
 
 	//parse auth header
-	email, pass, ok := r.BasicAuth()
+	user, pass, ok := r.BasicAuth()
 	if !ok {
 		rest_utils.RestErrWithLog(w, r, l,
 			ErrAuthHeader, http.StatusUnauthorized)
 		return
 	}
+	email := model.Email(strings.ToLower(user))
 
 	token, err := u.userAdm.Login(ctx, email, pass)
 	if err != nil {

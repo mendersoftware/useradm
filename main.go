@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,20 +17,24 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/urfave/cli"
 
 	. "github.com/mendersoftware/useradm/config"
+	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store/mongo"
 )
 
 func main() {
-	doMain(os.Args)
+	if err := doMain(os.Args); err != nil {
+		os.Exit(1)
+	}
 }
 
-func doMain(args []string) {
+func doMain(args []string) error {
 	var debug bool
 	var configPath string
 
@@ -139,7 +143,11 @@ func doMain(args []string) {
 
 		return nil
 	}
-	_ = app.Run(args)
+	err := app.Run(args)
+	if err != nil {
+		log.NewEmpty().Fatal(err)
+	}
+	return err
 }
 
 func runServer(args *cli.Context) error {
@@ -185,9 +193,10 @@ func runServer(args *cli.Context) error {
 }
 
 func runCreateUser(args *cli.Context) error {
+	email := model.Email(strings.ToLower(args.String("username")))
 	err := commandCreateUser(
 		config.Config,
-		args.String("username"),
+		email,
 		args.String("password"),
 		args.String("user-id"),
 		args.String("tenant-id"),
@@ -207,8 +216,11 @@ func runMigrate(args *cli.Context) error {
 }
 
 func runSetPassword(args *cli.Context) error {
-	err := commandSetPassword(config.Config,
-		args.String("username"), args.String("password"), args.String("tenant-id"))
+	email := model.Email(strings.ToLower(args.String("username")))
+	err := commandSetPassword(
+		config.Config, email,
+		args.String("password"), args.String("tenant-id"),
+	)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 7)
 	}

@@ -354,7 +354,7 @@ func TestMongoGetUserByEmail(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inEmail string
+		inEmail model.Email
 		tenant  string
 		outUser *model.User
 	}{
@@ -700,7 +700,7 @@ func TestMongoGetUsers(t *testing.T) {
 			},
 			filter: model.UserFilter{
 				ID: []string{"1", "2"},
-				Email: []string{
+				Email: []model.Email{
 					"foo@bar.com",
 					"bar@bar.com",
 					"baz@bar.com",

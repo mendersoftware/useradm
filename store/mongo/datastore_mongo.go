@@ -248,7 +248,10 @@ func (db *DataStoreMongo) UpdateLoginTs(ctx context.Context, id string) error {
 	return err
 }
 
-func (db *DataStoreMongo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+func (db *DataStoreMongo) GetUserByEmail(
+	ctx context.Context,
+	email model.Email,
+) (*model.User, error) {
 	var user model.User
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).

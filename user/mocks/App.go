@@ -219,11 +219,11 @@ func (_m *App) IssuePersonalAccessToken(ctx context.Context, tr *model.TokenRequ
 }
 
 // Login provides a mock function with given fields: ctx, email, pass
-func (_m *App) Login(ctx context.Context, email string, pass string) (*jwt.Token, error) {
+func (_m *App) Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error) {
 	ret := _m.Called(ctx, email, pass)
 
 	var r0 *jwt.Token
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *jwt.Token); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, model.Email, string) *jwt.Token); ok {
 		r0 = rf(ctx, email, pass)
 	} else {
 		if ret.Get(0) != nil {
@@ -232,7 +232,7 @@ func (_m *App) Login(ctx context.Context, email string, pass string) (*jwt.Token
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, model.Email, string) error); ok {
 		r1 = rf(ctx, email, pass)
 	} else {
 		r1 = ret.Error(1)

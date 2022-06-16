@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"net/url"
 	"testing"
@@ -111,7 +112,7 @@ func TestUserFilterParseForm(t *testing.T) {
 		},
 		Result: UserFilter{
 			ID: []string{"1", "2", "3"},
-			Email: []string{
+			Email: []Email{
 				"user1@acme.io",
 				"user2@acme.io",
 				"user3@acme.io",
@@ -179,4 +180,18 @@ func TestUserFilterParseForm(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEmailType(t *testing.T) {
+	const (
+		testEmail        = "test@mender.io"
+		validEmailJSON   = `"` + testEmail + `"`
+		invalidEmailJSON = `"` + testEmail
+	)
+
+	var email Email
+
+	assert.NoError(t, json.Unmarshal([]byte(validEmailJSON), &email))
+	assert.NoError(t, email.Validate())
+	assert.Error(t, email.UnmarshalJSON([]byte(invalidEmailJSON)))
 }
