@@ -22,13 +22,14 @@ from common import (
 )
 import bravado
 import pytest
+import semver
 import tenantadm
 
 
 class Migration:
     DB_NAME = "useradm"
     MIGRATION_COLLECTION = "migration_info"
-    DB_VERSION = "1.0.0"
+    DB_VERSION = "1.3.2"
 
     @staticmethod
     def verify_db_and_collections(client, dbname):
@@ -40,16 +41,15 @@ class Migration:
 
     @staticmethod
     def verify_migration(db, expected_version):
-        major, minor, patch = [int(x) for x in expected_version.split(".")]
-        version = {
-            "version.major": major,
-            "version.minor": minor,
-            "version.patch": patch,
-        }
+        expected_version = semver.VersionInfo.parse(expected_version)
 
-        mi = db[Migration.MIGRATION_COLLECTION].find_one(version)
-        print("found migration:", mi)
-        assert mi
+        migrations = list(db[Migration.MIGRATION_COLLECTION].find({}))
+        semvers = list()
+        for migration in migrations:
+            version: str = ".".join(str(ver_part) for ver_part in list(migration["version"].values()))
+            semvers.append(semver.VersionInfo.parse(version))
+        latest_migration_version = sorted(semvers)[-1]
+        assert expected_version == latest_migration_version, f"Expected migration version {expected_version} is different than latest found: {latest_migration_version}"
 
 
 class TestCli:
