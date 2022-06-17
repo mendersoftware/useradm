@@ -20,6 +20,7 @@ from common import (
     cli,
     api_client_mgmt,
     mongo,
+    migrate,
     make_auth,
 )
 import bravado

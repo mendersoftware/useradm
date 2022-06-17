@@ -21,6 +21,7 @@ from common import (
     api_client_int,
     api_client_mgmt,
     mongo,
+    migrate,
     make_auth,
 )
 import bravado

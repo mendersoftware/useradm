@@ -18,6 +18,7 @@ from common import (
     mongo,
     clean_db,
     make_auth,
+    migrate,
     explode_jwt,
 )
 import bravado
@@ -48,6 +49,8 @@ class Migration:
         for migration in migrations:
             version: str = ".".join(str(ver_part) for ver_part in list(migration["version"].values()))
             semvers.append(semver.VersionInfo.parse(version))
+
+        assert len(semvers) != 0, "DB: No migrations found"
         latest_migration_version = sorted(semvers)[-1]
         assert expected_version == latest_migration_version, f"Expected migration version {expected_version} is different than latest found: {latest_migration_version}"
 

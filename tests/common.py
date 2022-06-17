@@ -82,6 +82,11 @@ def cli():
     return CliClient()
 
 
+@pytest.fixture(scope="class", autouse=True)
+def migrate(cli: CliClient):
+    cli.migrate()
+
+
 @pytest.fixture(scope="session")
 def api_client_mgmt(request):
     return ManagementApiClient(

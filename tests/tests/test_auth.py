@@ -22,6 +22,7 @@ from common import (
     api_client_mgmt,
     api_client_int,
     mongo,
+    migrate,
     make_auth,
     user_tokens,
     explode_jwt,

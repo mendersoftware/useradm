@@ -12,7 +12,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import api_client_int, mongo, clean_db, make_auth, api_client_mgmt
+from common import api_client_int, mongo, clean_db, make_auth, api_client_mgmt, migrate, cli
 import bravado
 import pytest
 import tenantadm
