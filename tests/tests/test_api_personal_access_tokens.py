@@ -26,6 +26,7 @@ from common import (
     mongo,
     migrate,
     make_auth,
+    TENANTS,
 )
 import bravado
 import pytest
@@ -166,7 +167,7 @@ class TestManagementApiPostToken(TestManagementApiPostTokenBase):
 
 
 class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok(self, tenant_id, api_client_int, api_client_mgmt, init_users_mt):
         token_request = {"name": "my_personal_access_token", "expires_in": 3600}
         users_db = {
@@ -179,7 +180,7 @@ class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
                 api_client_int, api_client_mgmt, init_users_mt[tenant_id], token_request
             )
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_tokens_limit_for_single_user(self, tenant_id, api_client_mgmt, init_users_mt):
         users_db = {
             tenant: [user.email for user in users]
@@ -188,7 +189,7 @@ class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
         with tenantadm.run_fake_user_tenants(users_db):
             self._test_pat_limit(api_client_mgmt, init_users_mt[tenant_id])
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_tokens_naming_collisions_one_user(self, tenant_id, api_client_mgmt, init_users_mt):
         users_db = {
             tenant: [user.email for user in users]
@@ -197,7 +198,7 @@ class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
         with tenantadm.run_fake_user_tenants(users_db):
             self._test_pat_name_collision_for_one_user(api_client_mgmt, init_users_mt[tenant_id])
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_tokens_naming_collisions_multiple_users(self, tenant_id, api_client_mgmt, init_users_mt):
         users_db = {
             tenant: [user.email for user in users]

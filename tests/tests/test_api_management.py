@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 from common import (
+    TENANTS,
     init_users,
     init_users_f,
     init_users_mt,
@@ -103,7 +104,7 @@ class TestManagementApiPostUsers(TestManagementApiPostUsersBase):
 
 
 class TestManagementApiPostUsersEnterprise(TestManagementApiPostUsersBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
         new_user = {"email": "foo@bar.com", "password": "asdf1234zxcv"}
         with tenantadm.run_fake_create_user(new_user):
@@ -111,7 +112,7 @@ class TestManagementApiPostUsersEnterprise(TestManagementApiPostUsersBase):
                 api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id
             )
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_fail_duplicate_email(self, tenant_id, api_client_mgmt, init_users_mt):
         new_user = {"email": "foo@bar.com", "password": "asdf1234zxcv"}
         with tenantadm.run_fake_create_user(new_user, 422):
@@ -153,11 +154,11 @@ class TestManagementApiGetUser(TestManagementApiGetUserBase):
 
 
 class TestManagementApiGetUserEnterprise(TestManagementApiGetUserBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_fail_not_found(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_fail_not_found(
             api_client_mgmt, init_users_mt[tenant_id], tenant_id
@@ -193,11 +194,11 @@ class TestManagementApiGetUsersNoUsers(TestManagementApiGetUsersBase):
 
 
 class TestManagementApiGetUsersEnterprise(TestManagementApiGetUsersBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_no_users(self, tenant_id, api_client_mgmt, init_users_mt):
         self._do_test_no_users(api_client_mgmt, "non_existing_tenant_id")
 
@@ -235,14 +236,14 @@ class TestManagementApiDeleteUser(TestManagementApiDeleteUserBase):
 
 
 class TestManagementApiDeleteUserEnterprise(TestManagementApiDeleteUserBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
         with tenantadm.run_fake_delete_user(
             tenant_id, init_users_mt[tenant_id][0]["id"]
         ):
             self._do_test_ok(api_client_mgmt, init_users_mt[tenant_id], tenant_id)
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_not_found(self, tenant_id, api_client_mgmt):
         with tenantadm.run_fake_delete_user():
             self._do_test_not_found(api_client_mgmt, tenant_id)
@@ -376,7 +377,7 @@ class TestManagementApiPutUser(TestManagementApiPutUserBase):
 
 
 class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok_email(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][0]
         update = {"email": "unique1@foo.com"}
@@ -385,7 +386,7 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
                 api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
             )
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][1]
         with tenantadm.run_fake_get_tenants(tenant_id):
@@ -397,7 +398,7 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
                 api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
             )
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok_email_and_pass(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][2]
         update = {
@@ -410,7 +411,7 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
                 api_client_mgmt, init_users_mt_f[tenant_id], user, update, tenant_id
             )
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_fail_not_found(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][3]
         update = {
@@ -423,11 +424,11 @@ class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):
                 api_client_mgmt, init_users_mt_f[tenant_id], update, tenant_id
             )
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_fail_bad_update(self, api_client_mgmt, init_users_mt_f, tenant_id):
         self._do_test_fail_bad_update(api_client_mgmt, init_users_mt_f[tenant_id])
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_fail_duplicate_email(self, api_client_mgmt, init_users_mt_f, tenant_id):
         user = init_users_mt_f[tenant_id][0]
         update = {
@@ -492,10 +493,10 @@ class TestManagementApiSettings(TestManagementApiSettingsBase):
 
 
 class TestManagementApiSettingsEnterprise(TestManagementApiSettingsBase):
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_ok(self, api_client_mgmt, init_users_mt_f, tenant_id):
         self._do_test_ok(api_client_mgmt, tenant_id)
 
-    @pytest.mark.parametrize("tenant_id", ["tenant1id", "tenant2id"])
+    @pytest.mark.parametrize("tenant_id", TENANTS)
     def test_bad_request(self, api_client_mgmt, tenant_id):
         self._do_test_fail_bad_request(api_client_mgmt, tenant_id)
