@@ -15,13 +15,20 @@
 import json
 import pytest
 import uuid
-
 from datetime import datetime, timedelta
-from pymongo import MongoClient
 from base64 import urlsafe_b64encode, urlsafe_b64decode
+from typing import List
+
+from pymongo import MongoClient
+
 from client import CliClient, ManagementApiClient, InternalApiClient
 
 import tenantadm
+
+
+TENANT_ONE: str = "tenant1id"
+TENANT_TWO: str = "tenant2id"
+TENANTS: List[str] = [TENANT_ONE, TENANT_TWO]
 
 
 def make_auth(sub, tenant=None):
@@ -82,6 +89,14 @@ def cli():
     return CliClient()
 
 
+@pytest.fixture(scope="class", autouse=True)
+def migrate(cli: CliClient, mongo: MongoClient):
+    """Migrate main DB and tenant DBs using useradm's CLI interface."""
+    cli.migrate()
+    cli.migrate(tenant_id=TENANT_ONE)
+    cli.migrate(tenant_id=TENANT_TWO)
+
+
 @pytest.fixture(scope="session")
 def api_client_mgmt(request):
     return ManagementApiClient(
@@ -119,7 +134,7 @@ def init_users_f(cli, api_client_mgmt, mongo):
 
 @pytest.fixture(scope="class")
 def init_users_mt(cli, api_client_mgmt, mongo):
-    tenant_users = {"tenant1id": [], "tenant2id": []}
+    tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
     for t in tenant_users:
         for i in range(5):
             user = {
@@ -140,7 +155,7 @@ def init_users_mt_f(cli, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users_mt'.
     """
-    tenant_users = {"tenant1id": [], "tenant2id": []}
+    tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
     for t in tenant_users:
         for i in range(5):
             user = {

@@ -18,17 +18,21 @@ from common import (
     mongo,
     clean_db,
     make_auth,
+    migrate,
     explode_jwt,
+    TENANT_ONE,
+    TENANT_TWO,
 )
 import bravado
 import pytest
+import semver
 import tenantadm
 
 
 class Migration:
     DB_NAME = "useradm"
     MIGRATION_COLLECTION = "migration_info"
-    DB_VERSION = "1.0.0"
+    DB_VERSION = "1.3.2"
 
     @staticmethod
     def verify_db_and_collections(client, dbname):
@@ -40,16 +44,17 @@ class Migration:
 
     @staticmethod
     def verify_migration(db, expected_version):
-        major, minor, patch = [int(x) for x in expected_version.split(".")]
-        version = {
-            "version.major": major,
-            "version.minor": minor,
-            "version.patch": patch,
-        }
+        expected_version = semver.VersionInfo.parse(expected_version)
 
-        mi = db[Migration.MIGRATION_COLLECTION].find_one(version)
-        print("found migration:", mi)
-        assert mi
+        migrations = list(db[Migration.MIGRATION_COLLECTION].find({}))
+        semvers = list()
+        for migration in migrations:
+            version: str = ".".join(str(ver_part) for ver_part in list(migration["version"].values()))
+            semvers.append(semver.VersionInfo.parse(version))
+
+        assert len(semvers) != 0, "DB: No migrations found"
+        latest_migration_version = sorted(semvers)[-1]
+        assert expected_version == latest_migration_version, f"Expected migration version {expected_version} is different than latest found: {latest_migration_version}"
 
 
 class TestCli:
@@ -113,26 +118,26 @@ class TestCli:
 
 class TestCliEnterprise:
     def test_create_user(self, api_client_mgmt, cli):
-        user = {"email": "foo-tenant1id@bar.com", "password": "1234youseeme"}
+        user = {"email": f"foo-{TENANT_ONE}@bar.com", "password": "1234youseeme"}
 
         with tenantadm.run_fake_create_user(user):
-            cli.create_user(user["email"], user["password"], tenant_id="tenant1id")
+            cli.create_user(user["email"], user["password"], tenant_id=TENANT_ONE)
 
-        users = api_client_mgmt.get_users(make_auth("foo", tenant="tenant1id"))
-        assert [user for user in users if user.email == "foo-tenant1id@bar.com"]
+        users = api_client_mgmt.get_users(make_auth("foo", tenant=TENANT_ONE))
+        assert [user for user in users if user.email == f"foo-{TENANT_ONE}@bar.com"]
 
         other_tenant_users = api_client_mgmt.get_users(
-            make_auth("foo", tenant="tenant2id")
+            make_auth("foo", tenant=TENANT_TWO)
         )
         assert not other_tenant_users
 
     def test_create_user_login(self, api_client_mgmt, cli, clean_db):
         user = {"email": "foo@bar.com", "password": "1234youseeme"}
 
-        users_db = {"tenant1id": [user["email"]]}
+        users_db = {TENANT_ONE: [user["email"]]}
 
         with tenantadm.run_fake_create_user(user):
-            cli.create_user(user["email"], user["password"], tenant_id="tenant1id")
+            cli.create_user(user["email"], user["password"], tenant_id=TENANT_ONE)
 
         with tenantadm.run_fake_user_tenants(users_db):
             _, r = api_client_mgmt.login(user["email"], user["password"])
@@ -141,14 +146,14 @@ class TestCliEnterprise:
             token = r.text
             assert token
             _, claims, _ = explode_jwt(token)
-            assert claims["mender.tenant"] == "tenant1id"
+            assert claims["mender.tenant"] == TENANT_ONE
 
     def test_set_password(self, api_client_mgmt, cli, clean_db):
         user = {
             "password": "1234youseeme",
             "new_password": "5678youseeme",
             "email": "foo@bar.com",
-            "tenant": "tenant1id",
+            "tenant": TENANT_ONE,
         }
 
         users_db = {user["tenant"]: [user["email"]]}

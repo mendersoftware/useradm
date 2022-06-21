@@ -18,6 +18,8 @@ import os.path
 import pytest
 import socket
 import subprocess
+from collections import namedtuple
+from typing import List
 
 import docker
 import requests
@@ -27,6 +29,8 @@ from bravado.swagger_model import load_file
 
 import common
 
+
+Microservice = namedtuple("Service", "bin_path data_path")
 
 class ApiClient:
     log = logging.getLogger("client.ApiClient")
@@ -197,7 +201,10 @@ class ManagementApiClient(ApiClient):
 
 
 class CliClient:
-    cmd = "/usr/bin/useradm"
+    open_source = Microservice("/usr/bin/useradm", "/etc/useradm")
+    enterprise = Microservice(
+        "/usr/bin/useradm-enterprise", "/etc/useradm-enterprise"
+    )
 
     def __init__(self):
         self.client = docker.from_env()
@@ -217,6 +224,24 @@ class CliClient:
             },
             limit=1,
         )[0]
+        self.cmd = self._choose_binary_and_config_paths(
+            [self.open_source, self.enterprise]
+        )
+
+    def _choose_binary_and_config_paths(
+        self, service_flavours: List[str]
+    ):
+        """Choose binary and configuration paths depending on service flavour. """
+        for service in service_flavours:
+            try:
+                res = self.useradm.exec_run(" ".join([service.bin_path, "--help"]))
+                if res.exit_code != 0:
+                    raise Exception("binary name does not exist")
+                return service.bin_path
+            except:
+                continue
+        else:
+            raise RuntimeError(f"no runnable binary found")
 
     def create_user(self, name, pwd, user_id=None, tenant_id=None):
         args = [self.cmd, "create-user", "--username", name, "--password", pwd]

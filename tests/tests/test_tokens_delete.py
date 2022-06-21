@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ from common import (
     api_client_mgmt,
     api_client_int,
     mongo,
+    migrate,
     make_auth,
     user_tokens,
     explode_jwt,
