@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
-	mstore "github.com/mendersoftware/go-lib-micro/store"
+	mstore "github.com/mendersoftware/go-lib-micro/store/v2"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"

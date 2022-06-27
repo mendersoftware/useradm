@@ -313,8 +313,8 @@ github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Ky
 github.com/mattn/go-isatty v0.0.14 h1:yVuAays6BHfxijgZPzw+3Zlu5yQgKGP2/hcQbHb7S9Y=
 github.com/mattn/go-isatty v0.0.14/go.mod h1:7GGIvUiUoEMVVmxf/4nioHXj79iQHKdU27kJ6hsGG94=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
-github.com/mendersoftware/go-lib-micro v0.0.0-20220620185918-c0dd57dbb00b h1:1bWtGD9wqJN4v/VYEED/gPb8bjHZMsuZDHqRpoQfzPQ=
-github.com/mendersoftware/go-lib-micro v0.0.0-20220620185918-c0dd57dbb00b/go.mod h1:MCT8kcilPz96DfcuHeA4yS73P2B8kVP/JP2px/Lna1U=
+github.com/mendersoftware/go-lib-micro v0.0.0-20220624091515-0b58edb1c674 h1:fVr02zVlc1l1li4kbYFKmeJJXLo4mb8kEU6MNEMPudw=
+github.com/mendersoftware/go-lib-micro v0.0.0-20220624091515-0b58edb1c674/go.mod h1:MCT8kcilPz96DfcuHeA4yS73P2B8kVP/JP2px/Lna1U=
 github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKjuso=
 github.com/miekg/dns v1.1.41/go.mod h1:p6aan82bvRIyn+zDIv9xYNUpwa73JcSh9BKwknJysuI=
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
