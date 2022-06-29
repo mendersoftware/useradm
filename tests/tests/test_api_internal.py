@@ -12,7 +12,18 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from common import api_client_int, mongo, clean_db, make_auth, api_client_mgmt, migrate, cli
+from common import (
+    api_client_int,
+    mongo,
+    clean_db,
+    clean_db_f,
+    clean_migrated_db,
+    clean_migrated_db_f,
+    make_auth,
+    api_client_mgmt,
+    migrate,
+    cli,
+)
 import bravado
 import pytest
 import tenantadm
@@ -45,7 +56,7 @@ class TestInternalApiTenantCreate:
 
 class TestInternalApiUserForTenantCreateEnterprise:
     def test_ok(
-        self, api_client_int, api_client_mgmt, clean_db,
+        self, api_client_int, api_client_mgmt, clean_db_f,
     ):
         user = {"email": "stefan@example.com", "password": "secret12345"}
 
@@ -56,7 +67,7 @@ class TestInternalApiUserForTenantCreateEnterprise:
         users = api_client_mgmt.get_users(auth)
         assert len(users) == 1
 
-    def test_ok_pwd_hash(self, api_client_int, api_client_mgmt, clean_db):
+    def test_ok_pwd_hash(self, api_client_int, api_client_mgmt, clean_db_f):
         user = {
             "email": "stefan@example.com",
             "password_hash": "secret12345",
@@ -71,7 +82,7 @@ class TestInternalApiUserForTenantCreateEnterprise:
         assert len(users) == 1
 
     def test_no_propagate(
-        self, api_client_int, api_client_mgmt, clean_db,
+        self, api_client_int, api_client_mgmt, clean_db_f,
     ):
         user = {
             "email": "stefan@example.com",
@@ -104,7 +115,7 @@ class TestInternalApiUserForTenantCreateEnterprise:
         else:
             pytest.fail("Exception expected")
 
-    def test_fail_pwd_and_hash(self, api_client_int, api_client_mgmt, clean_db):
+    def test_fail_pwd_and_hash(self, api_client_int, api_client_mgmt, clean_db_f):
         new_user = {
             "email": "foobar@tenant.com",
             "password": "secret1234",

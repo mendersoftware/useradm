@@ -112,7 +112,7 @@ def api_client_int(request):
 
 
 @pytest.fixture(scope="class")
-def init_users(cli, api_client_mgmt, mongo):
+def init_users(cli, clean_migrated_db, api_client_mgmt, mongo):
     for i in range(5):
         cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
 
@@ -121,7 +121,7 @@ def init_users(cli, api_client_mgmt, mongo):
 
 
 @pytest.fixture(scope="function")
-def init_users_f(cli, api_client_mgmt, mongo):
+def init_users_f(cli, clean_migrated_db_f, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users'.
     """
@@ -133,7 +133,7 @@ def init_users_f(cli, api_client_mgmt, mongo):
 
 
 @pytest.fixture(scope="class")
-def init_users_mt(cli, api_client_mgmt, mongo):
+def init_users_mt(cli, clean_migrated_db, api_client_mgmt, mongo):
     tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
     for t in tenant_users:
         for i in range(5):
@@ -151,7 +151,7 @@ def init_users_mt(cli, api_client_mgmt, mongo):
 
 
 @pytest.fixture(scope="function")
-def init_users_mt_f(cli, api_client_mgmt, mongo):
+def init_users_mt_f(cli, clean_migrated_db_f, api_client_mgmt, mongo):
     """
     Function-scoped version of 'init_users_mt'.
     """
@@ -181,11 +181,36 @@ def user_tokens(init_users, api_client_mgmt):
     yield tokens
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="class")
 def clean_db(mongo):
     mongo_cleanup(mongo)
     yield mongo
     mongo_cleanup(mongo)
+
+
+@pytest.fixture(scope="function")
+def clean_db_f(mongo):
+    mongo_cleanup(mongo)
+    yield mongo
+    mongo_cleanup(mongo)
+
+
+@pytest.fixture(scope="class")
+def clean_migrated_db(clean_db, cli):
+    """Clean database with migrations applied. Yields pymongo.MongoClient connected to the DB."""
+    cli.migrate()
+    cli.migrate(tenant_id=TENANT_ONE)
+    cli.migrate(tenant_id=TENANT_TWO)
+    yield clean_db
+
+
+@pytest.fixture(scope="function")
+def clean_migrated_db_f(clean_db_f, cli):
+    """Clean database with migrations applied. Yields pymongo.MongoClient connected to the DB."""
+    cli.migrate()
+    cli.migrate(tenant_id=TENANT_ONE)
+    cli.migrate(tenant_id=TENANT_TWO)
+    yield clean_db_f
 
 
 def b64pad(b64data):
