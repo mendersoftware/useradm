@@ -23,7 +23,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
-	mstore "github.com/mendersoftware/go-lib-micro/store"
+	mstore "github.com/mendersoftware/go-lib-micro/store/v2"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
@@ -138,19 +138,14 @@ func TestMongoCreateUser(t *testing.T) {
 				ctx = identity.WithContext(ctx, &identity.Identity{
 					Tenant: tc.tenant,
 				})
-				store = store.WithMultitenant()
-				err = store.MigrateTenant(ctx, DbVersion, tc.tenant)
-				assert.NoError(t, err)
-			} else {
-				err = store.Migrate(ctx, DbVersion)
-				assert.NoError(t, err)
 			}
+			err = store.Migrate(ctx, DbVersion)
+			assert.NoError(t, err)
 
 			_, err = client.
-				Database(mstore.DbFromContext(ctx, DbName)).
+				Database(DbName).
 				Collection(DbUsersColl).
-				InsertMany(ctx, exisitingUsers)
-
+				InsertMany(ctx, mstore.ArrayWithTenantID(ctx, exisitingUsers))
 			assert.NoError(t, err)
 
 			err = store.CreateUser(ctx, &tc.inUser)
@@ -161,12 +156,13 @@ func TestMongoCreateUser(t *testing.T) {
 				err := client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbUsersColl).
-					FindOne(ctx, bson.M{"_id": "1234"}).
+					FindOne(ctx, mstore.WithTenantID(ctx, bson.M{"_id": "1234"})).
 					Decode(&user)
 				assert.NoError(t, err)
 				assert.Equal(t, tc.inUser.Password, user.Password)
 
 			} else {
+				err = store.CreateUser(ctx, &tc.inUser)
 				assert.EqualError(t, err, tc.outErr)
 			}
 		})
@@ -260,18 +256,14 @@ func TestMongoUpdateUser(t *testing.T) {
 				ctx = identity.WithContext(ctx, &identity.Identity{
 					Tenant: tc.tenant,
 				})
-				store = store.WithMultitenant()
-				err = store.MigrateTenant(ctx, DbVersion, tc.tenant)
-				assert.NoError(t, err)
-			} else {
-				err = store.Migrate(ctx, DbVersion)
-				assert.NoError(t, err)
 			}
+			err = store.Migrate(ctx, DbVersion)
+			assert.NoError(t, err)
 
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
-				InsertMany(ctx, exisitingUsers)
+				InsertMany(ctx, mstore.ArrayWithTenantID(ctx, exisitingUsers))
 			assert.NoError(t, err)
 
 			pass := tc.inUserUpdate.Password
@@ -282,7 +274,7 @@ func TestMongoUpdateUser(t *testing.T) {
 				err := client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbUsersColl).
-					FindOne(ctx, bson.M{"_id": tc.inUserId}).
+					FindOne(ctx, mstore.WithTenantID(ctx, bson.M{"_id": tc.inUserId})).
 					Decode(&user)
 
 				assert.NoError(t, err)
@@ -411,7 +403,7 @@ func TestMongoGetUserByEmail(t *testing.T) {
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
-				InsertMany(ctx, existingUsers)
+				InsertMany(ctx, mstore.ArrayWithTenantID(ctx, existingUsers))
 			assert.NoError(t, err)
 
 			user, err := store.GetUserByEmail(ctx, tc.inEmail)
@@ -500,7 +492,7 @@ func TestMongoGetUserById(t *testing.T) {
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
-				InsertMany(ctx, existingUsers)
+				InsertMany(ctx, mstore.ArrayWithTenantID(ctx, existingUsers))
 			assert.NoError(t, err)
 
 			user, err := store.GetUserById(ctx, tc.inId)
@@ -598,7 +590,7 @@ func TestMongoGetTokenById(t *testing.T) {
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbTokensColl).
-				InsertMany(ctx, existing)
+				InsertMany(ctx, mstore.ArrayWithTenantID(ctx, existing))
 			assert.NoError(t, err)
 
 			token, err := store.GetTokenById(ctx, oid.NewUUIDv5(tc.id))
@@ -773,7 +765,7 @@ func TestMongoGetUsers(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(tc.ctx, DbName)).
 					Collection(DbUsersColl).
-					InsertMany(context.Background(), tc.inUsers)
+					InsertMany(context.Background(), mstore.ArrayWithTenantID(tc.ctx, tc.inUsers))
 				if !assert.NoError(t, err) {
 					t.FailNow()
 				}
@@ -887,7 +879,7 @@ func TestMongoDeleteUser(t *testing.T) {
 			_, err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
-				InsertMany(ctx, existingUsers)
+				InsertMany(ctx, mstore.ArrayWithTenantID(ctx, existingUsers))
 			assert.NoError(t, err)
 
 			err = store.DeleteUser(ctx, tc.inId)
@@ -897,7 +889,7 @@ func TestMongoDeleteUser(t *testing.T) {
 			c, err := client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbUsersColl).
-				Find(ctx, bson.M{})
+				Find(ctx, mstore.WithTenantID(ctx, bson.M{}))
 
 			assert.NoError(t, err)
 
@@ -998,7 +990,7 @@ func TestMongoSaveToken(t *testing.T) {
 			err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbTokensColl).
-				FindOne(ctx, bson.M{"_id": tc.token.Claims.ID}).
+				FindOne(ctx, mstore.WithTenantID(ctx, bson.M{"_id": tc.token.Claims.ID})).
 				Decode(&token)
 
 			assert.NoError(t, err)
@@ -1014,7 +1006,6 @@ func TestMigrate(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		tenantDbs   []string
 		automigrate bool
 
 		version string
@@ -1035,18 +1026,6 @@ func TestMigrate(t *testing.T) {
 			version:     "0.1",
 			err:         "failed to parse service version: failed to parse Version: unexpected EOF",
 		},
-		DbVersion + ", automigrate, multitenant": {
-			tenantDbs:   []string{"useradm-tenant1", "useradm-tenant2"},
-			automigrate: true,
-			version:     DbVersion,
-			err:         "",
-		},
-		DbVersion + ", no automigrate, multitenant": {
-			tenantDbs:   []string{"useradm-tenant1", "useradm-tenant2"},
-			automigrate: true,
-			version:     DbVersion,
-			err:         "",
-		},
 	}
 
 	for name, tc := range testCases {
@@ -1061,58 +1040,35 @@ func TestMigrate(t *testing.T) {
 				store = store.WithAutomigrate()
 			}
 
-			// set up multitenancy/tenant dbs
-			if len(tc.tenantDbs) != 0 {
-				store = store.WithMultitenant()
-
-				for _, d := range tc.tenantDbs {
-					_, err := store.client.
-						Database(d).
-						Collection("foo").
-						InsertOne(context.TODO(), bson.M{"foo": "bar"})
-					assert.NoError(t, err)
-				}
-			}
-
 			ctx := context.Background()
-
 			err = store.Migrate(ctx, tc.version)
 
 			if tc.err != "" {
 				assert.EqualError(t, err, tc.err)
 			} else {
+				var out []migrate.MigrationEntry
+				findOpts := mopts.Find().SetSort(bson.D{
+					{Key: "version.major", Value: -1},
+					{Key: "version.minor", Value: -1},
+					{Key: "version.patch", Value: -1},
+				})
+				c, err := store.client.
+					Database(DbName).
+					Collection(migrate.DbMigrationsColl).
+					Find(ctx, bson.M{}, findOpts)
+				assert.NoError(t, err)
 
-				// verify migration entry in all databases (>1 if multitenant)
-				dbs := []string{DbName}
-				if len(tc.tenantDbs) > 0 {
-					dbs = tc.tenantDbs
-				}
+				err = c.All(ctx, &out)
+				assert.NoError(t, err)
 
-				for _, d := range dbs {
-					var out []migrate.MigrationEntry
-					findOpts := mopts.Find().SetSort(bson.D{
-						{Key: "version.major", Value: -1},
-						{Key: "version.minor", Value: -1},
-						{Key: "version.patch", Value: -1},
-					})
-					c, err := store.client.
-						Database(d).
-						Collection(migrate.DbMigrationsColl).
-						Find(ctx, bson.M{}, findOpts)
+				if tc.automigrate {
+					assert.Len(t, out, 4)
 					assert.NoError(t, err)
 
-					err = c.All(ctx, &out)
-					assert.NoError(t, err)
-
-					if tc.automigrate {
-						assert.Len(t, out, 3)
-						assert.NoError(t, err)
-
-						v, _ := migrate.NewVersion(tc.version)
-						assert.Equal(t, *v, out[0].Version)
-					} else {
-						assert.Len(t, out, 0)
-					}
+					v, _ := migrate.NewVersion(tc.version)
+					assert.Equal(t, *v, out[0].Version)
+				} else {
+					assert.Len(t, out, 0)
 				}
 			}
 		})
@@ -1304,7 +1260,7 @@ func TestMongoDeleteToken(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, tc.inTokens)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, tc.inTokens))
 				assert.NoError(t, err)
 			}
 
@@ -1315,7 +1271,7 @@ func TestMongoDeleteToken(t *testing.T) {
 			c, err := client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbTokensColl).
-				Find(ctx, bson.M{"_id": tc.token.ID})
+				Find(ctx, mstore.WithTenantID(ctx, bson.M{"_id": tc.token.ID}))
 			assert.NoError(t, err)
 
 			err = c.All(ctx, &tokens)
@@ -1472,7 +1428,7 @@ func TestMongoDeleteTokens(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, tc.inTokens)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, tc.inTokens))
 				assert.NoError(t, err)
 			}
 
@@ -1487,7 +1443,7 @@ func TestMongoDeleteTokens(t *testing.T) {
 			c, err := client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbTokensColl).
-				Find(ctx, bson.M{})
+				Find(ctx, mstore.WithTenantID(ctx, bson.M{}))
 			assert.NoError(t, err)
 
 			err = c.All(ctx, &tokens)
@@ -1710,7 +1666,7 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, tc.inTokens)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, tc.inTokens))
 				assert.NoError(t, err)
 			}
 
@@ -1726,7 +1682,7 @@ func TestMongoDeleteTokensByUserId(t *testing.T) {
 				c, err := client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					Find(ctx, bson.M{})
+					Find(ctx, mstore.WithTenantID(ctx, bson.M{}))
 				assert.NoError(t, err)
 
 				err = c.All(ctx, &tokens)
@@ -1883,7 +1839,7 @@ func TestMongoDeleteTokensByUserIdExceptCurrentOne(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, tc.inTokens)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, tc.inTokens))
 				assert.NoError(t, err)
 			}
 
@@ -1899,7 +1855,7 @@ func TestMongoDeleteTokensByUserIdExceptCurrentOne(t *testing.T) {
 				c, err := client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					Find(ctx, bson.M{})
+					Find(ctx, mstore.WithTenantID(ctx, bson.M{}))
 				assert.NoError(t, err)
 
 				err = c.All(ctx, &tokens)
@@ -1935,9 +1891,10 @@ func TestMongoSaveSettings(t *testing.T) {
 				"bar": 42,
 			},
 			settingsOut: map[string]interface{}{
-				"_id": "1",
-				"foo": "foo-val",
-				"bar": int32(42),
+				"_id":       "1",
+				"foo":       "foo-val",
+				"bar":       int32(42),
+				"tenant_id": "",
 			},
 		},
 		"ok: insert, tenant": {
@@ -1947,9 +1904,10 @@ func TestMongoSaveSettings(t *testing.T) {
 				"bar": 42,
 			},
 			settingsOut: map[string]interface{}{
-				"_id": "1",
-				"foo": "foo-val",
-				"bar": int32(42),
+				"_id":       "1",
+				"foo":       "foo-val",
+				"bar":       int32(42),
+				"tenant_id": "acme",
 			},
 			tenant: "acme",
 		},
@@ -1965,9 +1923,10 @@ func TestMongoSaveSettings(t *testing.T) {
 				"bar": 0,
 			},
 			settingsOut: map[string]interface{}{
-				"_id": "1",
-				"foo": "foo-val",
-				"bar": int32(42),
+				"_id":       "1",
+				"foo":       "foo-val",
+				"bar":       int32(42),
+				"tenant_id": "",
 			},
 		},
 		"ok: overwrite with different fields": {
@@ -1982,9 +1941,10 @@ func TestMongoSaveSettings(t *testing.T) {
 				"bar": 0,
 			},
 			settingsOut: map[string]interface{}{
-				"_id":  "1",
-				"baz1": "baz",
-				"baz2": int32(420),
+				"_id":       "1",
+				"baz1":      "baz",
+				"baz2":      int32(420),
+				"tenant_id": "",
 			},
 		},
 	}
@@ -2008,7 +1968,7 @@ func TestMongoSaveSettings(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbSettingsColl).
-					InsertOne(ctx, tc.settingsExisting)
+					InsertOne(ctx, mstore.WithTenantID(ctx, tc.settingsExisting))
 				assert.NoError(t, err)
 			}
 
@@ -2024,7 +1984,7 @@ func TestMongoSaveSettings(t *testing.T) {
 			err = client.
 				Database(mstore.DbFromContext(ctx, DbName)).
 				Collection(DbSettingsColl).
-				FindOne(ctx, bson.M{}).
+				FindOne(ctx, mstore.WithTenantID(ctx, bson.M{})).
 				Decode(&settings)
 
 			assert.NoError(t, err)
@@ -2050,8 +2010,9 @@ func TestMongoGetSettings(t *testing.T) {
 				"bar": 42,
 			},
 			settingsOut: map[string]interface{}{
-				"foo": "foo-val",
-				"bar": int32(42),
+				"foo":       "foo-val",
+				"bar":       int32(42),
+				"tenant_id": "",
 			},
 		},
 		"ok, tenant": {
@@ -2060,8 +2021,9 @@ func TestMongoGetSettings(t *testing.T) {
 				"bar": 42,
 			},
 			settingsOut: map[string]interface{}{
-				"foo": "foo-val",
-				"bar": int32(42),
+				"foo":       "foo-val",
+				"bar":       int32(42),
+				"tenant_id": "tenant-foo",
 			},
 			tenant: "tenant-foo",
 		},
@@ -2089,7 +2051,7 @@ func TestMongoGetSettings(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbSettingsColl).
-					InsertOne(ctx, tc.settingsExisting)
+					InsertOne(ctx, mstore.WithTenantID(ctx, tc.settingsExisting))
 				assert.NoError(t, err)
 			}
 
@@ -2225,7 +2187,7 @@ func TestMongoGetPersonalAccessTokens(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, inputData)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, inputData))
 				assert.NoError(t, err)
 			}
 
@@ -2352,7 +2314,7 @@ func TestMongoCountPersonalAccessTokens(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, inputData)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, inputData))
 				assert.NoError(t, err)
 			}
 
@@ -2483,7 +2445,7 @@ func TestMongoUpdateTokenLastUsed(t *testing.T) {
 				_, err = client.
 					Database(mstore.DbFromContext(ctx, DbName)).
 					Collection(DbTokensColl).
-					InsertMany(ctx, inputData)
+					InsertMany(ctx, mstore.ArrayWithTenantID(ctx, inputData))
 				assert.NoError(t, err)
 			}
 

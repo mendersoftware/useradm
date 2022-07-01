@@ -67,7 +67,7 @@ github.com/leodido/go-urn
 github.com/magiconair/properties
 # github.com/mattn/go-isatty v0.0.14
 github.com/mattn/go-isatty
-# github.com/mendersoftware/go-lib-micro v0.0.0-20220620185918-c0dd57dbb00b
+# github.com/mendersoftware/go-lib-micro v0.0.0-20220624091515-0b58edb1c674
 ## explicit
 github.com/mendersoftware/go-lib-micro/accesslog
 github.com/mendersoftware/go-lib-micro/addons
@@ -78,6 +78,7 @@ github.com/mendersoftware/go-lib-micro/context/httpheader
 github.com/mendersoftware/go-lib-micro/identity
 github.com/mendersoftware/go-lib-micro/log
 github.com/mendersoftware/go-lib-micro/mongo/dbtest
+github.com/mendersoftware/go-lib-micro/mongo/doc
 github.com/mendersoftware/go-lib-micro/mongo/migrate
 github.com/mendersoftware/go-lib-micro/mongo/oid
 github.com/mendersoftware/go-lib-micro/mongo/testing
@@ -87,6 +88,7 @@ github.com/mendersoftware/go-lib-micro/rest.utils
 github.com/mendersoftware/go-lib-micro/rest_utils
 github.com/mendersoftware/go-lib-micro/routing
 github.com/mendersoftware/go-lib-micro/store
+github.com/mendersoftware/go-lib-micro/store/v2
 github.com/mendersoftware/go-lib-micro/strings
 github.com/mendersoftware/go-lib-micro/testing
 # github.com/mitchellh/mapstructure v1.5.0

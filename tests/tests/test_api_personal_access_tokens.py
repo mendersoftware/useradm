@@ -24,6 +24,10 @@ from common import (
     api_client_int,
     api_client_mgmt,
     mongo,
+    clean_db,
+    clean_db_f,
+    clean_migrated_db,
+    clean_migrated_db_f,
     migrate,
     make_auth,
     TENANTS,
@@ -74,64 +78,63 @@ class TestManagementApiPostTokenBase:
             _, r = api_client_int.verify(personal_access_token)
             assert e.response.status_code == 401
 
-
-    def _test_pat_limit(
-            self,
-            api_client_mgmt,
-            init_users
-        ):
+    def _test_pat_limit(self, api_client_mgmt, init_users):
         user = init_users[0]
         _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
         assert r.status_code == 200
         user_token = r.text
 
         auth = {"Authorization": "Bearer " + user_token}
-        
+
         # first, create maximum number of tokens per user (10 is default)
         for _ in range(10):
-            token_request = {"name": f"personal_access_token_{''.join(sample(string.ascii_lowercase, 5))}", "expires_in": 3600}
+            token_request = {
+                "name": f"personal_access_token_{''.join(sample(string.ascii_lowercase, 5))}",
+                "expires_in": 3600,
+            }
             _, r = api_client_mgmt.create_token(token_request, auth)
             assert r.status_code == 200
-        
+
         # send one token request more
-        token_request = {"name": f"personal_access_token_{''.join(sample(string.ascii_lowercase, 5))}", "expires_in": 3600}
+        token_request = {
+            "name": f"personal_access_token_{''.join(sample(string.ascii_lowercase, 5))}",
+            "expires_in": 3600,
+        }
         with pytest.raises(bravado.exception.HTTPUnprocessableEntity):
             _, r = api_client_mgmt.create_token(token_request, auth)
             assert r.status_code == 422
 
-    def _test_pat_name_collision_for_one_user(
-        self,
-        api_client_mgmt,
-        init_users
-    ):
+    def _test_pat_name_collision_for_one_user(self, api_client_mgmt, init_users):
         user = init_users[1]
         _, r = api_client_mgmt.login(user.email, "correcthorsebatterystaple")
         assert r.status_code == 200
         user_token = r.text
 
         auth = {"Authorization": "Bearer " + user_token}
-        
-        token_request = {"name": "conflicting_personal_access_token", "expires_in": 3600}
+
+        token_request = {
+            "name": "conflicting_personal_access_token",
+            "expires_in": 3600,
+        }
         _, r = api_client_mgmt.create_token(token_request, auth)
         assert r.status_code == 200
-    
+
         with pytest.raises(bravado.exception.HTTPConflict):
             _, r = api_client_mgmt.create_token(token_request, auth)
             assert r.status_code == 409
 
-    def _test_pat_name_collision_for_multiple_users(
-        self,
-        api_client_mgmt,
-        init_users
-    ):
+    def _test_pat_name_collision_for_multiple_users(self, api_client_mgmt, init_users):
         first_user = init_users[2]
         _, r = api_client_mgmt.login(first_user.email, "correcthorsebatterystaple")
         assert r.status_code == 200
         first_user_token = r.text
 
         auth = {"Authorization": "Bearer " + first_user_token}
-        
-        token_request = {"name": "conflicting_personal_access_token", "expires_in": 3600}
+
+        token_request = {
+            "name": "conflicting_personal_access_token",
+            "expires_in": 3600,
+        }
         _, r = api_client_mgmt.create_token(token_request, auth)
         assert r.status_code == 200
 
@@ -145,7 +148,7 @@ class TestManagementApiPostTokenBase:
         assert r.status_code == 200
         second_user_token = r.text
         auth = {"Authorization": "Bearer " + second_user_token}
-        
+
         # another user can create token with the same name
         _, r = api_client_mgmt.create_token(token_request, auth)
         assert r.status_code == 200
@@ -155,7 +158,7 @@ class TestManagementApiPostToken(TestManagementApiPostTokenBase):
     def test_ok(self, api_client_int, api_client_mgmt, init_users):
         token_request = {"name": "my_personal_access_token", "expires_in": 3600}
         self._do_test_ok(api_client_int, api_client_mgmt, init_users, token_request)
-    
+
     def test_tokens_limit_for_single_user(self, api_client_mgmt, init_users):
         self._test_pat_limit(api_client_mgmt, init_users)
 
@@ -181,7 +184,9 @@ class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
             )
 
     @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_tokens_limit_for_single_user(self, tenant_id, api_client_mgmt, init_users_mt):
+    def test_tokens_limit_for_single_user(
+        self, tenant_id, api_client_mgmt, init_users_mt
+    ):
         users_db = {
             tenant: [user.email for user in users]
             for tenant, users in init_users_mt.items()
@@ -190,19 +195,27 @@ class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
             self._test_pat_limit(api_client_mgmt, init_users_mt[tenant_id])
 
     @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_tokens_naming_collisions_one_user(self, tenant_id, api_client_mgmt, init_users_mt):
+    def test_tokens_naming_collisions_one_user(
+        self, tenant_id, api_client_mgmt, init_users_mt
+    ):
         users_db = {
             tenant: [user.email for user in users]
             for tenant, users in init_users_mt.items()
         }
         with tenantadm.run_fake_user_tenants(users_db):
-            self._test_pat_name_collision_for_one_user(api_client_mgmt, init_users_mt[tenant_id])
+            self._test_pat_name_collision_for_one_user(
+                api_client_mgmt, init_users_mt[tenant_id]
+            )
 
     @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_tokens_naming_collisions_multiple_users(self, tenant_id, api_client_mgmt, init_users_mt):
+    def test_tokens_naming_collisions_multiple_users(
+        self, tenant_id, api_client_mgmt, init_users_mt
+    ):
         users_db = {
             tenant: [user.email for user in users]
             for tenant, users in init_users_mt.items()
         }
         with tenantadm.run_fake_user_tenants(users_db):
-            self._test_pat_name_collision_for_multiple_users(api_client_mgmt, init_users_mt[tenant_id])
+            self._test_pat_name_collision_for_multiple_users(
+                api_client_mgmt, init_users_mt[tenant_id]
+            )

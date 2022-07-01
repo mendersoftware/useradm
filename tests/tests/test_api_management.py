@@ -21,6 +21,10 @@ from common import (
     cli,
     api_client_mgmt,
     mongo,
+    clean_db,
+    clean_db_f,
+    clean_migrated_db,
+    clean_migrated_db_f,
     migrate,
     make_auth,
 )
@@ -105,19 +109,22 @@ class TestManagementApiPostUsers(TestManagementApiPostUsersBase):
 
 class TestManagementApiPostUsersEnterprise(TestManagementApiPostUsersBase):
     @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_ok(self, tenant_id, api_client_mgmt, init_users_mt):
+    def test_ok(self, tenant_id, api_client_mgmt, init_users_mt_f):
         new_user = {"email": "foo@bar.com", "password": "asdf1234zxcv"}
         with tenantadm.run_fake_create_user(new_user):
             self._do_test_ok(
-                api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id
+                api_client_mgmt, init_users_mt_f[tenant_id], new_user, tenant_id
             )
 
     @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_fail_duplicate_email(self, tenant_id, api_client_mgmt, init_users_mt):
-        new_user = {"email": "foo@bar.com", "password": "asdf1234zxcv"}
+    def test_fail_duplicate_email(self, tenant_id, api_client_mgmt, init_users_mt_f):
+        new_user = {
+            "email": init_users_mt_f[tenant_id][0]["email"],
+            "password": "asdf1234zxcv",
+        }
         with tenantadm.run_fake_create_user(new_user, 422):
             self._do_test_fail_unprocessable_entity(
-                api_client_mgmt, init_users_mt[tenant_id], new_user, tenant_id
+                api_client_mgmt, init_users_mt_f[tenant_id], new_user, tenant_id,
             )
 
 
@@ -449,7 +456,7 @@ class TestManagementApiSettingsBase:
 
         # nonempty
         self._set_and_verify(
-            {"foo": "foo-val", "bar": "bar-val"}, api_client_mgmt, auth
+            {"foo": "foo-val", "bar": "bar-val"}, api_client_mgmt, auth,
         )
 
         # empty

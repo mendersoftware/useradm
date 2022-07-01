@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
-	mstore "github.com/mendersoftware/go-lib-micro/store"
+	mstore "github.com/mendersoftware/go-lib-micro/store/v2"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -57,6 +57,10 @@ const (
 	DbUniqueEmailIndexName     = "email_1"
 	DbUniqueTokenNameIndexName = "token_name_1"
 	DbTokenSubjectIndexName    = "token_subject_1"
+	DbTokenExpirationIndexName = "token_expiration"
+
+	DbTenantUniqueTokenNameIndexName = "tenant_1_subject_1_name_1"
+	DbTenantTokenSubjectIndexName    = "tenant_1_subject_1"
 )
 
 type DataStoreMongoConfig struct {
@@ -160,7 +164,7 @@ func (db *DataStoreMongo) CreateUser(ctx context.Context, u *model.User) error {
 	_, err := db.client.
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbUsersColl).
-		InsertOne(ctx, u)
+		InsertOne(ctx, mstore.WithTenantID(ctx, u))
 
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key error") {
@@ -219,7 +223,7 @@ func (db *DataStoreMongo) UpdateUser(
 	up := bson.M{"$set": u}
 	fuOpts := mopts.FindOneAndUpdate().
 		SetReturnDocument(mopts.Before)
-	err := collUsers.FindOneAndUpdate(ctx, f, up, fuOpts).
+	err := collUsers.FindOneAndUpdate(ctx, mstore.WithTenantID(ctx, f), up, fuOpts).
 		Decode(updatedUser)
 
 	switch {
@@ -240,7 +244,7 @@ func (db *DataStoreMongo) UpdateLoginTs(ctx context.Context, id string) error {
 		Collection(DbUsersColl)
 
 	_, err := collUsrs.UpdateOne(ctx,
-		bson.D{{Key: "_id", Value: id}},
+		mstore.WithTenantID(ctx, bson.D{{Key: "_id", Value: id}}),
 		bson.D{{Key: "$set", Value: bson.D{
 			{Key: DbUserLoginTs, Value: time.Now()}},
 		}},
@@ -256,7 +260,7 @@ func (db *DataStoreMongo) GetUserByEmail(
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbUsersColl).
-		FindOne(ctx, bson.M{DbUserEmail: email}).
+		FindOne(ctx, mstore.WithTenantID(ctx, bson.M{DbUserEmail: email})).
 		Decode(&user)
 
 	if err != nil {
@@ -286,7 +290,7 @@ func (db *DataStoreMongo) GetUserAndPasswordById(
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbUsersColl).
-		FindOne(ctx, bson.M{"_id": id}).
+		FindOne(ctx, mstore.WithTenantID(ctx, bson.M{"_id": id})).
 		Decode(&user)
 
 	if err != nil {
@@ -305,7 +309,7 @@ func (db *DataStoreMongo) GetTokenById(ctx context.Context, id oid.ObjectID) (*j
 
 	err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl).
-		FindOne(ctx, bson.M{"_id": id}).
+		FindOne(ctx, mstore.WithTenantID(ctx, bson.M{"_id": id})).
 		Decode(&token)
 
 	if err != nil {
@@ -369,7 +373,7 @@ func (db *DataStoreMongo) GetUsers(
 			}},
 		})
 	}
-	cur, err := collUsers.Find(ctx, mgoFltr, findOpts)
+	cur, err := collUsers.Find(ctx, mstore.WithTenantID(ctx, mgoFltr), findOpts)
 	if err != nil {
 		return nil, errors.Wrap(err, "store: failed to fetch users")
 	}
@@ -387,7 +391,7 @@ func (db *DataStoreMongo) GetUsers(
 func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
 	_, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbUsersColl).
-		DeleteOne(ctx, bson.M{"_id": id})
+		DeleteOne(ctx, mstore.WithTenantID(ctx, bson.M{"_id": id}))
 
 	if err != nil {
 		return err
@@ -399,7 +403,7 @@ func (db *DataStoreMongo) DeleteUser(ctx context.Context, id string) error {
 func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error {
 	_, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl).
-		InsertOne(ctx, token)
+		InsertOne(ctx, mstore.WithTenantID(ctx, token))
 
 	if isDuplicateKeyError(err) {
 		return store.ErrDuplicateTokenName
@@ -434,7 +438,7 @@ func (db *DataStoreMongo) DeleteToken(ctx context.Context, userID, tokenID oid.O
 	_, err := db.client.
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl).
-		DeleteOne(ctx, bson.M{DbID: tokenID, DbTokenSubject: userID})
+		DeleteOne(ctx, mstore.WithTenantID(ctx, bson.M{DbID: tokenID, DbTokenSubject: userID}))
 	return err
 }
 
@@ -443,7 +447,7 @@ func (db *DataStoreMongo) DeleteTokens(ctx context.Context) error {
 	d, err := db.client.
 		Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbTokensColl).
-		DeleteMany(ctx, bson.M{})
+		DeleteMany(ctx, mstore.WithTenantID(ctx, bson.M{}))
 
 	if err != nil {
 		return err
@@ -482,7 +486,7 @@ func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(
 		}
 	}
 
-	_, err := c.DeleteMany(ctx, filter)
+	_, err := c.DeleteMany(ctx, mstore.WithTenantID(ctx, filter))
 	if err != nil {
 		return errors.Wrap(err, "failed to remove tokens")
 	}
@@ -498,7 +502,8 @@ func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interfa
 	o.SetUpsert(true)
 
 	var res interface{}
-	err := c.FindOneAndReplace(ctx, bson.M{}, s, o).Decode(&res)
+	err := c.FindOneAndReplace(
+		ctx, mstore.WithTenantID(ctx, bson.M{}), mstore.WithTenantID(ctx, s), o).Decode(&res)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return errors.Wrapf(err, "failed to store settings %v", s)
 	}
@@ -515,7 +520,7 @@ func (db *DataStoreMongo) GetSettings(ctx context.Context) (map[string]interface
 
 	var settings map[string]interface{}
 
-	err := c.FindOne(ctx, bson.M{}, o).
+	err := c.FindOne(ctx, mstore.WithTenantID(ctx, bson.M{}), o).
 		Decode(&settings)
 
 	switch err {
@@ -551,7 +556,7 @@ func (db *DataStoreMongo) GetPersonalAccessTokens(
 		DbTokenSubject: oid.FromString(userID),
 		DbTokenName:    bson.M{"$exists": true},
 	}
-	cur, err := collTokens.Find(ctx, mgoFltr, findOpts)
+	cur, err := collTokens.Find(ctx, mstore.WithTenantID(ctx, mgoFltr), findOpts)
 	if err != nil {
 		return nil, errors.Wrap(err, "store: failed to fetch tokens")
 	}
@@ -572,7 +577,7 @@ func (db *DataStoreMongo) UpdateTokenLastUsed(ctx context.Context, id oid.Object
 		Collection(DbTokensColl)
 
 	_, err := collTokens.UpdateOne(ctx,
-		bson.D{{Key: DbID, Value: id}},
+		mstore.WithTenantID(ctx, bson.D{{Key: DbID, Value: id}}),
 		bson.D{{Key: "$set", Value: bson.D{
 			{Key: DbTokenLastUsed, Value: time.Now()}},
 		}},
@@ -593,7 +598,7 @@ func (db *DataStoreMongo) CountPersonalAccessTokens(
 		DbTokenSubject: oid.FromString(userID),
 		DbTokenName:    bson.M{"$exists": true},
 	}
-	count, err := collTokens.CountDocuments(ctx, mgoFltr)
+	count, err := collTokens.CountDocuments(ctx, mstore.WithTenantID(ctx, mgoFltr))
 	if err != nil {
 		return -1, errors.Wrap(err, "store: failed to count tokens")
 	}

@@ -586,6 +586,9 @@ func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.R
 
 	settings, err := u.db.GetSettings(ctx)
 
+	// remove internal "tenant_id" field from the result
+	delete(settings, "tenant_id")
+
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return

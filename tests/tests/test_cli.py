@@ -17,6 +17,7 @@ from common import (
     api_client_mgmt,
     mongo,
     clean_db,
+    clean_db_f,
     make_auth,
     migrate,
     explode_jwt,
@@ -32,7 +33,7 @@ import tenantadm
 class Migration:
     DB_NAME = "useradm"
     MIGRATION_COLLECTION = "migration_info"
-    DB_VERSION = "1.3.2"
+    DB_VERSION = "2.0.0"
 
     @staticmethod
     def verify_db_and_collections(client, dbname):
@@ -49,12 +50,16 @@ class Migration:
         migrations = list(db[Migration.MIGRATION_COLLECTION].find({}))
         semvers = list()
         for migration in migrations:
-            version: str = ".".join(str(ver_part) for ver_part in list(migration["version"].values()))
+            version: str = ".".join(
+                str(ver_part) for ver_part in list(migration["version"].values())
+            )
             semvers.append(semver.VersionInfo.parse(version))
 
         assert len(semvers) != 0, "DB: No migrations found"
         latest_migration_version = sorted(semvers)[-1]
-        assert expected_version == latest_migration_version, f"Expected migration version {expected_version} is different than latest found: {latest_migration_version}"
+        assert (
+            expected_version == latest_migration_version
+        ), f"Expected migration version {expected_version} is different than latest found: {latest_migration_version}"
 
 
 class TestCli:
@@ -109,7 +114,7 @@ class TestCli:
         _, r = api_client_mgmt.login(email, new_password)
         assert r.status_code == 200
 
-    def test_migrate(self, cli, clean_db, mongo):
+    def test_migrate(self, cli, clean_db_f, mongo):
         cli.migrate()
 
         Migration.verify_db_and_collections(mongo, Migration.DB_NAME)

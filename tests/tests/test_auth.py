@@ -22,6 +22,10 @@ from common import (
     api_client_mgmt,
     api_client_int,
     mongo,
+    clean_db,
+    clean_db_f,
+    clean_migrated_db,
+    clean_migrated_db_f,
     migrate,
     make_auth,
     user_tokens,
@@ -149,12 +153,7 @@ class TestAuthLoginEnterprise:
 
 class TestAuthVerify:
     @pytest.mark.parametrize(
-        "token",
-        [
-            "garbage",
-            "",
-            make_auth("user-1@foo.com")["Authorization"],
-        ],
+        "token", ["garbage", "", make_auth("user-1@foo.com")["Authorization"],],
     )
     def test_fail(self, api_client_int, init_users, token):
         try:
