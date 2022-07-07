@@ -495,7 +495,7 @@ func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(
 	return nil
 }
 
-func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interface{}) error {
+func (db *DataStoreMongo) SaveSettings(ctx context.Context, s *model.Settings) error {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbSettingsColl)
 
@@ -512,23 +512,18 @@ func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interfa
 	return nil
 }
 
-func (db *DataStoreMongo) GetSettings(ctx context.Context) (map[string]interface{}, error) {
+func (db *DataStoreMongo) GetSettings(ctx context.Context) (*model.Settings, error) {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbSettingsColl)
 
-	o := mopts.FindOne()
-	o.SetProjection(bson.M{"_id": 0})
-
-	var settings map[string]interface{}
-
-	err := c.FindOne(ctx, mstore.WithTenantID(ctx, bson.M{}), o).
-		Decode(&settings)
+	var settings *model.Settings
+	err := c.FindOne(ctx, mstore.WithTenantID(ctx, bson.M{})).Decode(&settings)
 
 	switch err {
 	case nil:
 		return settings, nil
 	case mongo.ErrNoDocuments:
-		return map[string]interface{}{}, nil
+		return nil, nil
 	default:
 		return nil, errors.Wrapf(err, "failed to get settings")
 	}

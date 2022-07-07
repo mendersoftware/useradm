@@ -1514,7 +1514,8 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		body interface{}
+		body     interface{}
+		settings *model.Settings
 
 		dbError error
 
@@ -1525,6 +1526,12 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				"foo": "foo-val",
 				"bar": "bar-val",
 			},
+			settings: &model.Settings{
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			},
 
 			checker: mt.NewJSONResponse(
 				http.StatusCreated,
@@ -1534,6 +1541,9 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 		},
 		"ok, empty": {
 			body: map[string]interface{}{},
+			settings: &model.Settings{
+				Values: model.SettingsValues{},
+			},
 
 			checker: mt.NewJSONResponse(
 				http.StatusCreated,
@@ -1555,6 +1565,12 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				"foo": "foo-val",
 				"bar": "bar-val",
 			},
+			settings: &model.Settings{
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			},
 
 			dbError: errors.New("generic"),
 
@@ -1572,7 +1588,9 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 
 			//make mock store
 			db := &mstore.DataStore{}
-			db.On("SaveSettings", ctx, tc.body).Return(tc.dbError)
+			if tc.settings != nil {
+				db.On("SaveSettings", ctx, tc.settings).Return(tc.dbError)
+			}
 
 			//make handler
 			api := makeMockApiHandler(t, nil, db)
@@ -1594,15 +1612,17 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		dbSettings map[string]interface{}
+		dbSettings *model.Settings
 		dbError    error
 
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			dbSettings: map[string]interface{}{
-				"foo": "foo-val",
-				"bar": "bar-val",
+			dbSettings: &model.Settings{
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
 			},
 
 			checker: mt.NewJSONResponse(

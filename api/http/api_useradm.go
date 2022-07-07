@@ -557,9 +557,8 @@ func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.
 
 	l := log.FromContext(ctx)
 
-	var settings map[string]interface{}
-
-	err := r.DecodeJsonPayload(&settings)
+	settings := &model.Settings{}
+	err := r.DecodeJsonPayload(settings)
 	if err != nil {
 		rest_utils.RestErrWithLog(
 			w,
@@ -585,9 +584,6 @@ func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.R
 	l := log.FromContext(ctx)
 
 	settings, err := u.db.GetSettings(ctx)
-
-	// remove internal "tenant_id" field from the result
-	delete(settings, "tenant_id")
 
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)

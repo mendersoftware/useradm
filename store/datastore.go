@@ -72,8 +72,8 @@ type DataStore interface {
 		tokenID oid.ObjectID,
 	) error
 
-	SaveSettings(ctx context.Context, s map[string]interface{}) error
-	GetSettings(ctx context.Context) (map[string]interface{}, error)
+	SaveSettings(ctx context.Context, s *model.Settings) error
+	GetSettings(ctx context.Context) (*model.Settings, error)
 }
 
 // TenantDataKeeper is an interface for executing administrative opeartions on

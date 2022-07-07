@@ -161,15 +161,15 @@ func (_m *DataStore) GetPersonalAccessTokens(ctx context.Context, userID string)
 }
 
 // GetSettings provides a mock function with given fields: ctx
-func (_m *DataStore) GetSettings(ctx context.Context) (map[string]interface{}, error) {
+func (_m *DataStore) GetSettings(ctx context.Context) (*model.Settings, error) {
 	ret := _m.Called(ctx)
 
-	var r0 map[string]interface{}
-	if rf, ok := ret.Get(0).(func(context.Context) map[string]interface{}); ok {
+	var r0 *model.Settings
+	if rf, ok := ret.Get(0).(func(context.Context) *model.Settings); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(*model.Settings)
 		}
 	}
 
@@ -313,11 +313,11 @@ func (_m *DataStore) Ping(ctx context.Context) error {
 }
 
 // SaveSettings provides a mock function with given fields: ctx, s
-func (_m *DataStore) SaveSettings(ctx context.Context, s map[string]interface{}) error {
+func (_m *DataStore) SaveSettings(ctx context.Context, s *model.Settings) error {
 	ret := _m.Called(ctx, s)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, map[string]interface{}) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Settings) error); ok {
 		r0 = rf(ctx, s)
 	} else {
 		r0 = ret.Error(0)
