@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/mendersoftware/go-lib-micro/mongo/codec"
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	mstore "github.com/mendersoftware/go-lib-micro/store"
 	"github.com/pkg/errors"
