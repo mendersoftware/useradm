@@ -35,6 +35,8 @@ var (
 	ErrCurrentPasswordMismatch = errors.New("current password mismatch")
 	// duplicated Personal Access Token name
 	ErrDuplicateTokenName = errors.New("Personal Access Token with a given name already exists")
+	// etag doesn't match
+	ErrETagMismatch = errors.New("ETag doesn't match")
 )
 
 //go:generate ../utils/mockgen.sh
@@ -72,7 +74,7 @@ type DataStore interface {
 		tokenID oid.ObjectID,
 	) error
 
-	SaveSettings(ctx context.Context, s *model.Settings) error
+	SaveSettings(ctx context.Context, s *model.Settings, etag string) error
 	GetSettings(ctx context.Context) (*model.Settings, error)
 }
 

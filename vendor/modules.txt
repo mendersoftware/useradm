@@ -40,6 +40,7 @@ github.com/golang/protobuf/proto
 # github.com/golang/snappy v0.0.3
 github.com/golang/snappy
 # github.com/google/uuid v1.3.0
+## explicit
 github.com/google/uuid
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl

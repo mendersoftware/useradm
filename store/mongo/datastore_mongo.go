@@ -62,6 +62,9 @@ const (
 
 	DbTenantUniqueTokenNameIndexName = "tenant_1_subject_1_name_1"
 	DbTenantTokenSubjectIndexName    = "tenant_1_subject_1"
+
+	DbSettingsEtag            = "etag"
+	DbSettingsTenantIndexName = "tenant"
 )
 
 type DataStoreMongoConfig struct {
@@ -495,21 +498,29 @@ func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(
 	return nil
 }
 
-func (db *DataStoreMongo) SaveSettings(ctx context.Context, s *model.Settings) error {
+func (db *DataStoreMongo) SaveSettings(ctx context.Context, s *model.Settings, etag string) error {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbSettingsColl)
 
-	o := mopts.FindOneAndReplace()
+	o := &mopts.ReplaceOptions{}
 	o.SetUpsert(true)
 
-	var res interface{}
-	err := c.FindOneAndReplace(
-		ctx, mstore.WithTenantID(ctx, bson.M{}), mstore.WithTenantID(ctx, s), o).Decode(&res)
-	if err != nil && err != mongo.ErrNoDocuments {
+	filters := bson.M{}
+	if etag != "" {
+		filters[DbSettingsEtag] = etag
+	}
+	_, err := c.ReplaceOne(ctx,
+		mstore.WithTenantID(ctx, filters),
+		mstore.WithTenantID(ctx, s),
+		o,
+	)
+	if err != nil && !mongo.IsDuplicateKeyError(err) {
 		return errors.Wrapf(err, "failed to store settings %v", s)
+	} else if mongo.IsDuplicateKeyError(err) && etag != "" {
+		return store.ErrETagMismatch
 	}
 
-	return nil
+	return err
 }
 
 func (db *DataStoreMongo) GetSettings(ctx context.Context) (*model.Settings, error) {

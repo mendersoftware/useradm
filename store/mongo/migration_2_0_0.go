@@ -88,7 +88,16 @@ func (m *migration_2_0_0) Up(from migrate.Version) error {
 			},
 		},
 		DbSettingsColl: {
-			Indexes: []mongo.IndexModel{},
+			Indexes: []mongo.IndexModel{
+				{
+					Keys: bson.D{
+						{Key: mstore.FieldTenantID, Value: 1},
+					},
+					Options: mopts.Index().
+						SetUnique(true).
+						SetName(DbSettingsTenantIndexName),
+				},
+			},
 		},
 	}
 

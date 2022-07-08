@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/google/uuid"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
@@ -57,6 +58,8 @@ const (
 const (
 	defaultTimeout = time.Second * 5
 	pathParamMe    = "me"
+	hdrETag        = "ETag"
+	hdrIfMatch     = "If-Match"
 )
 
 const (
@@ -570,9 +573,16 @@ func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.
 		return
 	}
 
-	err = u.db.SaveSettings(ctx, settings)
-	if err != nil {
+	ifMatchHeader := r.Header.Get(hdrIfMatch)
+
+	settings.ETag = uuid.NewString()
+	err = u.db.SaveSettings(ctx, settings, ifMatchHeader)
+	if err == store.ErrETagMismatch {
+		rest_utils.RestErrWithInfoMsg(w, r, l, err, http.StatusPreconditionFailed, err.Error())
+		return
+	} else if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -588,8 +598,15 @@ func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.R
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
+	} else if settings == nil {
+		settings = &model.Settings{
+			Values: model.SettingsValues{},
+		}
 	}
 
+	if settings.ETag != "" {
+		w.Header().Set(hdrETag, settings.ETag)
+	}
 	_ = w.WriteJson(settings)
 }
 

@@ -312,9 +312,9 @@ func (_m *DataStore) Ping(ctx context.Context) error {
 	return r0
 }
 
-// SaveSettings provides a mock function with given fields: ctx, s
-func (_m *DataStore) SaveSettings(ctx context.Context, s *model.Settings) error {
-	ret := _m.Called(ctx, s)
+// SaveSettings provides a mock function with given fields: ctx, s, etag
+func (_m *DataStore) SaveSettings(ctx context.Context, s *model.Settings, etag string) error {
+	ret := _m.Called(ctx, s, etag)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *model.Settings) error); ok {

@@ -323,6 +323,11 @@ paths:
           description: Successful response - a user information is returned.
           schema:
             $ref: "#/definitions/Settings"
+          headers:
+            ETag:
+              type: string
+              description: |
+                Contains the device object's current ETag.
         401:
           description: |
                 The user cannot be granted authentication.
@@ -342,6 +347,10 @@ paths:
       description: |
         Create user settings or replace existing settings with provided object.
       parameters:
+        - name: If-Match
+          in: header
+          description: Contains the settings' current ETag, and performs the update only if it matches the one stored in the database.
+          type: string
         - name: settings
           in: body
           description: New user settings.
@@ -361,6 +370,8 @@ paths:
                 The user cannot be granted authentication.
           schema:
             $ref: '#/definitions/Error'
+        412:
+          description: ETag doesn't match.
         500:
           description: Internal server error.
           schema:

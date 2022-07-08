@@ -1514,6 +1514,7 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
+		etag     string
 		body     interface{}
 		settings *model.Settings
 
@@ -1589,7 +1590,12 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 			//make mock store
 			db := &mstore.DataStore{}
 			if tc.settings != nil {
-				db.On("SaveSettings", ctx, tc.settings).Return(tc.dbError)
+				db.On("SaveSettings", ctx, mock.MatchedBy(func(s *model.Settings) bool {
+					s.ETag = tc.settings.ETag // ignore
+					assert.Equal(t, tc.settings, s)
+
+					return true
+				}), tc.etag).Return(tc.dbError)
 			}
 
 			//make handler
@@ -1600,6 +1606,9 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				"http://1.2.3.4/api/management/v1/useradm/settings",
 				"",
 				tc.body)
+			if tc.etag != "" {
+				req.Header.Add(hdrETag, tc.etag)
+			}
 
 			//test
 			recorded := test.RunRequest(t, api, req)
@@ -1634,6 +1643,31 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 				},
 			),
 		},
+		"ok, with etag": {
+			dbSettings: &model.Settings{
+				ETag: "etag",
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			},
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				map[string]interface{}{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			),
+		},
+		"ok, no settings": {
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				map[string]interface{}{},
+			),
+		},
 		"error: generic": {
 			dbError: errors.New("failed to get settings"),
 
@@ -1665,6 +1699,10 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 			//test
 			recorded := test.RunRequest(t, api, req)
 			mt.CheckResponse(t, tc.checker, recorded)
+
+			if tc.dbSettings != nil && tc.dbSettings.ETag != "" {
+				recorded.HeaderIs(hdrETag, tc.dbSettings.ETag)
+			}
 		})
 	}
 }
