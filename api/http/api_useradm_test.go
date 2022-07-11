@@ -1576,6 +1576,19 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				restError("cannot parse request body as json"),
 			),
 		},
+		"error, etag mismatch": {
+			body: map[string]interface{}{},
+			settings: &model.Settings{
+				Values: model.SettingsValues{},
+			},
+			dbError: store.ErrETagMismatch,
+
+			checker: mt.NewJSONResponse(
+				http.StatusPreconditionFailed,
+				nil,
+				restError(store.ErrETagMismatch.Error()),
+			),
+		},
 		"error, db": {
 			body: map[string]interface{}{
 				"foo": "foo-val",

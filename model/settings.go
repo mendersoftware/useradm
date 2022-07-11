@@ -24,6 +24,7 @@ import (
 const (
 	settingsID       = "_id"
 	settingsETag     = "etag"
+	settingsUserID   = "user_id"
 	settingsTenantID = "tenant_id"
 
 	maxSettings = 1024
@@ -34,6 +35,7 @@ type SettingsValues map[string]interface{}
 type Settings struct {
 	ID     string         `json:"id"`
 	ETag   string         `json:"etag"`
+	UserID string         `json:"-"`
 	Values SettingsValues `json:"-"`
 }
 
@@ -54,6 +56,9 @@ func (s Settings) MarshalBSON() ([]byte, error) {
 		value[settingsID] = s.ID
 	}
 	value[settingsETag] = s.ETag
+	if s.UserID != "" {
+		value[settingsUserID] = s.UserID
+	}
 	return bson.Marshal(value)
 }
 
@@ -73,6 +78,7 @@ func (s *Settings) UnmarshalBSON(b []byte) error {
 	if err == nil {
 		delete(value, settingsID)
 		delete(value, settingsETag)
+		delete(value, settingsUserID)
 		delete(value, settingsTenantID)
 		s.Values = value
 	}

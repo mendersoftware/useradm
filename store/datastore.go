@@ -76,6 +76,8 @@ type DataStore interface {
 
 	SaveSettings(ctx context.Context, s *model.Settings, etag string) error
 	GetSettings(ctx context.Context) (*model.Settings, error)
+	SaveUserSettings(ctx context.Context, userID string, s *model.Settings, etag string) error
+	GetUserSettings(ctx context.Context, userID string) (*model.Settings, error)
 }
 
 // TenantDataKeeper is an interface for executing administrative opeartions on

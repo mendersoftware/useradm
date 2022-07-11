@@ -35,9 +35,10 @@ import (
 )
 
 const (
-	DbUsersColl    = "users"
-	DbTokensColl   = "tokens"
-	DbSettingsColl = "settings"
+	DbUsersColl        = "users"
+	DbTokensColl       = "tokens"
+	DbSettingsColl     = "settings"
+	DbUserSettingsColl = "user_settings"
 
 	DbUserEmail      = "email"
 	DbUserPass       = "password"
@@ -65,6 +66,7 @@ const (
 
 	DbSettingsEtag            = "etag"
 	DbSettingsTenantIndexName = "tenant"
+	DbSettingsUserID          = "user_id"
 )
 
 type DataStoreMongoConfig struct {
@@ -523,12 +525,66 @@ func (db *DataStoreMongo) SaveSettings(ctx context.Context, s *model.Settings, e
 	return err
 }
 
+func (db *DataStoreMongo) SaveUserSettings(ctx context.Context, userID string,
+	s *model.Settings, etag string) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUserSettingsColl)
+
+	o := &mopts.ReplaceOptions{}
+	o.SetUpsert(true)
+
+	filters := bson.M{
+		DbSettingsUserID: userID,
+	}
+	if etag != "" {
+		filters[DbSettingsEtag] = etag
+	}
+	settings := mstore.WithTenantID(ctx, s)
+	settings = append(settings, bson.E{
+		Key:   DbSettingsUserID,
+		Value: userID,
+	})
+	_, err := c.ReplaceOne(ctx,
+		mstore.WithTenantID(ctx, filters),
+		settings,
+		o,
+	)
+	if err != nil && !mongo.IsDuplicateKeyError(err) {
+		return errors.Wrapf(err, "failed to store settings %v", s)
+	} else if mongo.IsDuplicateKeyError(err) && etag != "" {
+		return store.ErrETagMismatch
+	}
+
+	return err
+}
+
 func (db *DataStoreMongo) GetSettings(ctx context.Context) (*model.Settings, error) {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbSettingsColl)
 
 	var settings *model.Settings
 	err := c.FindOne(ctx, mstore.WithTenantID(ctx, bson.M{})).Decode(&settings)
+
+	switch err {
+	case nil:
+		return settings, nil
+	case mongo.ErrNoDocuments:
+		return nil, nil
+	default:
+		return nil, errors.Wrapf(err, "failed to get settings")
+	}
+}
+
+func (db *DataStoreMongo) GetUserSettings(ctx context.Context,
+	userID string) (*model.Settings, error) {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUserSettingsColl)
+
+	filters := bson.M{
+		DbSettingsUserID: userID,
+	}
+	var settings *model.Settings
+	err := c.FindOne(ctx, mstore.WithTenantID(ctx, filters)).Decode(&settings)
 
 	switch err {
 	case nil:
