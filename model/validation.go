@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -18,7 +18,13 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+const (
+	maxLength128  = 128
+	maxLength4096 = 4096
+)
+
 // Reusable validation rules
 var (
-	lessThan4096 = validation.Length(0, 4096)
+	lessThan128  = validation.Length(0, maxLength128)
+	lessThan4096 = validation.Length(0, maxLength4096)
 )

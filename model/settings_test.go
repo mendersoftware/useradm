@@ -16,6 +16,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -108,4 +109,71 @@ func TestSettingsMarshalBSON(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expected, unmarshalled)
+}
+
+func TestSettingsValidate(t *testing.T) {
+	tooManyValues := map[string]interface{}{}
+	for i := 0; i < maxSettings+1; i++ {
+		tooManyValues[fmt.Sprintf("key%d", i)] = "value"
+	}
+
+	b := make([]rune, maxLength4096+1)
+	for i := range b {
+		b[i] = rune(65) // "A"
+	}
+	tooLongValue := string(b)
+
+	testCases := map[string]struct {
+		settings Settings
+		err      error
+	}{
+		"ok": {
+			settings: Settings{
+				ID:   "id",
+				ETag: "etag",
+				Values: map[string]interface{}{
+					"key": "value",
+				},
+			},
+		},
+		"ko, too many settings": {
+			settings: Settings{
+				ID:     "id",
+				ETag:   "etag",
+				Values: tooManyValues,
+			},
+			err: fmt.Errorf("Values: the length must be no more than %d.", maxSettings),
+		},
+		"ko, too long key": {
+			settings: Settings{
+				ID:   "id",
+				ETag: "etag",
+				Values: map[string]interface{}{
+					tooLongValue: "value",
+				},
+			},
+			err: fmt.Errorf("Values: the length must be no more than %d.", maxLength128),
+		},
+		"ko, too long value": {
+			settings: Settings{
+				ID:   "id",
+				ETag: "etag",
+				Values: map[string]interface{}{
+					"key": tooLongValue,
+				},
+			},
+			err: fmt.Errorf("Values: (key: the length must be no more than %d.).", maxLength4096),
+		},
+	}
+
+	for i, tc := range testCases {
+		t.Run(i, func(t *testing.T) {
+			err := tc.settings.Validate()
+			if tc.err != nil {
+				assert.EqualError(t, tc.err, err.Error())
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
 }

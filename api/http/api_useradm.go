@@ -573,6 +573,11 @@ func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.
 		return
 	}
 
+	if err := settings.Validate(); err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
 	ifMatchHeader := r.Header.Get(hdrIfMatch)
 
 	settings.ETag = uuid.NewString()

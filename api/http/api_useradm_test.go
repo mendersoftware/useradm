@@ -16,6 +16,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -1513,6 +1514,11 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 func TestUserAdmApiSaveSettings(t *testing.T) {
 	t.Parallel()
 
+	tooManyValues := map[string]interface{}{}
+	for i := 0; i < 4097; i++ {
+		tooManyValues[fmt.Sprintf("key%d", i)] = "value"
+	}
+
 	testCases := map[string]struct {
 		etag     string
 		body     interface{}
@@ -1553,6 +1559,15 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 			),
 		},
 		"error, not json": {
+			body: tooManyValues,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("Values: the length must be no more than 1024."),
+			),
+		},
+		"error, validation": {
 			body: "asdf",
 
 			checker: mt.NewJSONResponse(

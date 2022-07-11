@@ -17,6 +17,7 @@ package model
 import (
 	"encoding/json"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -24,6 +25,8 @@ const (
 	settingsID       = "_id"
 	settingsETag     = "etag"
 	settingsTenantID = "tenant_id"
+
+	maxSettings = 1024
 )
 
 type SettingsValues map[string]interface{}
@@ -74,4 +77,34 @@ func (s *Settings) UnmarshalBSON(b []byte) error {
 		s.Values = value
 	}
 	return err
+}
+
+func ValidateKeys(value interface{}) error {
+	s, _ := value.(SettingsValues)
+	for k := range s {
+		err := validation.Validate(k, lessThan128)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func lessThan4096Strings(value interface{}) error {
+	if _, ok := value.(string); ok {
+		return validation.Validate(value, lessThan4096)
+	}
+	return nil
+}
+
+func (s Settings) Validate() error {
+	return validation.ValidateStruct(&s,
+		validation.Field(&s.Values,
+			validation.Length(0, maxSettings),
+			validation.By(ValidateKeys),
+			validation.Each(
+				validation.By(lessThan4096Strings),
+			),
+		),
+	)
 }
