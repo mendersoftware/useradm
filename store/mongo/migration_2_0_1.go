@@ -17,6 +17,7 @@ package mongo
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	mstore "github.com/mendersoftware/go-lib-micro/store/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,6 +31,11 @@ type migration_2_0_1 struct {
 	ctx    context.Context
 }
 
+func isValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
+}
+
 func (m *migration_2_0_1) Up(from migrate.Version) error {
 	ctx := context.Background()
 
@@ -41,7 +47,7 @@ func (m *migration_2_0_1) Up(from migrate.Version) error {
 				{
 					Keys: bson.D{
 						{Key: mstore.FieldTenantID, Value: 1},
-						{Key: dbSettingsUserID, Value: 1},
+						{Key: DbSettingsUserID, Value: 1},
 					},
 					Options: mopts.Index().
 						SetUnique(true).
@@ -63,6 +69,41 @@ func (m *migration_2_0_1) Up(from migrate.Version) error {
 				_, err := coll.Indexes().CreateMany(ctx, indexModel.Indexes)
 				if err != nil {
 					return err
+				}
+			}
+		}
+
+		// migrate user settings to the dedicated collection
+		coll := m.ds.client.Database(m.dbName).Collection(DbSettingsColl)
+		opts := &mopts.FindOptions{}
+		opts.SetSort(bson.D{{Key: "_id", Value: 1}})
+		cur, err := coll.Find(ctx, bson.M{}, opts)
+		if err != nil {
+			return err
+		}
+
+		usersColl := m.ds.client.Database(m.dbName).Collection(DbUserSettingsColl)
+
+		defer cur.Close(ctx)
+
+		// migrate the documents
+		for cur.Next(ctx) {
+			item := map[string]interface{}{}
+			err := cur.Decode(&item)
+			if err != nil {
+				return err
+			}
+			for key, value := range item {
+				if isValidUUID(key) {
+					valueMap, ok := value.(map[string]interface{})
+					if ok {
+						valueMap[DbSettingsUserID] = key
+						valueMap[mstore.FieldTenantID] = item[mstore.FieldTenantID]
+						_, err = usersColl.InsertOne(ctx, valueMap)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		}
