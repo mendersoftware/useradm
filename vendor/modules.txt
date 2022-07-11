@@ -67,7 +67,7 @@ github.com/leodido/go-urn
 github.com/magiconair/properties
 # github.com/mattn/go-isatty v0.0.14
 github.com/mattn/go-isatty
-# github.com/mendersoftware/go-lib-micro v0.0.0-20220624091515-0b58edb1c674
+# github.com/mendersoftware/go-lib-micro v0.0.0-20220707135320-27b318f4b76d
 ## explicit
 github.com/mendersoftware/go-lib-micro/accesslog
 github.com/mendersoftware/go-lib-micro/addons
@@ -91,6 +91,9 @@ github.com/mendersoftware/go-lib-micro/store
 github.com/mendersoftware/go-lib-micro/store/v2
 github.com/mendersoftware/go-lib-micro/strings
 github.com/mendersoftware/go-lib-micro/testing
+# github.com/mendersoftware/go-lib-micro/mongo/codec v0.0.0-20220707135320-27b318f4b76d
+## explicit
+github.com/mendersoftware/go-lib-micro/mongo/codec
 # github.com/mitchellh/mapstructure v1.5.0
 github.com/mitchellh/mapstructure
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -135,9 +138,9 @@ github.com/spf13/viper/internal/encoding/javaproperties
 github.com/spf13/viper/internal/encoding/json
 github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
-# github.com/stretchr/objx v0.1.1
+# github.com/stretchr/objx v0.4.0
 github.com/stretchr/objx
-# github.com/stretchr/testify v1.7.2
+# github.com/stretchr/testify v1.8.0
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
