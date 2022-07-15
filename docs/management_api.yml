@@ -317,12 +317,17 @@ paths:
         - Management API
       security:
         - ManagementJWT: []
-      summary: Get user settings
+      summary: Get global user settings
       responses:
         200:
           description: Successful response - a user information is returned.
           schema:
             $ref: "#/definitions/Settings"
+          headers:
+            ETag:
+              type: string
+              description: |
+                Contains the device object's current ETag.
         401:
           description: |
                 The user cannot be granted authentication.
@@ -338,10 +343,14 @@ paths:
         - Management API
       security:
         - ManagementJWT: []
-      summary: Set user settings
+      summary: Set global user settings
       description: |
-        Create user settings or replace existing settings with provided object.
+        Create global user settings or replace existing settings with provided object.
       parameters:
+        - name: If-Match
+          in: header
+          description: Contains the settings' current ETag, and performs the update only if it matches the one stored in the database.
+          type: string
         - name: settings
           in: body
           description: New user settings.
@@ -361,6 +370,75 @@ paths:
                 The user cannot be granted authentication.
           schema:
             $ref: '#/definitions/Error'
+        412:
+          description: ETag doesn't match.
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
+  /settings/me:
+    get:
+      operationId: Show My User Settings
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Get user settings for the current user
+      responses:
+        200:
+          description: Successful response - a user information is returned.
+          schema:
+            $ref: "#/definitions/Settings"
+          headers:
+            ETag:
+              type: string
+              description: |
+                Contains the device object's current ETag.
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      operationId: Update My User Settings
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Set user settings for the current user
+      description: |
+        Create current user settings or replace existing settings with provided object.
+      parameters:
+        - name: If-Match
+          in: header
+          description: Contains the settings' current ETag, and performs the update only if it matches the one stored in the database.
+          type: string
+        - name: settings
+          in: body
+          description: New user settings.
+          required: true
+          schema:
+            $ref: "#/definitions/Settings"
+      responses:
+        201:
+          description: User settings set.
+        400:
+          description: |
+              The request body is malformed.
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        412:
+          description: ETag doesn't match.
         500:
           description: Internal server error.
           schema:

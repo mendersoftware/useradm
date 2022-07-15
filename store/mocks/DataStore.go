@@ -161,15 +161,15 @@ func (_m *DataStore) GetPersonalAccessTokens(ctx context.Context, userID string)
 }
 
 // GetSettings provides a mock function with given fields: ctx
-func (_m *DataStore) GetSettings(ctx context.Context) (map[string]interface{}, error) {
+func (_m *DataStore) GetSettings(ctx context.Context) (*model.Settings, error) {
 	ret := _m.Called(ctx)
 
-	var r0 map[string]interface{}
-	if rf, ok := ret.Get(0).(func(context.Context) map[string]interface{}); ok {
+	var r0 *model.Settings
+	if rf, ok := ret.Get(0).(func(context.Context) *model.Settings); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(*model.Settings)
 		}
 	}
 
@@ -275,6 +275,29 @@ func (_m *DataStore) GetUserById(ctx context.Context, id string) (*model.User, e
 	return r0, r1
 }
 
+// GetUserSettings provides a mock function with given fields: ctx, userID
+func (_m *DataStore) GetUserSettings(ctx context.Context, userID string) (*model.Settings, error) {
+	ret := _m.Called(ctx, userID)
+
+	var r0 *model.Settings
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.Settings); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Settings)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUsers provides a mock function with given fields: ctx, fltr
 func (_m *DataStore) GetUsers(ctx context.Context, fltr model.UserFilter) ([]model.User, error) {
 	ret := _m.Called(ctx, fltr)
@@ -312,13 +335,13 @@ func (_m *DataStore) Ping(ctx context.Context) error {
 	return r0
 }
 
-// SaveSettings provides a mock function with given fields: ctx, s
-func (_m *DataStore) SaveSettings(ctx context.Context, s map[string]interface{}) error {
-	ret := _m.Called(ctx, s)
+// SaveSettings provides a mock function with given fields: ctx, s, etag
+func (_m *DataStore) SaveSettings(ctx context.Context, s *model.Settings, etag string) error {
+	ret := _m.Called(ctx, s, etag)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, map[string]interface{}) error); ok {
-		r0 = rf(ctx, s)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Settings, string) error); ok {
+		r0 = rf(ctx, s, etag)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -333,6 +356,20 @@ func (_m *DataStore) SaveToken(ctx context.Context, token *jwt.Token) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *jwt.Token) error); ok {
 		r0 = rf(ctx, token)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SaveUserSettings provides a mock function with given fields: ctx, userID, s, etag
+func (_m *DataStore) SaveUserSettings(ctx context.Context, userID string, s *model.Settings, etag string) error {
+	ret := _m.Called(ctx, userID, s, etag)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *model.Settings, string) error); ok {
+		r0 = rf(ctx, userID, s, etag)
 	} else {
 		r0 = ret.Error(0)
 	}

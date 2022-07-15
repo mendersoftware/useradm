@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/google/uuid"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
@@ -40,6 +41,7 @@ const (
 	uriManagementUser       = apiUrlManagementV1 + "/users/:id"
 	uriManagementUsers      = apiUrlManagementV1 + "/users"
 	uriManagementSettings   = apiUrlManagementV1 + "/settings"
+	uriManagementSettingsMe = apiUrlManagementV1 + "/settings/me"
 	uriManagementTokens     = apiUrlManagementV1 + "/settings/tokens"
 	uriManagementToken      = apiUrlManagementV1 + "/settings/tokens/:id"
 
@@ -57,6 +59,8 @@ const (
 const (
 	defaultTimeout = time.Second * 5
 	pathParamMe    = "me"
+	hdrETag        = "ETag"
+	hdrIfMatch     = "If-Match"
 )
 
 const (
@@ -117,6 +121,8 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Delete(uriManagementUser, i.DeleteUserHandler),
 		rest.Post(uriManagementSettings, i.SaveSettingsHandler),
 		rest.Get(uriManagementSettings, i.GetSettingsHandler),
+		rest.Post(uriManagementSettingsMe, i.SaveSettingsMeHandler),
+		rest.Get(uriManagementSettingsMe, i.GetSettingsMeHandler),
 		rest.Post(uriManagementTokens, i.IssueTokenHandler),
 		rest.Get(uriManagementTokens, i.GetTokensHandler),
 		rest.Delete(uriManagementToken, i.DeleteTokenHandler),
@@ -553,13 +559,20 @@ func (u *UserAdmApiHandlers) DeleteTokensHandler(w rest.ResponseWriter, r *rest.
 }
 
 func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.Request) {
+	u.saveSettingsHandler(w, r, false)
+}
+
+func (u *UserAdmApiHandlers) SaveSettingsMeHandler(w rest.ResponseWriter, r *rest.Request) {
+	u.saveSettingsHandler(w, r, true)
+}
+
+func (u *UserAdmApiHandlers) saveSettingsHandler(w rest.ResponseWriter, r *rest.Request, me bool) {
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
 
-	var settings map[string]interface{}
-
-	err := r.DecodeJsonPayload(&settings)
+	settings := &model.Settings{}
+	err := r.DecodeJsonPayload(settings)
 	if err != nil {
 		rest_utils.RestErrWithLog(
 			w,
@@ -571,29 +584,73 @@ func (u *UserAdmApiHandlers) SaveSettingsHandler(w rest.ResponseWriter, r *rest.
 		return
 	}
 
-	err = u.db.SaveSettings(ctx, settings)
-	if err != nil {
+	if err := settings.Validate(); err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	ifMatchHeader := r.Header.Get(hdrIfMatch)
+
+	settings.ETag = uuid.NewString()
+	if me {
+		id := identity.FromContext(ctx)
+		if id == nil {
+			rest_utils.RestErrWithLogInternal(w, r, l, errors.New("identity not present"))
+			return
+		}
+		err = u.db.SaveUserSettings(ctx, id.Subject, settings, ifMatchHeader)
+	} else {
+		err = u.db.SaveSettings(ctx, settings, ifMatchHeader)
+	}
+	if err == store.ErrETagMismatch {
+		rest_utils.RestErrWithInfoMsg(w, r, l, err, http.StatusPreconditionFailed, err.Error())
+		return
+	} else if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 }
 
 func (u *UserAdmApiHandlers) GetSettingsHandler(w rest.ResponseWriter, r *rest.Request) {
+	u.getSettingsHandler(w, r, false)
+}
+
+func (u *UserAdmApiHandlers) GetSettingsMeHandler(w rest.ResponseWriter, r *rest.Request) {
+	u.getSettingsHandler(w, r, true)
+}
+
+func (u *UserAdmApiHandlers) getSettingsHandler(w rest.ResponseWriter, r *rest.Request, me bool) {
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
 
-	settings, err := u.db.GetSettings(ctx)
-
-	// remove internal "tenant_id" field from the result
-	delete(settings, "tenant_id")
+	var settings *model.Settings
+	var err error
+	if me {
+		id := identity.FromContext(ctx)
+		if id == nil {
+			rest_utils.RestErrWithLogInternal(w, r, l, errors.New("identity not present"))
+			return
+		}
+		settings, err = u.db.GetUserSettings(ctx, id.Subject)
+	} else {
+		settings, err = u.db.GetSettings(ctx)
+	}
 
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
 		return
+	} else if settings == nil {
+		settings = &model.Settings{
+			Values: model.SettingsValues{},
+		}
 	}
 
+	if settings.ETag != "" {
+		w.Header().Set(hdrETag, settings.ETag)
+	}
 	_ = w.WriteJson(settings)
 }
 

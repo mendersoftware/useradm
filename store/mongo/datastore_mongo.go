@@ -35,9 +35,10 @@ import (
 )
 
 const (
-	DbUsersColl    = "users"
-	DbTokensColl   = "tokens"
-	DbSettingsColl = "settings"
+	DbUsersColl        = "users"
+	DbTokensColl       = "tokens"
+	DbSettingsColl     = "settings"
+	DbUserSettingsColl = "user_settings"
 
 	DbUserEmail      = "email"
 	DbUserPass       = "password"
@@ -62,6 +63,10 @@ const (
 
 	DbTenantUniqueTokenNameIndexName = "tenant_1_subject_1_name_1"
 	DbTenantTokenSubjectIndexName    = "tenant_1_subject_1"
+
+	DbSettingsEtag            = "etag"
+	DbSettingsTenantIndexName = "tenant"
+	DbSettingsUserID          = "user_id"
 )
 
 type DataStoreMongoConfig struct {
@@ -495,40 +500,97 @@ func (db *DataStoreMongo) DeleteTokensByUserIdExceptCurrentOne(
 	return nil
 }
 
-func (db *DataStoreMongo) SaveSettings(ctx context.Context, s map[string]interface{}) error {
+func (db *DataStoreMongo) SaveSettings(ctx context.Context, s *model.Settings, etag string) error {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbSettingsColl)
 
-	o := mopts.FindOneAndReplace()
+	o := &mopts.ReplaceOptions{}
 	o.SetUpsert(true)
 
-	var res interface{}
-	err := c.FindOneAndReplace(
-		ctx, mstore.WithTenantID(ctx, bson.M{}), mstore.WithTenantID(ctx, s), o).Decode(&res)
-	if err != nil && err != mongo.ErrNoDocuments {
+	filters := bson.M{}
+	if etag != "" {
+		filters[DbSettingsEtag] = etag
+	}
+	_, err := c.ReplaceOne(ctx,
+		mstore.WithTenantID(ctx, filters),
+		mstore.WithTenantID(ctx, s),
+		o,
+	)
+	if err != nil && !mongo.IsDuplicateKeyError(err) {
 		return errors.Wrapf(err, "failed to store settings %v", s)
+	} else if mongo.IsDuplicateKeyError(err) && etag != "" {
+		return store.ErrETagMismatch
 	}
 
-	return nil
+	return err
 }
 
-func (db *DataStoreMongo) GetSettings(ctx context.Context) (map[string]interface{}, error) {
+func (db *DataStoreMongo) SaveUserSettings(ctx context.Context, userID string,
+	s *model.Settings, etag string) error {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUserSettingsColl)
+
+	o := &mopts.ReplaceOptions{}
+	o.SetUpsert(true)
+
+	filters := bson.M{
+		DbSettingsUserID: userID,
+	}
+	if etag != "" {
+		filters[DbSettingsEtag] = etag
+	}
+	settings := mstore.WithTenantID(ctx, s)
+	settings = append(settings, bson.E{
+		Key:   DbSettingsUserID,
+		Value: userID,
+	})
+	_, err := c.ReplaceOne(ctx,
+		mstore.WithTenantID(ctx, filters),
+		settings,
+		o,
+	)
+	if err != nil && !mongo.IsDuplicateKeyError(err) {
+		return errors.Wrapf(err, "failed to store settings %v", s)
+	} else if mongo.IsDuplicateKeyError(err) && etag != "" {
+		return store.ErrETagMismatch
+	}
+
+	return err
+}
+
+func (db *DataStoreMongo) GetSettings(ctx context.Context) (*model.Settings, error) {
 	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
 		Collection(DbSettingsColl)
 
-	o := mopts.FindOne()
-	o.SetProjection(bson.M{"_id": 0})
-
-	var settings map[string]interface{}
-
-	err := c.FindOne(ctx, mstore.WithTenantID(ctx, bson.M{}), o).
-		Decode(&settings)
+	var settings *model.Settings
+	err := c.FindOne(ctx, mstore.WithTenantID(ctx, bson.M{})).Decode(&settings)
 
 	switch err {
 	case nil:
 		return settings, nil
 	case mongo.ErrNoDocuments:
-		return map[string]interface{}{}, nil
+		return nil, nil
+	default:
+		return nil, errors.Wrapf(err, "failed to get settings")
+	}
+}
+
+func (db *DataStoreMongo) GetUserSettings(ctx context.Context,
+	userID string) (*model.Settings, error) {
+	c := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbUserSettingsColl)
+
+	filters := bson.M{
+		DbSettingsUserID: userID,
+	}
+	var settings *model.Settings
+	err := c.FindOne(ctx, mstore.WithTenantID(ctx, filters)).Decode(&settings)
+
+	switch err {
+	case nil:
+		return settings, nil
+	case mongo.ErrNoDocuments:
+		return nil, nil
 	default:
 		return nil, errors.Wrapf(err, "failed to get settings")
 	}

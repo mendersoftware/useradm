@@ -16,6 +16,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -1513,8 +1514,15 @@ func TestUserAdmApiCreateTenant(t *testing.T) {
 func TestUserAdmApiSaveSettings(t *testing.T) {
 	t.Parallel()
 
+	tooManyValues := map[string]interface{}{}
+	for i := 0; i < 4097; i++ {
+		tooManyValues[fmt.Sprintf("key%d", i)] = "value"
+	}
+
 	testCases := map[string]struct {
-		body interface{}
+		etag     string
+		body     interface{}
+		settings *model.Settings
 
 		dbError error
 
@@ -1525,6 +1533,12 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				"foo": "foo-val",
 				"bar": "bar-val",
 			},
+			settings: &model.Settings{
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			},
 
 			checker: mt.NewJSONResponse(
 				http.StatusCreated,
@@ -1534,6 +1548,9 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 		},
 		"ok, empty": {
 			body: map[string]interface{}{},
+			settings: &model.Settings{
+				Values: model.SettingsValues{},
+			},
 
 			checker: mt.NewJSONResponse(
 				http.StatusCreated,
@@ -1542,6 +1559,15 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 			),
 		},
 		"error, not json": {
+			body: tooManyValues,
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("Values: the length must be no more than 1024."),
+			),
+		},
+		"error, validation": {
 			body: "asdf",
 
 			checker: mt.NewJSONResponse(
@@ -1550,10 +1576,29 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				restError("cannot parse request body as json"),
 			),
 		},
+		"error, etag mismatch": {
+			body: map[string]interface{}{},
+			settings: &model.Settings{
+				Values: model.SettingsValues{},
+			},
+			dbError: store.ErrETagMismatch,
+
+			checker: mt.NewJSONResponse(
+				http.StatusPreconditionFailed,
+				nil,
+				restError(store.ErrETagMismatch.Error()),
+			),
+		},
 		"error, db": {
 			body: map[string]interface{}{
 				"foo": "foo-val",
 				"bar": "bar-val",
+			},
+			settings: &model.Settings{
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
 			},
 
 			dbError: errors.New("generic"),
@@ -1572,7 +1617,14 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 
 			//make mock store
 			db := &mstore.DataStore{}
-			db.On("SaveSettings", ctx, tc.body).Return(tc.dbError)
+			if tc.settings != nil {
+				db.On("SaveSettings", ctx, mock.MatchedBy(func(s *model.Settings) bool {
+					s.ETag = tc.settings.ETag // ignore
+					assert.Equal(t, tc.settings, s)
+
+					return true
+				}), tc.etag).Return(tc.dbError)
+			}
 
 			//make handler
 			api := makeMockApiHandler(t, nil, db)
@@ -1582,6 +1634,9 @@ func TestUserAdmApiSaveSettings(t *testing.T) {
 				"http://1.2.3.4/api/management/v1/useradm/settings",
 				"",
 				tc.body)
+			if tc.etag != "" {
+				req.Header.Add(hdrETag, tc.etag)
+			}
 
 			//test
 			recorded := test.RunRequest(t, api, req)
@@ -1594,15 +1649,17 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		dbSettings map[string]interface{}
+		dbSettings *model.Settings
 		dbError    error
 
 		checker mt.ResponseChecker
 	}{
 		"ok": {
-			dbSettings: map[string]interface{}{
-				"foo": "foo-val",
-				"bar": "bar-val",
+			dbSettings: &model.Settings{
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
 			},
 
 			checker: mt.NewJSONResponse(
@@ -1612,6 +1669,31 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 					"foo": "foo-val",
 					"bar": "bar-val",
 				},
+			),
+		},
+		"ok, with etag": {
+			dbSettings: &model.Settings{
+				ETag: "etag",
+				Values: model.SettingsValues{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			},
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				map[string]interface{}{
+					"foo": "foo-val",
+					"bar": "bar-val",
+				},
+			),
+		},
+		"ok, no settings": {
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				map[string]interface{}{},
 			),
 		},
 		"error: generic": {
@@ -1645,6 +1727,10 @@ func TestUserAdmApiGetSettings(t *testing.T) {
 			//test
 			recorded := test.RunRequest(t, api, req)
 			mt.CheckResponse(t, tc.checker, recorded)
+
+			if tc.dbSettings != nil && tc.dbSettings.ETag != "" {
+				recorded.HeaderIs(hdrETag, tc.dbSettings.ETag)
+			}
 		})
 	}
 }
