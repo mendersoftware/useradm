@@ -76,6 +76,9 @@ type User struct {
 
 	// LoginTs is the timestamp of the last login for this user.
 	LoginTs *time.Time `json:"login_ts,omitempty" bson:"login_ts,omitempty"`
+
+	// IsOauth is the indicator that the user is using oauth mechanism to login
+	IsOauth bool `json:"is_oauth,omitempty" bson:"is_oauth,omitempty"`
 }
 
 func (u User) Validate() error {
@@ -89,6 +92,10 @@ func (u User) Validate() error {
 		return ErrPasswordTooShort
 	}
 	return nil
+}
+
+func (u User) AllowedPersonalAccessToken() bool {
+	return !u.IsOauth
 }
 
 type UserInternal struct {

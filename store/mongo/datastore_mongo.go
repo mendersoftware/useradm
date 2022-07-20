@@ -67,6 +67,7 @@ const (
 	DbSettingsEtag            = "etag"
 	DbSettingsTenantIndexName = "tenant"
 	DbSettingsUserID          = "user_id"
+	DbIsOauthUser             = "is_oauth"
 )
 
 type DataStoreMongoConfig struct {

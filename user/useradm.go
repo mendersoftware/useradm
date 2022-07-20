@@ -43,6 +43,8 @@ var (
 		"maximum number of personal acess tokens reached for this user")
 	ErrDuplicateTokenName = errors.New(
 		"Personal Access Token with a given name already exists")
+	ErrForbiddenToCreatePAT = errors.New(
+		"user is not allowed to create a personal access token")
 )
 
 const (
@@ -573,6 +575,16 @@ func (u *UserAdm) IssuePersonalAccessToken(
 	if id == nil {
 		return "", errors.New("identity not present in the context")
 	}
+
+	user, err := u.db.GetUserById(ctx, id.Subject)
+	if err != nil || user == nil {
+		return "", ErrUserNotFound
+	}
+
+	if !user.AllowedPersonalAccessToken() {
+		return "", ErrForbiddenToCreatePAT
+	}
+
 	if u.config.LimitTokensPerUser > 0 {
 		count, err := u.db.CountPersonalAccessTokens(ctx, id.Subject)
 		if err != nil {
