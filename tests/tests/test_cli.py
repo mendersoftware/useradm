@@ -189,5 +189,6 @@ class TestCliEnterprise:
     def test_migrate(self, cli, clean_db_f, mongo):
         cli.migrate(tenant_id="0000000000000000000000")
 
-        Migration.verify_db_and_collections(mongo, Migration.DB_NAME)
-        Migration.verify_migration(mongo[Migration.DB_NAME], Migration.DB_VERSION)
+        tenant_db = Migration.DB_NAME + "-0000000000000000000000"
+        Migration.verify_db_and_collections(mongo, tenant_db)
+        Migration.verify_migration(mongo[tenant_db], Migration.DB_VERSION)

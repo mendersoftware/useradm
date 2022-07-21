@@ -23,6 +23,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 
+	mstore_v1 "github.com/mendersoftware/go-lib-micro/store"
 	mstore "github.com/mendersoftware/go-lib-micro/store/v2"
 )
 
@@ -44,7 +45,7 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 
 	m := migrate.SimpleMigrator{
 		Client:      db.client,
-		Db:          mstore.DbFromContext(tenantCtx, DbName),
+		Db:          mstore_v1.DbFromContext(tenantCtx, DbName),
 		Automigrate: db.automigrate,
 	}
 	migrations := []migrate.Migration{
@@ -62,7 +63,7 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 		},
 		&migration_2_0_0{
 			ds:     db,
-			dbName: mstore.DbFromContext(tenantCtx, DbName),
+			dbName: mstore_v1.DbFromContext(tenantCtx, DbName),
 			ctx:    tenantCtx,
 		},
 		&migration_2_0_1{
@@ -91,7 +92,7 @@ func (db *DataStoreMongo) Migrate(ctx context.Context, version string) error {
 		if err != nil {
 			return errors.Wrap(err, "failed go retrieve tenant DBs")
 		}
-		dbs = tdbs
+		dbs = append(dbs, tdbs...)
 	} else {
 		l.Infof("running migrations in single tenant mode")
 	}
