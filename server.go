@@ -73,7 +73,7 @@ func RunServer(c config.Reader) error {
 		return errors.Wrap(err, "database connection failed")
 	}
 
-	ua := useradm.NewUserAdm(jwth, db, mongo.NewTenantStoreMongo(db),
+	ua := useradm.NewUserAdm(jwth, db,
 		useradm.Config{
 			Issuer:                         c.GetString(SettingJWTIssuer),
 			ExpirationTime:                 int64(c.GetInt(SettingJWTExpirationTimeout)),

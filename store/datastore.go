@@ -79,11 +79,3 @@ type DataStore interface {
 	SaveUserSettings(ctx context.Context, userID string, s *model.Settings, etag string) error
 	GetUserSettings(ctx context.Context, userID string) (*model.Settings, error)
 }
-
-// TenantDataKeeper is an interface for executing administrative opeartions on
-// tenants
-//go:generate ../utils/mockgen.sh
-type TenantDataKeeper interface {
-	// MigrateTenant migrates given tenant to the latest DB version
-	MigrateTenant(ctx context.Context, id string) error
-}
