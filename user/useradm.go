@@ -373,8 +373,8 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 
 	_, err := ua.db.UpdateUser(ctx, id, u)
 
-	// if we changed the password, invalidate the JWT tokens but the one used to update the user
-	if err == nil && u.Password != "" {
+	// invalidate the JWT tokens but the one used to update the user
+	if err == nil {
 		if u.Token != nil {
 			err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, id, u.Token.ID)
 		} else {

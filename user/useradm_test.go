@@ -704,6 +704,18 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			dbErr:  nil,
 			outErr: nil,
 		},
+		"ok email with current token": {
+			inUserUpdate: model.UserUpdate{
+				Email: "foofoo@bar.com",
+				Token: &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
+			},
+
+			dbErr:  nil,
+			outErr: nil,
+		},
 		"ok with current token": {
 			inUserUpdate: model.UserUpdate{
 				Email:           "foo@bar.com",
