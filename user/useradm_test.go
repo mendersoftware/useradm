@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -691,6 +691,18 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Email:           "foo@bar.com",
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
+			},
+			getUserById: &model.User{
+				Password: hashPassword("current"),
+			},
+
+			dbErr:  nil,
+			outErr: nil,
+		},
+		"ok email with current token": {
+			inUserUpdate: model.UserUpdate{
+				Email: "foofoo@bar.com",
+				Token: &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
 			getUserById: &model.User{
 				Password: hashPassword("current"),

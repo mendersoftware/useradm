@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -360,8 +360,8 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 
 	_, err := ua.db.UpdateUser(ctx, id, u)
 
-	// if we changed the password, invalidate the JWT tokens but the one used to update the user
-	if err == nil && u.Password != "" {
+	// invalidate the JWT tokens but the one used to update the user
+	if err == nil {
 		if u.Token != nil {
 			err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, id, u.Token.ID)
 		} else {
