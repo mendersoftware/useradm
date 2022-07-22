@@ -332,7 +332,10 @@ class TestManagementApiPutUserBase:
 
 class TestManagementApiPutUser(TestManagementApiPutUserBase):
     def test_ok_email(self, api_client_mgmt, init_users_f):
-        update = {"email": "unique1@foo.com"}
+        update = {
+            "email": "unique1@foo.com",
+            "current_password": "correcthorsebatterystaple"
+        }
         self._do_test_ok_email(api_client_mgmt, init_users_f, init_users_f[0], update)
 
     def test_ok_pass(self, api_client_mgmt, init_users_f):
@@ -372,6 +375,48 @@ class TestManagementApiPutUser(TestManagementApiPutUserBase):
         self._do_test_fail_unprocessable_entity(
             api_client_mgmt, init_users_f, init_users_f[0], update
         )
+
+    def test_fail_invalidated_tokens_after_update(self, api_client_mgmt, api_client_int, init_users_f):
+        users = [
+            init_users_f[0],
+            init_users_f[1]
+        ]
+        update = {
+            "email": "unique1@foo.com",
+             "current_password": "correcthorsebatterystaple"
+        }
+        _, r = api_client_mgmt.login(users[0].email, "correcthorsebatterystaple")
+        assert r.status_code == 200
+        token_one = r.text
+        auth = {"Authorization": "Bearer " + token_one}
+
+        _, r = api_client_mgmt.login(users[1].email, "correcthorsebatterystaple")
+        assert r.status_code == 200
+        token_two = r.text
+        _, r = api_client_int.verify(token_two)
+        assert r.status_code == 200
+
+        # test update
+        _, r = api_client_mgmt.update_user(users[1].id, update, auth)
+        assert r.status_code == 204
+
+        # verify tokens
+        _, r = api_client_int.verify(token_one)
+        assert r.status_code == 200
+        with pytest.raises(bravado.exception.HTTPError) as excinfo:
+            _, r = api_client_int.verify(token_two)
+            assert excinfo.value.response.status_code == 401
+
+    def test_fail_update_email_without_current_password(self, api_client_mgmt, init_users_f):
+        update = {"email": "unique1@foo.com"}
+        _, r = api_client_mgmt.login(init_users_f[0].email, "correcthorsebatterystaple")
+        assert r.status_code == 200
+        token = r.text
+        auth = {"Authorization": "Bearer " + token}
+
+        with pytest.raises(bravado.exception.HTTPError) as excinfo:
+            _, r = api_client_mgmt.update_user(init_users_f[0].id, update, auth)
+            assert excinfo.value.response.status_code == 422
 
 
 class TestManagementApiPutUserEnterprise(TestManagementApiPutUserBase):

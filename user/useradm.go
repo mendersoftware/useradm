@@ -321,13 +321,15 @@ func (ua *UserAdm) compensateTenantUser(ctx context.Context, userId, tenantId st
 }
 
 func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
-	if len(u.Password) > 0 {
-		user, err := ua.db.GetUserAndPasswordById(ctx, id)
-		if err != nil {
-			return errors.Wrap(err, "useradm: failed to get user")
-		} else if user == nil {
-			return store.ErrUserNotFound
-		}
+	user, err := ua.db.GetUserAndPasswordById(ctx, id)
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get user")
+	} else if user == nil {
+		return store.ErrUserNotFound
+	}
+
+	// make sure current password is provided on email/password change events
+	if len(u.Password) > 0 || u.Email != "" {
 		if err = bcrypt.CompareHashAndPassword(
 			[]byte(user.Password),
 			[]byte(u.CurrentPassword),
@@ -358,7 +360,7 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 		}
 	}
 
-	_, err := ua.db.UpdateUser(ctx, id, u)
+	_, err = ua.db.UpdateUser(ctx, id, u)
 
 	// if we changed the password, invalidate the JWT tokens but the one used to update the user
 	if err == nil && u.Password != "" {
