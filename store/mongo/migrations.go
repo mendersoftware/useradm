@@ -68,7 +68,7 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 		},
 		&migration_2_0_1{
 			ds:     db,
-			dbName: mstore.DbFromContext(tenantCtx, DbName),
+			dbName: mstore_v1.DbFromContext(tenantCtx, DbName),
 			ctx:    tenantCtx,
 		},
 	}
@@ -92,7 +92,7 @@ func (db *DataStoreMongo) Migrate(ctx context.Context, version string) error {
 		if err != nil {
 			return errors.Wrap(err, "failed go retrieve tenant DBs")
 		}
-		dbs = append(dbs, tdbs...)
+		dbs = append(tdbs, DbName)
 	} else {
 		l.Infof("running migrations in single tenant mode")
 	}
