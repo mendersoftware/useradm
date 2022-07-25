@@ -14,7 +14,6 @@
 package tenant
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -58,15 +57,6 @@ type Config struct {
 type ClientRunner interface {
 	CheckHealth(ctx context.Context) error
 	GetTenant(ctx context.Context, username string, client apiclient.HttpRunner) (*Tenant, error)
-	CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error
-	UpdateUser(
-		ctx context.Context,
-		tenantId,
-		userId string,
-		u *UserUpdate,
-		client apiclient.HttpRunner,
-	) error
-	DeleteUser(ctx context.Context, tenantId, clientId string, client apiclient.HttpRunner) error
 }
 
 // Client is an opaque implementation of tenantadm api client.
@@ -184,132 +174,6 @@ func (c *Client) GetTenant(
 	default:
 		return nil, errors.Errorf("got unexpected number of tenants: %v", len(tenants))
 	}
-}
-
-func (c *Client) CreateUser(ctx context.Context, user *User, client apiclient.HttpRunner) error {
-	// prepare request body
-	userJson, err := json.Marshal(user)
-	if err != nil {
-		return errors.Wrap(err, "failed to prepare body for POST /users")
-	}
-
-	reader := bytes.NewReader(userJson)
-
-	req, err := http.NewRequest(http.MethodPost,
-		JoinURL(c.conf.TenantAdmAddr, UsersUri),
-		reader)
-	if err != nil {
-		return errors.Wrap(err, "failed to create request for POST /users")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
-	defer cancel()
-
-	// send
-	rsp, err := client.Do(req.WithContext(ctx))
-	if err != nil {
-		return errors.Wrap(err, "POST /users request failed")
-	}
-	defer rsp.Body.Close()
-
-	switch rsp.StatusCode {
-	case http.StatusCreated:
-		return nil
-	case http.StatusUnprocessableEntity:
-		return ErrDuplicateUser
-	default:
-		return errors.Errorf("POST /users request failed with unexpected status %v", rsp.StatusCode)
-	}
-}
-
-func (c *Client) UpdateUser(
-	ctx context.Context,
-	tenantId,
-	userId string,
-	u *UserUpdate,
-	client apiclient.HttpRunner,
-) error {
-	// prepare request body
-	json, err := json.Marshal(u)
-	if err != nil {
-		return errors.Wrap(err, "failed to prepare body for PUT /tenants/:id/users/:id")
-	}
-
-	reader := bytes.NewReader(json)
-
-	repl := strings.NewReplacer("#tid", tenantId, "#uid", userId)
-	uri := repl.Replace(TenantsUsersUri)
-
-	req, err := http.NewRequest(http.MethodPut,
-		JoinURL(c.conf.TenantAdmAddr, uri),
-		reader)
-	if err != nil {
-		return errors.Wrap(err, "failed to create request for PUT /tenants/:id/users/:id")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
-	defer cancel()
-
-	// send
-	rsp, err := client.Do(req.WithContext(ctx))
-	if err != nil {
-		return errors.Wrap(err, "PUT /tenants/:id/users/:id request failed")
-	}
-	defer rsp.Body.Close()
-
-	switch rsp.StatusCode {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusUnprocessableEntity:
-		return ErrDuplicateUser
-	case http.StatusNotFound:
-		return ErrUserNotFound
-	default:
-		return errors.Errorf(
-			"PUT /tenants/:id/users/:id request failed with unexpected status %v",
-			rsp.StatusCode,
-		)
-	}
-}
-
-func (c *Client) DeleteUser(
-	ctx context.Context,
-	tenantId,
-	userId string,
-	client apiclient.HttpRunner,
-) error {
-
-	repl := strings.NewReplacer("#tid", tenantId, "#uid", userId)
-	uri := repl.Replace(TenantsUsersUri)
-
-	req, err := http.NewRequest(http.MethodDelete,
-		JoinURL(c.conf.TenantAdmAddr, uri), nil)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create request for DELETE %s", uri)
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, c.conf.Timeout)
-	defer cancel()
-
-	// send
-	rsp, err := client.Do(req.WithContext(ctx))
-	if err != nil {
-		return errors.Wrapf(err, "DELETE %s request failed", uri)
-	}
-	defer rsp.Body.Close()
-
-	if rsp.StatusCode != http.StatusNoContent {
-		return errors.Errorf(
-			"DELETE %s request failed with unexpected status %v",
-			uri,
-			rsp.StatusCode,
-		)
-	}
-	return nil
 }
 
 func JoinURL(base, url string) string {
