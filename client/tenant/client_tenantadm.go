@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ const (
 	UriBase         = "/api/internal/v1/tenantadm"
 	GetTenantsUri   = UriBase + "/tenants"
 	UsersUri        = UriBase + "/users"
-	TenantsUsersUri = UriBase + "/tenants/:tid/users/:uid"
+	TenantsUsersUri = UriBase + "/tenants/#tid/users/#uid"
 	URIHealth       = UriBase + "/health"
 	// default request timeout, 10s
 	defaultReqTimeout = time.Duration(10) * time.Second
@@ -239,7 +239,7 @@ func (c *Client) UpdateUser(
 
 	reader := bytes.NewReader(json)
 
-	repl := strings.NewReplacer(":tid", tenantId, ":uid", userId)
+	repl := strings.NewReplacer("#tid", tenantId, "#uid", userId)
 	uri := repl.Replace(TenantsUsersUri)
 
 	req, err := http.NewRequest(http.MethodPut,
@@ -283,7 +283,7 @@ func (c *Client) DeleteUser(
 	client apiclient.HttpRunner,
 ) error {
 
-	repl := strings.NewReplacer(":tid", tenantId, ":uid", userId)
+	repl := strings.NewReplacer("#tid", tenantId, "#uid", userId)
 	uri := repl.Replace(TenantsUsersUri)
 
 	req, err := http.NewRequest(http.MethodDelete,

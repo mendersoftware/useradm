@@ -38,12 +38,12 @@ const (
 	apiUrlManagementV1      = "/api/management/v1/useradm"
 	uriManagementAuthLogin  = apiUrlManagementV1 + "/auth/login"
 	uriManagementAuthLogout = apiUrlManagementV1 + "/auth/logout"
-	uriManagementUser       = apiUrlManagementV1 + "/users/:id"
+	uriManagementUser       = apiUrlManagementV1 + "/users/#id"
 	uriManagementUsers      = apiUrlManagementV1 + "/users"
 	uriManagementSettings   = apiUrlManagementV1 + "/settings"
 	uriManagementSettingsMe = apiUrlManagementV1 + "/settings/me"
 	uriManagementTokens     = apiUrlManagementV1 + "/settings/tokens"
-	uriManagementToken      = apiUrlManagementV1 + "/settings/tokens/:id"
+	uriManagementToken      = apiUrlManagementV1 + "/settings/tokens/#id"
 
 	apiUrlInternalV1  = "/api/internal/v1/useradm"
 	uriInternalAlive  = apiUrlInternalV1 + "/alive"
@@ -51,8 +51,8 @@ const (
 
 	uriInternalAuthVerify  = apiUrlInternalV1 + "/auth/verify"
 	uriInternalTenants     = apiUrlInternalV1 + "/tenants"
-	uriInternalTenantUsers = apiUrlInternalV1 + "/tenants/:id/users"
-	uriInternalTenantUser  = apiUrlInternalV1 + "/tenants/:id/users/:userid"
+	uriInternalTenantUsers = apiUrlInternalV1 + "/tenants/#id/users"
+	uriInternalTenantUser  = apiUrlInternalV1 + "/tenants/#id/users/#userid"
 	uriInternalTokens      = apiUrlInternalV1 + "/tokens"
 )
 
