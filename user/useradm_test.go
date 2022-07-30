@@ -706,8 +706,10 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"ok email with current token": {
 			inUserUpdate: model.UserUpdate{
-				Email: "foofoo@bar.com",
-				Token: &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+				Email:           "foofoo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
 			getUserById: &model.User{
 				Password: hashPassword("current"),
@@ -799,7 +801,12 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"db error: duplicate email": {
 			inUserUpdate: model.UserUpdate{
-				Email: "foo@bar.com",
+				Email:           "foo@bar.com",
+				CurrentPassword: "current",
+			},
+			getUserById: &model.User{
+				Email:    "foo@bar.com",
+				Password: hashPassword("current"),
 			},
 
 			dbErr:  store.ErrDuplicateEmail,
@@ -852,6 +859,18 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			dbErr:  nil,
 			outErr: store.ErrCurrentPasswordMismatch,
 		},
+		"error: email without current password": {
+			inUserUpdate: model.UserUpdate{
+				Email: "foobar@bar.com",
+			},
+			getUserById: &model.User{
+				Email:    "foo@bar.com",
+				Password: hashPassword("current"),
+			},
+
+			dbErr:  nil,
+			outErr: store.ErrCurrentPasswordMismatch,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -862,12 +881,10 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			db := &mstore.DataStore{}
 			defer db.AssertExpectations(t)
 
-			if len(tc.inUserUpdate.Password) > 0 {
-				db.On("GetUserAndPasswordById",
-					ContextMatcher(),
-					mock.AnythingOfType("string"),
-				).Return(tc.getUserById, tc.getUserByIdErr)
-			}
+			db.On("GetUserAndPasswordById",
+				ContextMatcher(),
+				mock.AnythingOfType("string"),
+			).Return(tc.getUserById, tc.getUserByIdErr)
 
 			if tc.getUserByIdErr == nil && tc.outErr != store.ErrCurrentPasswordMismatch &&
 				(len(tc.inUserUpdate.Password) == 0 || tc.getUserById != nil) &&
