@@ -13,7 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli v1.22.9
-	go.mongodb.org/mongo-driver v1.9.1
-	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
+	go.mongodb.org/mongo-driver v1.10.0
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 )
