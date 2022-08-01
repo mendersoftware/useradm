@@ -10,7 +10,7 @@ require (
 	github.com/mendersoftware/go-lib-micro v0.0.0-20220707135320-27b318f4b76d
 	github.com/mendersoftware/go-lib-micro/mongo/codec v0.0.0-20220707135320-27b318f4b76d
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli v1.22.9
 	go.mongodb.org/mongo-driver v1.9.1
