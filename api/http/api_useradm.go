@@ -35,7 +35,7 @@ import (
 const (
 	uriManagementAuthLogin  = "/api/management/v1/useradm/auth/login"
 	uriManagementAuthLogout = "/api/management/v1/useradm/auth/logout"
-	uriManagementUser       = "/api/management/v1/useradm/users/:id"
+	uriManagementUser       = "/api/management/v1/useradm/users/#id"
 	uriManagementUsers      = "/api/management/v1/useradm/users"
 	uriManagementSettings   = "/api/management/v1/useradm/settings"
 
@@ -44,8 +44,8 @@ const (
 
 	uriInternalAuthVerify  = "/api/internal/v1/useradm/auth/verify"
 	uriInternalTenants     = "/api/internal/v1/useradm/tenants"
-	uriInternalTenantUsers = "/api/internal/v1/useradm/tenants/:id/users"
-	uriInternalTenantUser  = "/api/internal/v1/useradm/tenants/:id/users/:userid"
+	uriInternalTenantUsers = "/api/internal/v1/useradm/tenants/#id/users"
+	uriInternalTenantUser  = "/api/internal/v1/useradm/tenants/#id/users/#userid"
 	uriInternalTokens      = "/api/internal/v1/useradm/tokens"
 )
 

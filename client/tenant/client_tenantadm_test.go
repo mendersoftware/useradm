@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -288,8 +288,8 @@ func TestDeleteUser(t *testing.T) {
 				assert.EqualError(t, err, tc.err.Error())
 			} else {
 				assert.NoError(t, err)
-				uri := strings.Replace(TenantsUsersUri, ":tid", "foo", 1)
-				uri = strings.Replace(uri, ":uid", "bar", 1)
+				uri := strings.Replace(TenantsUsersUri, "#tid", "foo", 1)
+				uri = strings.Replace(uri, "#uid", "bar", 1)
 				assert.Equal(t, uri, rd.Url.Path)
 				assert.Equal(t, "DELETE", rd.Method)
 			}
@@ -351,8 +351,8 @@ func TestUpdateUser(t *testing.T) {
 			err := c.UpdateUser(context.Background(), tc.tid, tc.uid, up, &apiclient.HttpApi{})
 
 			assert.Equal(t, "PUT", rd.Method)
-			uri := strings.Replace(TenantsUsersUri, ":tid", tc.tid, 1)
-			uri = strings.Replace(uri, ":uid", tc.uid, 1)
+			uri := strings.Replace(TenantsUsersUri, "#tid", tc.tid, 1)
+			uri = strings.Replace(uri, "#uid", tc.uid, 1)
 			assert.Equal(t, uri, rd.Url.Path)
 
 			if tc.err != nil {

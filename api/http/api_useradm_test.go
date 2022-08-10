@@ -1180,7 +1180,7 @@ func TestUserAdmApiTenantsGetUsers(t *testing.T) {
 			api := makeMockApiHandler(t, uadm, nil)
 
 			//make request
-			repl := strings.NewReplacer(":id", tc.tenant)
+			repl := strings.NewReplacer("#id", tc.tenant)
 			req, _ := http.NewRequest(
 				"GET",
 				"http://localhost"+
