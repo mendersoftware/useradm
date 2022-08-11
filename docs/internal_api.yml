@@ -373,9 +373,16 @@ definitions:
       password:
         description: User's password.
         type: string
+      propagate:
+        description: |
+          When propagate is true, the useradm will propagate user information
+          to tenantadm, otherwise no request to tenantadm will be made.
+          Defaults to true.
+        type: boolean
     required:
       - email
       - password
     example:
       email: "user@acme.com"
       password: "secret"
+      propagate: false
