@@ -233,7 +233,7 @@ func (ua *UserAdm) CreateUser(ctx context.Context, u *model.User) error {
 	}
 	u.Password = string(hash)
 
-	return ua.doCreateUser(ctx, u)
+	return ua.doCreateUser(ctx, u, true)
 }
 
 func (ua *UserAdm) CreateUserInternal(ctx context.Context, u *model.UserInternal) error {
@@ -247,10 +247,12 @@ func (ua *UserAdm) CreateUserInternal(ctx context.Context, u *model.UserInternal
 		u.Password = string(hash)
 	}
 
-	return ua.doCreateUser(ctx, &u.User)
+	return ua.doCreateUser(ctx, &u.User, u.ShouldPropagate())
 }
 
-func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User) error {
+func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User, propagate bool) error {
+	var tenantErr error
+
 	if u.ID == "" {
 		//technically one of the functions down the oid.NewUUIDv4() stack can panic,
 		//so what we could do is: wrap around it and recover and fall back
@@ -264,12 +266,68 @@ func (ua *UserAdm) doCreateUser(ctx context.Context, u *model.User) error {
 		u.ID = id.String()
 	}
 
+	id := identity.FromContext(ctx)
+	if ua.verifyTenant && propagate {
+		tenantErr = ua.cTenant.CreateUser(ctx,
+			&tenant.User{
+				ID:       u.ID,
+				Name:     string(u.Email),
+				TenantID: id.Tenant,
+			},
+			ua.clientGetter())
+
+		if tenantErr != nil && tenantErr != tenant.ErrDuplicateUser {
+			return errors.Wrap(tenantErr, "useradm: failed to create user in tenantadm")
+		}
+	}
+
+	if tenantErr == tenant.ErrDuplicateUser {
+		// check if the user exists in useradm
+		// if the user does not exists then we should try to remove the user from tenantadm
+		user, err := ua.db.GetUserByEmail(ctx, u.Email)
+		if err != nil {
+			return errors.Wrap(err, "tenant data out of sync: failed to get user from db")
+		}
+		if user == nil {
+			if compensateErr := ua.compensateTenantUser(
+				ctx,
+				u.ID,
+				id.Tenant,
+			); compensateErr != nil {
+				tenantErr = compensateErr
+			}
+			return errors.Wrap(tenantErr, "tenant data out of sync")
+		}
+		return store.ErrDuplicateEmail
+	}
+
 	if err := ua.db.CreateUser(ctx, u); err != nil {
 		if err == store.ErrDuplicateEmail {
 			return err
 		}
+		if ua.verifyTenant && propagate {
+			// if the user could not be created in the useradm database
+			// try to remove the user from tenantadm
+			if compensateErr := ua.compensateTenantUser(
+				ctx,
+				u.ID,
+				id.Tenant,
+			); compensateErr != nil {
+				err = errors.Wrap(err, compensateErr.Error())
+			}
+		}
 
 		return errors.Wrap(err, "useradm: failed to create user in the db")
+	}
+
+	return nil
+}
+
+func (ua *UserAdm) compensateTenantUser(ctx context.Context, userId, tenantId string) error {
+	err := ua.cTenant.DeleteUser(ctx, tenantId, userId, ua.clientGetter())
+
+	if err != nil {
+		return errors.Wrap(err, "faield to delete tenant user")
 	}
 
 	return nil
@@ -290,6 +348,28 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 			[]byte(u.CurrentPassword),
 		); err != nil {
 			return store.ErrCurrentPasswordMismatch
+		}
+	}
+
+	if ua.verifyTenant && u.Email != "" {
+		ident := identity.FromContext(ctx)
+		err := ua.cTenant.UpdateUser(ctx,
+			ident.Tenant,
+			id,
+			&tenant.UserUpdate{
+				Name: string(u.Email),
+			},
+			ua.clientGetter())
+
+		if err != nil {
+			switch err {
+			case tenant.ErrDuplicateUser:
+				return store.ErrDuplicateEmail
+			case tenant.ErrUserNotFound:
+				return store.ErrUserNotFound
+			default:
+				return errors.Wrap(err, "useradm: failed to update user in tenantadm")
+			}
 		}
 	}
 
@@ -394,6 +474,15 @@ func (ua *UserAdm) GetUser(ctx context.Context, id string) (*model.User, error) 
 }
 
 func (ua *UserAdm) DeleteUser(ctx context.Context, id string) error {
+	if ua.verifyTenant {
+		identity := identity.FromContext(ctx)
+		err := ua.cTenant.DeleteUser(ctx, identity.Tenant, id, ua.clientGetter())
+
+		if err != nil {
+			return errors.Wrap(err, "useradm: failed to delete user in tenantadm")
+		}
+	}
+
 	err := ua.db.DeleteUser(ctx, id)
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to delete user")
