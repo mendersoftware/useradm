@@ -1,16 +1,16 @@
 // Copyright 2022 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package useradm
 
 import (
@@ -676,6 +676,7 @@ func hashPassword(password string) string {
 func TestUserAdmUpdateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUserUpdate   model.UserUpdate
+		inUserId       string
 		getUserById    *model.User
 		getUserByIdErr error
 
@@ -692,6 +693,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -701,9 +703,12 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"ok email with current token": {
 			inUserUpdate: model.UserUpdate{
-				Email: "foofoo@bar.com",
-				Token: &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
+				Email:           "foofoo@bar.com",
+				Password:        "correcthorsebatterystaple",
+				CurrentPassword: "current",
+				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -718,6 +723,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				CurrentPassword: "current",
 				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -734,6 +740,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -750,6 +757,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -766,6 +774,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -782,6 +791,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -794,7 +804,13 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 		"db error: duplicate email": {
 			inUserUpdate: model.UserUpdate{
-				Email: "foo@bar.com",
+				Email:           "foo@bar.com",
+				CurrentPassword: "current",
+			},
+			inUserId: "me",
+			getUserById: &model.User{
+				Email:    "foo@bar.com",
+				Password: hashPassword("current"),
 			},
 
 			dbErr:  store.ErrDuplicateEmail,
@@ -806,6 +822,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -819,6 +836,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId:       "me",
 			getUserByIdErr: errors.New("error"),
 
 			dbErr:  nil,
@@ -830,6 +848,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
+			inUserId: "me",
 
 			dbErr:  nil,
 			outErr: store.ErrUserNotFound,
@@ -840,36 +859,47 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "wrong",
 			},
+			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
 
 			dbErr:  nil,
-			outErr: store.ErrCurrentPasswordMismatch,
+			outErr: ErrCurrentPasswordMismatch,
+		},
+		"error: email without current password": {
+			inUserUpdate: model.UserUpdate{
+				Email: "foobar@bar.com",
+			},
+			inUserId: "me",
+			getUserById: &model.User{
+				Email:    "foo@bar.com",
+				Password: hashPassword("current"),
+			},
+
+			dbErr:  nil,
+			outErr: ErrCurrentPasswordMismatch,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-
-			ctx := context.Background()
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
 
 			db := &mstore.DataStore{}
 			defer db.AssertExpectations(t)
 
-			if len(tc.inUserUpdate.Password) > 0 {
-				db.On("GetUserAndPasswordById",
-					ContextMatcher(),
-					mock.AnythingOfType("string"),
-				).Return(tc.getUserById, tc.getUserByIdErr)
-			}
+			db.On("GetUserAndPasswordById",
+				ContextMatcher(),
+				mock.AnythingOfType("string"),
+			).Return(tc.getUserById, tc.getUserByIdErr)
 
-			if tc.getUserByIdErr == nil && tc.outErr != store.ErrCurrentPasswordMismatch &&
+			if tc.getUserByIdErr == nil && tc.outErr != ErrCurrentPasswordMismatch &&
 				(len(tc.inUserUpdate.Password) == 0 || tc.getUserById != nil) &&
 				(!tc.verifyTenant || tc.tenantErr == nil) {
 				db.On("UpdateUser",
 					ContextMatcher(),
-					mock.AnythingOfType("string"),
+					"123",
 					mock.AnythingOfType("*model.UserUpdate")).
 					Return(&model.User{
 						Email:    tc.inUserUpdate.Email,
@@ -894,7 +924,8 @@ func TestUserAdmUpdateUser(t *testing.T) {
 
 			if tc.verifyTenant {
 				id := &identity.Identity{
-					Tenant: "foo",
+					Tenant:  "foo",
+					Subject: "123",
 				}
 				ctx = identity.WithContext(ctx, id)
 
@@ -911,7 +942,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				useradm = useradm.WithTenantVerification(cTenant)
 			}
 
-			err := useradm.UpdateUser(ctx, "123", &tc.inUserUpdate)
+			err := useradm.UpdateUser(ctx, tc.inUserId, &tc.inUserUpdate)
 
 			if tc.outErr != nil {
 				assert.EqualError(t, err, tc.outErr.Error())

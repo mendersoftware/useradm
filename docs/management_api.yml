@@ -277,7 +277,8 @@ paths:
             $ref: '#/definitions/Error'
         422:
           description: |
-                The email address is duplicated or password is too short.
+                The email address is duplicated, the password is too short
+                or the user is trying to modify another user's password.
           schema:
             $ref: '#/definitions/Error'
         500:
