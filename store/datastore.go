@@ -31,8 +31,6 @@ var (
 	ErrTokenNotFound = errors.New("token not found")
 	// duplicated email address
 	ErrDuplicateEmail = errors.New("user with a given email already exists")
-	// password mismatch
-	ErrCurrentPasswordMismatch = errors.New("current password mismatch")
 	// duplicated Personal Access Token name
 	ErrDuplicateTokenName = errors.New("Personal Access Token with a given name already exists")
 	// etag doesn't match
