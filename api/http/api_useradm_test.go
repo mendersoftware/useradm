@@ -630,7 +630,8 @@ func TestUpdateUser(t *testing.T) {
 		"8bb75uaEce4BQfgIwvVyVN0NXhfN7bq6ucObZdUbNhuXmN1R6MQ"
 
 	testCases := map[string]struct {
-		inReq *http.Request
+		inReq  *http.Request
+		userId string
 
 		updateUserErr error
 
@@ -644,6 +645,7 @@ func TestUpdateUser(t *testing.T) {
 					"password": "foobarbar",
 				},
 			),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusNoContent,
@@ -660,6 +662,7 @@ func TestUpdateUser(t *testing.T) {
 					"roles":    []string{"RBAC_ROLE_ROLE0", "RBAC_ROLE_ROLE1"},
 				},
 			),
+			userId: "me",
 
 			checker: mt.NewJSONResponse(
 				http.StatusNoContent,
@@ -676,6 +679,7 @@ func TestUpdateUser(t *testing.T) {
 					"password": "foobarbar",
 				},
 			),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusNoContent,
@@ -691,6 +695,7 @@ func TestUpdateUser(t *testing.T) {
 					"password": "foobar",
 				},
 			),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusUnprocessableEntity,
@@ -705,6 +710,7 @@ func TestUpdateUser(t *testing.T) {
 					"email": "foo@foo.com",
 				},
 			),
+			userId:        "123",
 			updateUserErr: store.ErrDuplicateEmail,
 
 			checker: mt.NewJSONResponse(
@@ -716,6 +722,7 @@ func TestUpdateUser(t *testing.T) {
 		"no body": {
 			inReq: test.MakeSimpleRequest("PUT",
 				"http://1.2.3.4/api/management/v1/useradm/users/123", nil),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
@@ -729,6 +736,7 @@ func TestUpdateUser(t *testing.T) {
 				map[string]interface{}{
 					"id": "1234",
 				}),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
@@ -743,15 +751,14 @@ func TestUpdateUser(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
 			uadm.On("UpdateUser", mtesting.ContextMatcher(),
-				"123",
+				tc.userId,
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.updateUserErr)
 
 			api := makeMockApiHandler(t, uadm, nil)
 
 			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
-			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
-			recorded := test.RunRequest(t, api, tc.inReq.WithContext(ctx))
+			recorded := test.RunRequest(t, api, tc.inReq.WithContext(context.Background()))
 
 			mt.CheckResponse(t, tc.checker, recorded)
 		})
