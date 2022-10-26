@@ -33,10 +33,12 @@ import (
 )
 
 var (
+	ErrUserNotFound           = store.ErrUserNotFound
+	ErrDuplicateEmail         = store.ErrDuplicateEmail
+	ErrETagMismatch           = errors.New("entity tag did not match any records")
 	ErrUnauthorized           = errors.New("unauthorized")
 	ErrAuthExpired            = errors.New("token expired")
 	ErrAuthInvalid            = errors.New("token is invalid")
-	ErrUserNotFound           = errors.New("user not found")
 	ErrTenantAccountSuspended = errors.New("tenant account suspended")
 	ErrInvalidTenantID        = errors.New("invalid tenant id")
 	// password mismatch
@@ -350,12 +352,23 @@ func (ua *UserAdm) validateUserUpdate(
 	return nil
 }
 
-func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
-	var me bool
-	if id == userIdMe {
-		id = identity.FromContext(ctx).Subject
-		me = true
+func (ua *UserAdm) deleteAndInvalidateUserTokens(
+	ctx context.Context,
+	userID string,
+	token *jwt.Token,
+) error {
+	var err error
+	if token != nil {
+		err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, userID, token.ID)
+	} else {
+		err = ua.db.DeleteTokensByUserId(ctx, userID)
 	}
+	return err
+}
+
+func (ua *UserAdm) UpdateUser(ctx context.Context, id string, userUpdate *model.UserUpdate) error {
+	idty := identity.FromContext(ctx)
+	me := idty.Subject == id
 	user, err := ua.db.GetUserAndPasswordById(ctx, id)
 	if err != nil {
 		return errors.Wrap(err, "useradm: failed to get user")
@@ -363,22 +376,32 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 		return store.ErrUserNotFound
 	}
 
-	if err := ua.validateUserUpdate(ctx, user, u, me); err != nil {
+	if err := ua.validateUserUpdate(ctx, user, userUpdate, me); err != nil {
 		return err
 	}
 
-	if ua.verifyTenant && u.Email != "" {
-		ident := identity.FromContext(ctx)
-		err := ua.cTenant.UpdateUser(ctx,
-			ident.Tenant,
-			id,
-			&tenant.UserUpdate{
-				Name: u.Email,
-			},
-			ua.clientGetter())
+	if userUpdate.ETag == nil {
+		// Update without the support for etags.
+		next := user.NextETag()
+		userUpdate.ETagUpdate = &next
+		userUpdate.ETag = &user.ETag
+	} else if *userUpdate.ETag != user.ETag {
+		return ErrETagMismatch
+	}
 
-		if err != nil {
+	if len(userUpdate.Email) > 0 && userUpdate.Email != user.Email {
+		if ua.verifyTenant {
+			err := ua.cTenant.UpdateUser(ctx,
+				idty.Tenant,
+				id,
+				&tenant.UserUpdate{
+					Name: string(userUpdate.Email),
+				},
+				ua.clientGetter())
+
 			switch err {
+			case nil:
+				break
 			case tenant.ErrDuplicateUser:
 				return store.ErrDuplicateEmail
 			case tenant.ErrUserNotFound:
@@ -389,25 +412,25 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 		}
 	}
 
-	_, err = ua.db.UpdateUser(ctx, id, u)
+	_, err = ua.db.UpdateUser(ctx, id, userUpdate)
+	switch err {
+	case nil:
+		// invalidate the JWT tokens but the one used to update the user
+		err = ua.deleteAndInvalidateUserTokens(ctx, id, userUpdate.Token)
+		err = errors.Wrap(err, "useradm: failed to invalidate tokens")
 
-	// invalidate the JWT tokens but the one used to update the user
-	if err == nil {
-		if u.Token != nil {
-			err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, id, u.Token.ID)
-		} else {
-			err = ua.db.DeleteTokensByUserId(ctx, id)
-		}
+	case store.ErrUserNotFound:
+		// We matched the user earlier, the ETag must have changed in
+		// the meantime
+		err = ErrETagMismatch
+	case store.ErrDuplicateEmail:
+		break
+
+	default:
+		err = errors.Wrap(err, "useradm: failed to update user information")
 	}
 
-	if err != nil {
-		if err == store.ErrDuplicateEmail || err == store.ErrUserNotFound {
-			return err
-		}
-		return errors.Wrap(err, "useradm: failed to update user information")
-	}
-
-	return nil
+	return err
 }
 
 func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {

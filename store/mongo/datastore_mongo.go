@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -202,6 +202,18 @@ func (db *DataStoreMongo) UpdateUser(
 		Collection(DbUsersColl)
 
 	f := bson.M{"_id": id}
+	if u.ETag != nil {
+		f["etag"] = *u.ETag
+		if u.ETagUpdate == nil {
+			next := *u.ETag
+			next.Increment()
+			u.ETagUpdate = &next
+		}
+	} else if u.ETagUpdate != nil {
+		return nil, errors.New(
+			"store: setting an etag with out providing a filter is not allowed",
+		)
+	}
 	up := bson.M{"$set": u}
 	fuOpts := mopts.FindOneAndUpdate().
 		SetReturnDocument(mopts.Before)

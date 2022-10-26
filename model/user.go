@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package model
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"net/url"
 	"strconv"
 	"time"
@@ -38,9 +40,50 @@ var (
 	ErrEmptyUpdate = errors.New("no update information provided")
 )
 
+type ETag [12]byte
+
+func (t *ETag) Increment() {
+	c := binary.BigEndian.Uint32((*t)[8:])
+	c += 1
+	binary.BigEndian.PutUint32((*t)[8:], c)
+}
+
+func (t *ETag) UnmarshalText(b []byte) error {
+	if t == nil {
+		return errors.New("nil ETag")
+	}
+	if len(b) == 0 {
+		// Treat an empty string as a special case
+		*t = [12]byte{}
+		return nil
+	}
+	if len(b) != 24 {
+		return errors.New("invalid ETag length")
+	}
+	_, err := hex.Decode((*t)[:], b)
+	return err
+}
+
+func (t ETag) MarshalText() (b []byte, err error) {
+	b = make([]byte, 24)
+	hex.Encode(b, t[:])
+	return b, err
+}
+
+func (t ETag) String() string {
+	b, _ := t.MarshalText()
+	return string(b)
+}
+
 type User struct {
 	// system-generated user ID
 	ID string `json:"id" bson:"_id"`
+
+	// ETag is the entity tag that together with ID uniquely identifies
+	// the User document.
+	// NOTE: The v1 API does not support ETags, so this is only used
+	// internally for checking pre-conditions before performing updates.
+	ETag ETag `json:"-" bson:"etag"`
 
 	// user email address
 	Email string `json:"email" bson:"email"`
@@ -56,6 +99,18 @@ type User struct {
 
 	// LoginTs is the timestamp of the last login for this user.
 	LoginTs *time.Time `json:"login_ts,omitempty" bson:"login_ts,omitempty"`
+}
+
+func (u User) NextETag() (ret ETag) {
+	if u.CreatedTs != nil {
+		// Weak part of the ETag
+		lsb := uint64(u.CreatedTs.Unix())
+		binary.BigEndian.PutUint64(ret[:8], lsb)
+	}
+	c := binary.BigEndian.Uint32(u.ETag[8:])
+	c += 1
+	binary.BigEndian.PutUint32(ret[8:], c)
+	return ret
 }
 
 func (u User) Validate() error {
@@ -101,6 +156,13 @@ func (u UserInternal) ShouldPropagate() bool {
 }
 
 type UserUpdate struct {
+	// ETag selects user ETag for the user to update
+	// NOTE: This is the only parameter that goes into the query condition if set.
+	ETag *ETag `json:"-" bson:"-"`
+
+	// ETagUpdate sets the updated ETag value. If not set, it is incremented from the
+	// ETag field if that field is set.
+	ETagUpdate *ETag `bson:"etag,omitempty"`
 
 	// user email address
 	Email string `json:"email,omitempty" bson:",omitempty" valid:"email"`

@@ -676,7 +676,6 @@ func hashPassword(password string) string {
 func TestUserAdmUpdateUser(t *testing.T) {
 	testCases := map[string]struct {
 		inUserUpdate   model.UserUpdate
-		inUserId       string
 		getUserById    *model.User
 		getUserByIdErr error
 
@@ -693,7 +692,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -708,7 +706,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				CurrentPassword: "current",
 				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -723,7 +720,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				CurrentPassword: "current",
 				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -740,7 +736,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -757,7 +752,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -774,7 +768,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -791,7 +784,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -807,7 +799,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Email:           "foo@bar.com",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Email:    "foo@bar.com",
 				Password: hashPassword("current"),
@@ -822,7 +813,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -836,7 +826,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId:       "me",
 			getUserByIdErr: errors.New("error"),
 
 			dbErr:  nil,
@@ -848,7 +837,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 
 			dbErr:  nil,
 			outErr: store.ErrUserNotFound,
@@ -859,7 +847,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "wrong",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -871,7 +858,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			inUserUpdate: model.UserUpdate{
 				Email: "foobar@bar.com",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Email:    "foo@bar.com",
 				Password: hashPassword("current"),
@@ -884,7 +870,9 @@ func TestUserAdmUpdateUser(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
+			const userID = "8258b2c3-38c2-4ffd-97c6-19e43f1ea2cf"
+
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: userID})
 
 			db := &mstore.DataStore{}
 			defer db.AssertExpectations(t)
@@ -899,7 +887,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				(!tc.verifyTenant || tc.tenantErr == nil) {
 				db.On("UpdateUser",
 					ContextMatcher(),
-					"123",
+					userID,
 					mock.AnythingOfType("*model.UserUpdate")).
 					Return(&model.User{
 						Email:    tc.inUserUpdate.Email,
@@ -925,7 +913,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			if tc.verifyTenant {
 				id := &identity.Identity{
 					Tenant:  "foo",
-					Subject: "123",
+					Subject: userID,
 				}
 				ctx = identity.WithContext(ctx, id)
 
@@ -942,7 +930,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				useradm = useradm.WithTenantVerification(cTenant)
 			}
 
-			err := useradm.UpdateUser(ctx, tc.inUserId, &tc.inUserUpdate)
+			err := useradm.UpdateUser(ctx, userID, &tc.inUserUpdate)
 
 			if tc.outErr != nil {
 				assert.EqualError(t, err, tc.outErr.Error())
