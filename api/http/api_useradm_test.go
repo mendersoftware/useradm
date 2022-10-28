@@ -752,6 +752,34 @@ func TestUpdateUser(t *testing.T) {
 				restError(model.ErrEmptyUpdate.Error()),
 			),
 		},
+		"etag does not match": {
+			userId: "me",
+			inReq: func() *http.Request {
+				body, _ := json.Marshal(
+					map[string]interface{}{
+						"email": "foo@foo.com",
+					},
+				)
+				ctx := context.Background()
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Subject: "Mario",
+				})
+				req, _ := http.NewRequestWithContext(
+					ctx,
+					http.MethodPut,
+					"http://1.2.3.4/api/management/v1/useradm/users/me",
+					bytes.NewReader(body))
+				return req
+			}(),
+
+			updateUserErr: useradm.ErrETagMismatch,
+
+			checker: mt.NewJSONResponse(
+				http.StatusConflict,
+				nil,
+				restError(useradm.ErrETagMismatch.Error()),
+			),
+		},
 	}
 
 	for name, tc := range testCases {
