@@ -11,7 +11,7 @@ require (
 	github.com/mendersoftware/go-lib-micro/mongo/codec v0.0.0-20220707135320-27b318f4b76d
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli v1.22.10
 	go.mongodb.org/mongo-driver v1.10.2
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
