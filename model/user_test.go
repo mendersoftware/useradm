@@ -1,21 +1,22 @@
 // Copyright 2022 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package model
 
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -194,4 +195,44 @@ func TestEmailType(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(validEmailJSON), &email))
 	assert.NoError(t, email.Validate())
 	assert.Error(t, email.UnmarshalJSON([]byte(invalidEmailJSON)))
+}
+
+func TestETag(t *testing.T) {
+	t.Parallel()
+
+	const (
+		validETag        = `00000000635bc43600000001`
+		validETagPlusOne = `00000000635bc43600000002`
+	)
+	var tag *ETag
+
+	err := tag.UnmarshalText([]byte{})
+	assert.EqualError(t, err, "nil ETag")
+
+	tag = new(ETag)
+
+	err = tag.UnmarshalText([]byte(validETag))
+	assert.NoError(t, err)
+
+	assert.Equal(t, validETag, tag.String())
+
+	tag.Increment()
+	assert.Equal(t, validETagPlusOne, tag.String())
+
+	err = tag.UnmarshalText([]byte("deadbeef"))
+	assert.EqualError(t, err, "invalid ETag length")
+
+	err = tag.UnmarshalText([]byte{})
+	if assert.NoError(t, err) {
+		assert.Equal(t, ETag{}, *tag)
+	}
+
+	now := time.Now()
+	usr := User{
+		ID:        "5a7c5462-7cb0-4b6f-9b57-43814a62b7cc",
+		CreatedTs: &now,
+	}
+	eTag := usr.NextETag()
+
+	assert.Equal(t, fmt.Sprintf("%016x%08x", now.Unix(), 1), eTag.String())
 }

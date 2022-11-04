@@ -1,20 +1,21 @@
 // Copyright 2022 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package useradm
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/mendersoftware/useradm/client/tenant"
 	ct "github.com/mendersoftware/useradm/client/tenant"
 	mct "github.com/mendersoftware/useradm/client/tenant/mocks"
 	"github.com/mendersoftware/useradm/jwt"
@@ -679,9 +681,9 @@ func hashPassword(password string) string {
 }
 
 func TestUserAdmUpdateUser(t *testing.T) {
+	t.Parallel()
 	testCases := map[string]struct {
 		inUserUpdate   model.UserUpdate
-		inUserId       string
 		getUserById    *model.User
 		getUserByIdErr error
 
@@ -698,7 +700,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -713,7 +714,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				CurrentPassword: "current",
 				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -728,7 +728,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				CurrentPassword: "current",
 				Token:           &jwt.Token{Claims: jwt.Claims{ID: oid.NewUUIDv5("token-1")}},
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -745,7 +744,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -762,7 +760,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -779,7 +776,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -796,7 +792,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -812,7 +807,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Email:           "foo@bar.com",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Email:    "foo@bar.com",
 				Password: hashPassword("current"),
@@ -827,7 +821,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -841,7 +834,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId:       "me",
 			getUserByIdErr: errors.New("error"),
 
 			dbErr:  nil,
@@ -853,7 +845,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "current",
 			},
-			inUserId: "me",
 
 			dbErr:  nil,
 			outErr: store.ErrUserNotFound,
@@ -864,7 +855,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				Password:        "correcthorsebatterystaple",
 				CurrentPassword: "wrong",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Password: hashPassword("current"),
 			},
@@ -876,7 +866,6 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			inUserUpdate: model.UserUpdate{
 				Email: "foobar@bar.com",
 			},
-			inUserId: "me",
 			getUserById: &model.User{
 				Email:    "foo@bar.com",
 				Password: hashPassword("current"),
@@ -887,10 +876,13 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases {
+	for name := range testCases {
+		tc := testCases[name]
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			const userID = "8258b2c3-38c2-4ffd-97c6-19e43f1ea2cf"
 
-			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: userID})
 
 			db := &mstore.DataStore{}
 			defer db.AssertExpectations(t)
@@ -905,7 +897,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				(!tc.verifyTenant || tc.tenantErr == nil) {
 				db.On("UpdateUser",
 					ContextMatcher(),
-					"123",
+					userID,
 					mock.AnythingOfType("*model.UserUpdate")).
 					Return(&model.User{
 						Email:    tc.inUserUpdate.Email,
@@ -931,7 +923,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 			if tc.verifyTenant {
 				id := &identity.Identity{
 					Tenant:  "foo",
-					Subject: "123",
+					Subject: userID,
 				}
 				ctx = identity.WithContext(ctx, id)
 
@@ -948,10 +940,135 @@ func TestUserAdmUpdateUser(t *testing.T) {
 				useradm = useradm.WithTenantVerification(cTenant)
 			}
 
-			err := useradm.UpdateUser(ctx, tc.inUserId, &tc.inUserUpdate)
+			err := useradm.UpdateUser(ctx, userID, &tc.inUserUpdate)
 
 			if tc.outErr != nil {
 				assert.EqualError(t, err, tc.outErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
+	etagPtr := func(etag model.ETag) *model.ETag { return &etag }
+	type testCase struct {
+		Name string
+
+		CTX        context.Context
+		ID         string
+		UserUpdate *model.UserUpdate
+
+		DataStore       func(t *testing.T, self *testCase) *mstore.DataStore
+		TenantadmClient func(t *testing.T, self *testCase) *mct.ClientRunner
+
+		Error error
+	}
+	tcs := []testCase{{
+		Name: "changing password of other user not allowed",
+
+		CTX: identity.WithContext(context.Background(), &identity.Identity{
+			Tenant:  "000000000000000000000000",
+			Subject: "36481319-7986-4bd9-9621-f143fc42bcca",
+		}),
+		ID: "0db11a0e-afac-4d73-aa6b-ccd857019553",
+		UserUpdate: &model.UserUpdate{
+			Password: "foobar",
+			ETag:     etagPtr(model.ETag{0}),
+		},
+		DataStore: func(t *testing.T, self *testCase) *mstore.DataStore {
+			ds := new(mstore.DataStore)
+			ds.On("GetUserAndPasswordById", self.CTX, self.ID).
+				Return(&model.User{ID: self.ID, ETag: model.ETag{0}}, nil)
+			return ds
+		},
+		Error: ErrCannotModifyPassword,
+	}, {
+		Name: "entity tag mismatch/on user lookup",
+
+		CTX: identity.WithContext(context.Background(), &identity.Identity{
+			Tenant:  "000000000000000000000000",
+			Subject: "36481319-7986-4bd9-9621-f143fc42bcca",
+		}),
+		ID: "0db11a0e-afac-4d73-aa6b-ccd857019553",
+		UserUpdate: &model.UserUpdate{
+			Email: model.Email("test@mender.io"),
+			ETag:  etagPtr(model.ETag{0}),
+		},
+		DataStore: func(t *testing.T, self *testCase) *mstore.DataStore {
+			ds := new(mstore.DataStore)
+			ds.On("GetUserAndPasswordById", self.CTX, self.ID).
+				Return(&model.User{ID: self.ID, ETag: model.ETag{1}}, nil)
+			return ds
+		},
+		Error: ErrETagMismatch,
+	}, {
+		Name: "entity tag mismatch/on user update",
+
+		CTX: identity.WithContext(context.Background(), &identity.Identity{
+			Tenant:  "000000000000000000000000",
+			Subject: "36481319-7986-4bd9-9621-f143fc42bcca",
+		}),
+		ID: "0db11a0e-afac-4d73-aa6b-ccd857019553",
+		UserUpdate: &model.UserUpdate{
+			Email: model.Email("test@mender.io"),
+			ETag:  etagPtr(model.ETag{0}),
+		},
+		DataStore: func(t *testing.T, self *testCase) *mstore.DataStore {
+			ds := new(mstore.DataStore)
+			ds.On("GetUserAndPasswordById", self.CTX, self.ID).
+				Return(&model.User{ID: self.ID, ETag: model.ETag{0}}, nil).
+				On("UpdateUser", self.CTX, self.ID, self.UserUpdate).
+				Return(nil, store.ErrUserNotFound)
+
+			return ds
+		},
+		TenantadmClient: func(t *testing.T, self *testCase) *mct.ClientRunner {
+			tnc := new(mct.ClientRunner)
+			tnc.On("UpdateUser",
+				self.CTX,
+				"000000000000000000000000",
+				self.ID,
+				&tenant.UserUpdate{
+					Name: string(self.UserUpdate.Email),
+				},
+				mock.AnythingOfType("*http.Client")).
+				Return(nil)
+			return tnc
+		},
+		Error: ErrETagMismatch,
+	}}
+	for i := range tcs {
+		tc := tcs[i]
+		t.Run(tc.Name, func(t *testing.T) {
+			var (
+				ds  *mstore.DataStore
+				tnc *mct.ClientRunner
+			)
+			if tc.DataStore != nil {
+				ds = tc.DataStore(t, &tc)
+			} else {
+				ds = new(mstore.DataStore)
+			}
+			defer ds.AssertExpectations(t)
+			if tc.TenantadmClient != nil {
+				tnc = tc.TenantadmClient(t, &tc)
+			} else {
+				tnc = new(mct.ClientRunner)
+			}
+			defer tnc.AssertExpectations(t)
+
+			app := UserAdm{
+				verifyTenant: true,
+				cTenant:      tnc,
+				db:           ds,
+				clientGetter: func() apiclient.HttpRunner {
+					return new(http.Client)
+				},
+			}
+
+			err := app.UpdateUser(tc.CTX, tc.ID, tc.UserUpdate)
+			if tc.Error != nil {
+				assert.ErrorIs(t, err, tc.Error)
 			} else {
 				assert.NoError(t, err)
 			}
