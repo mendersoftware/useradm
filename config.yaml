@@ -22,6 +22,10 @@ listen: :8080
 # Overwrite with environment variable: USERADM_SERVER_FALLBACK_PRIV_KEY_PATH
 # server_fallback_priv_key_path: /etc/useradm/rsa/private-fallback.pem
 
+# Allowed JWT issuers as a comma separated list of strings (whitelist of 'iss' claims)
+# Defaults to: empty list
+# allowed_jwt_issuers: ""
+
 # JWT issuer ('iss' claim)
 # Defaults to: mender.useradm
 # jwt_issuer: mender.useradm

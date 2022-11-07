@@ -34,6 +34,9 @@ const (
 	SettingJWTIssuer        = "jwt_issuer"
 	SettingJWTIssuerDefault = "mender.useradm"
 
+	SettingAllowedJWTIssuers        = "allowed_jwt_issuers"
+	SettingAllowedJWTIssuersDefault = ""
+
 	SettingJWTExpirationTimeout        = "jwt_exp_timeout"
 	SettingJWTExpirationTimeoutDefault = "604800" //one week
 
@@ -69,6 +72,7 @@ var (
 		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
 		{Key: SettingServerFallbackPrivKeyPath, Value: SettingServerFallbackPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
+		{Key: SettingAllowedJWTIssuers, Value: SettingAllowedJWTIssuersDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
 		{Key: SettingDb, Value: SettingDbDefault},
 		{Key: SettingTenantAdmAddr, Value: SettingTenantAdmAddrDefault},

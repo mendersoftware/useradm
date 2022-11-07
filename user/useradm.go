@@ -89,6 +89,8 @@ type App interface {
 type Config struct {
 	// token issuer
 	Issuer string
+	// white-listed issuers
+	AllowedIssuers map[string]struct{}
 	// token expiration time
 	ExpirationTime int64
 	// maximum number of personal access tokens per user
@@ -116,6 +118,10 @@ type UserAdm struct {
 }
 
 func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore, config Config) *UserAdm {
+	if config.AllowedIssuers == nil {
+		config.AllowedIssuers = map[string]struct{}{}
+	}
+	config.AllowedIssuers[config.Issuer] = struct{}{}
 
 	return &UserAdm{
 		jwtHandler:   jwtHandler,
@@ -470,7 +476,7 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 	}
 
 	//check service-specific claims - iss
-	if token.Claims.Issuer != ua.config.Issuer {
+	if _, ok := ua.config.AllowedIssuers[token.Claims.Issuer]; !ok {
 		return ErrUnauthorized
 	}
 
