@@ -469,11 +469,6 @@ func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
 		return jwt.ErrTokenInvalid
 	}
 
-	//check service-specific claims - iss
-	if token.Claims.Issuer != ua.config.Issuer {
-		return ErrUnauthorized
-	}
-
 	user, err := ua.db.GetUserById(ctx, token.Claims.Subject.String())
 	if user == nil && err == nil {
 		return ErrUnauthorized
