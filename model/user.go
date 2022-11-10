@@ -162,7 +162,7 @@ type UserUpdate struct {
 
 	// ETagUpdate sets the updated ETag value. If not set, it is incremented from the
 	// ETag field if that field is set.
-	ETagUpdate *ETag `bson:"etag,omitempty"`
+	ETagUpdate *ETag `json:"-" bson:"etag,omitempty"`
 
 	// user email address
 	Email string `json:"email,omitempty" bson:",omitempty" valid:"email"`
