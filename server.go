@@ -103,7 +103,7 @@ func RunServer(c config.Reader) error {
 
 	apph, err := useradmapi.GetApp()
 	if err != nil {
-		return errors.Wrap(err, "inventory API handlers setup failed")
+		return errors.Wrap(err, "useradm API handlers setup failed")
 	}
 	api.SetApp(apph)
 
