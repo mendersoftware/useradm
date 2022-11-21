@@ -16,6 +16,7 @@ package useradm
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/apiclient"
@@ -60,7 +61,7 @@ const (
 type App interface {
 	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
-	Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error)
+	Login(ctx context.Context, email model.Email, pass string, stayLoggedIn bool) (*jwt.Token, error)
 	Logout(ctx context.Context, token *jwt.Token) error
 	CreateUser(ctx context.Context, u *model.User) error
 	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
@@ -141,7 +142,7 @@ func (u *UserAdm) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error) {
+func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string, stayLoggedIn bool) (*jwt.Token, error) {
 	var ident identity.Identity
 	l := log.FromContext(ctx)
 
@@ -186,8 +187,12 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 		return nil, ErrUnauthorized
 	}
 
+	expiration := u.config.ExpirationTime
+	if stayLoggedIn {
+		expiration = math.MaxInt64
+	}
 	//generate and save token
-	t, err := u.generateToken(user.ID, scope.All, ident.Tenant)
+	t, err := u.generateToken(user.ID, scope.All, ident.Tenant, expiration)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -204,7 +209,7 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
+func (u *UserAdm) generateToken(subject, scope, tenant string, expirationSeconds int64) (*jwt.Token, error) {
 	id := oid.NewUUIDv4()
 	subjectID := oid.FromString(subject)
 	now := jwt.Time{Time: time.Now()}
@@ -216,7 +221,7 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 		NotBefore: now,
 		ExpiresAt: jwt.Time{
 			Time: now.Add(time.Second *
-				time.Duration(u.config.ExpirationTime)),
+				time.Duration(expirationSeconds)),
 		},
 		Tenant: tenant,
 		Scope:  scope,
@@ -629,7 +634,7 @@ func (u *UserAdm) IssuePersonalAccessToken(
 		}
 	}
 	//generate and save token
-	t, err := u.generateToken(id.Subject, scope.All, id.Tenant)
+	t, err := u.generateToken(id.Subject, scope.All, id.Tenant, u.config.ExpirationTime)
 	if err != nil {
 		return "", errors.Wrap(err, "useradm: failed to generate token")
 	}

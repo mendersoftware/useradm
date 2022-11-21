@@ -156,6 +156,10 @@ func (u *UserAdmApiHandlers) HealthHandler(w rest.ResponseWriter, r *rest.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type LoginOptions struct {
+	StayLoggedIn bool `json:"stayLoggedIn,omitempty" bson:"-"`
+}
+
 func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Request) {
 	ctx := r.Context()
 
@@ -169,8 +173,13 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 		return
 	}
 	email := model.Email(strings.ToLower(user))
+	options := LoginOptions{}
+	err := r.DecodeJsonPayload(&options)
+	if err != nil {
+		l.Error("Couldn't keep them logged in")
+	}
 
-	token, err := u.userAdm.Login(ctx, email, pass)
+	token, err := u.userAdm.Login(ctx, email, pass, options.StayLoggedIn)
 	if err != nil {
 		switch {
 		case err == useradm.ErrUnauthorized || err == useradm.ErrTenantAccountSuspended:
