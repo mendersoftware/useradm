@@ -397,8 +397,8 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, userUpdate *model.
 		// Update without the support for etags.
 		next := user.NextETag()
 		userUpdate.ETagUpdate = &next
-		userUpdate.ETag = &user.ETag
-	} else if *userUpdate.ETag != user.ETag {
+		userUpdate.ETag = user.ETag
+	} else if user.ETag == nil || *userUpdate.ETag != *user.ETag {
 		return ErrETagMismatch
 	}
 
