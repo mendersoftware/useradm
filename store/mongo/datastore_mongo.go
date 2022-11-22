@@ -233,10 +233,8 @@ func (db *DataStoreMongo) UpdateUser(
 			next.Increment()
 			u.ETagUpdate = &next
 		}
-	} else if u.ETagUpdate != nil {
-		return nil, errors.New(
-			"store: setting an etag with out providing a filter is not allowed",
-		)
+	} else {
+		f["etag"] = bson.D{{Key: "$exists", Value: false}}
 	}
 	up := bson.M{"$set": u}
 	fuOpts := mopts.FindOneAndUpdate().

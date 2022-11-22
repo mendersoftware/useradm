@@ -978,7 +978,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		DataStore: func(t *testing.T, self *testCase) *mstore.DataStore {
 			ds := new(mstore.DataStore)
 			ds.On("GetUserAndPasswordById", self.CTX, self.ID).
-				Return(&model.User{ID: self.ID, ETag: model.ETag{0}}, nil)
+				Return(&model.User{ID: self.ID, ETag: &model.ETag{0}}, nil)
 			return ds
 		},
 		Error: ErrCannotModifyPassword,
@@ -997,7 +997,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		DataStore: func(t *testing.T, self *testCase) *mstore.DataStore {
 			ds := new(mstore.DataStore)
 			ds.On("GetUserAndPasswordById", self.CTX, self.ID).
-				Return(&model.User{ID: self.ID, ETag: model.ETag{1}}, nil)
+				Return(&model.User{ID: self.ID, ETag: &model.ETag{1}}, nil)
 			return ds
 		},
 		Error: ErrETagMismatch,
@@ -1016,7 +1016,7 @@ func TestUserAdmUpdateUser(t *testing.T) {
 		DataStore: func(t *testing.T, self *testCase) *mstore.DataStore {
 			ds := new(mstore.DataStore)
 			ds.On("GetUserAndPasswordById", self.CTX, self.ID).
-				Return(&model.User{ID: self.ID, ETag: model.ETag{0}}, nil).
+				Return(&model.User{ID: self.ID, ETag: &model.ETag{0}}, nil).
 				On("UpdateUser", self.CTX, self.ID, self.UserUpdate).
 				Return(nil, store.ErrUserNotFound)
 
