@@ -1,19 +1,20 @@
 // Copyright 2022 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io/ioutil"
@@ -628,7 +629,8 @@ func TestUpdateUser(t *testing.T) {
 		"8bb75uaEce4BQfgIwvVyVN0NXhfN7bq6ucObZdUbNhuXmN1R6MQ"
 
 	testCases := map[string]struct {
-		inReq *http.Request
+		inReq  *http.Request
+		userId string
 
 		updateUserErr error
 
@@ -642,6 +644,7 @@ func TestUpdateUser(t *testing.T) {
 					"password": "foobarbar",
 				},
 			),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusNoContent,
@@ -650,14 +653,25 @@ func TestUpdateUser(t *testing.T) {
 			),
 		},
 		"ok with me": {
-			inReq: test.MakeSimpleRequest("PUT",
-				"http://1.2.3.4/api/management/v1/useradm/users/me",
-				map[string]interface{}{
-					"email":    "foo@foo.com",
-					"password": "foobarbar",
-					"roles":    []string{"RBAC_ROLE_ROLE0", "RBAC_ROLE_ROLE1"},
-				},
-			),
+			userId: "me",
+			inReq: func() *http.Request {
+				body, _ := json.Marshal(
+					map[string]interface{}{
+						"email":    "foo@foo.com",
+						"password": "foobarbar",
+					},
+				)
+				ctx := context.Background()
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Subject: "Mario",
+				})
+				req, _ := http.NewRequestWithContext(
+					ctx,
+					http.MethodPut,
+					"http://1.2.3.4/api/management/v1/useradm/users/me",
+					bytes.NewReader(body))
+				return req
+			}(),
 
 			checker: mt.NewJSONResponse(
 				http.StatusNoContent,
@@ -674,6 +688,7 @@ func TestUpdateUser(t *testing.T) {
 					"password": "foobarbar",
 				},
 			),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusNoContent,
@@ -688,6 +703,7 @@ func TestUpdateUser(t *testing.T) {
 					"password": "foobar",
 				},
 			),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusUnprocessableEntity,
@@ -702,6 +718,7 @@ func TestUpdateUser(t *testing.T) {
 					"email": "foo@foo.com",
 				},
 			),
+			userId:        "123",
 			updateUserErr: store.ErrDuplicateEmail,
 
 			checker: mt.NewJSONResponse(
@@ -713,6 +730,7 @@ func TestUpdateUser(t *testing.T) {
 		"no body": {
 			inReq: test.MakeSimpleRequest("PUT",
 				"http://1.2.3.4/api/management/v1/useradm/users/123", nil),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
@@ -726,11 +744,40 @@ func TestUpdateUser(t *testing.T) {
 				map[string]interface{}{
 					"id": "1234",
 				}),
+			userId: "123",
 
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
 				restError(model.ErrEmptyUpdate.Error()),
+			),
+		},
+		"etag does not match": {
+			userId: "me",
+			inReq: func() *http.Request {
+				body, _ := json.Marshal(
+					map[string]interface{}{
+						"email": "foo@foo.com",
+					},
+				)
+				ctx := context.Background()
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Subject: "Mario",
+				})
+				req, _ := http.NewRequestWithContext(
+					ctx,
+					http.MethodPut,
+					"http://1.2.3.4/api/management/v1/useradm/users/me",
+					bytes.NewReader(body))
+				return req
+			}(),
+
+			updateUserErr: useradm.ErrETagMismatch,
+
+			checker: mt.NewJSONResponse(
+				http.StatusConflict,
+				nil,
+				restError(useradm.ErrETagMismatch.Error()),
 			),
 		},
 	}
@@ -739,16 +786,23 @@ func TestUpdateUser(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			//make mock useradm
 			uadm := &museradm.App{}
+			userID := tc.userId
+			if strings.EqualFold(userID, "me") {
+				idty := identity.FromContext(tc.inReq.Context())
+				if idty != nil {
+					userID = idty.Subject
+				}
+			}
+
 			uadm.On("UpdateUser", mtesting.ContextMatcher(),
-				"123",
+				userID,
 				mock.AnythingOfType("*model.UserUpdate")).
 				Return(tc.updateUserErr)
 
 			api := makeMockApiHandler(t, uadm, nil)
 
 			tc.inReq.Header.Add(requestid.RequestIdHeader, "test")
-			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
-			recorded := test.RunRequest(t, api, tc.inReq.WithContext(ctx))
+			recorded := test.RunRequest(t, api, tc.inReq)
 
 			mt.CheckResponse(t, tc.checker, recorded)
 		})

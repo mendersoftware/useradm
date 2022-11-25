@@ -1,21 +1,22 @@
 // Copyright 2022 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package http
 
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
@@ -51,7 +52,6 @@ const (
 
 const (
 	defaultTimeout = time.Second * 5
-	pathParamMe    = "me"
 )
 
 const (
@@ -315,20 +315,12 @@ func (u *UserAdmApiHandlers) GetTenantUsersHandler(w rest.ResponseWriter, r *res
 	u.GetUsersHandler(w, r)
 }
 
-func getUserIdFromPath(r *rest.Request) string {
-	id := r.PathParam("id")
-	if id == pathParamMe {
-		id = identity.FromContext(r.Context()).Subject
-	}
-	return id
-}
-
 func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Request) {
 	ctx := r.Context()
 
 	l := log.FromContext(ctx)
 
-	id := getUserIdFromPath(r)
+	id := r.PathParam("id")
 	user, err := u.userAdm.GetUser(ctx, id)
 	if err != nil {
 		rest_utils.RestErrWithLogInternal(w, r, l, err)
@@ -345,7 +337,7 @@ func (u *UserAdmApiHandlers) GetUserHandler(w rest.ResponseWriter, r *rest.Reque
 
 func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Request) {
 	ctx := r.Context()
-
+	idty := identity.FromContext(ctx)
 	l := log.FromContext(ctx)
 
 	userUpdate, err := parseUserUpdate(r)
@@ -368,14 +360,21 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 		userUpdate.Token = token
 	}
 
-	id := getUserIdFromPath(r)
+	id := r.PathParam("id")
+	if strings.EqualFold(id, "me") {
+		id = idty.Subject
+	}
 	err = u.userAdm.UpdateUser(ctx, id, userUpdate)
 	if err != nil {
 		switch err {
-		case store.ErrDuplicateEmail, store.ErrCurrentPasswordMismatch:
+		case store.ErrDuplicateEmail,
+			useradm.ErrCurrentPasswordMismatch,
+			useradm.ErrCannotModifyPassword:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusUnprocessableEntity)
 		case store.ErrUserNotFound:
 			rest_utils.RestErrWithLog(w, r, l, err, http.StatusNotFound)
+		case useradm.ErrETagMismatch:
+			rest_utils.RestErrWithLog(w, r, l, err, http.StatusConflict)
 		default:
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 		}

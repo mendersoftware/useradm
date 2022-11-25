@@ -33,16 +33,23 @@ import (
 )
 
 var (
+	ErrUserNotFound           = store.ErrUserNotFound
+	ErrDuplicateEmail         = store.ErrDuplicateEmail
+	ErrETagMismatch           = errors.New("entity tag did not match any records")
 	ErrUnauthorized           = errors.New("unauthorized")
 	ErrAuthExpired            = errors.New("token expired")
 	ErrAuthInvalid            = errors.New("token is invalid")
-	ErrUserNotFound           = errors.New("user not found")
 	ErrTenantAccountSuspended = errors.New("tenant account suspended")
 	ErrInvalidTenantID        = errors.New("invalid tenant id")
+	// password mismatch
+	ErrCurrentPasswordMismatch = errors.New("current password mismatch")
+	// modification of other user's password is not allowed
+	ErrCannotModifyPassword = errors.New("password cannot be modified")
 )
 
 const (
 	TenantStatusSuspended = "suspended"
+	userIdMe              = "me"
 )
 
 //go:generate ../utils/mockgen.sh
@@ -316,38 +323,85 @@ func (ua *UserAdm) compensateTenantUser(ctx context.Context, userId, tenantId st
 	if err != nil {
 		return errors.Wrap(err, "faield to delete tenant user")
 	}
-
 	return nil
 }
 
-func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdate) error {
-	if len(u.Password) > 0 {
-		user, err := ua.db.GetUserAndPasswordById(ctx, id)
-		if err != nil {
-			return errors.Wrap(err, "useradm: failed to get user")
-		} else if user == nil {
-			return store.ErrUserNotFound
+func (ua *UserAdm) validateUserUpdate(
+	ctx context.Context,
+	user *model.User,
+	u *model.UserUpdate,
+	me bool,
+) error {
+	// user can change own password only
+	if !me {
+		if len(u.Password) > 0 {
+			return ErrCannotModifyPassword
 		}
-		if err = bcrypt.CompareHashAndPassword(
-			[]byte(user.Password),
-			[]byte(u.CurrentPassword),
-		); err != nil {
-			return store.ErrCurrentPasswordMismatch
+	} else {
+		// when changing own password or email address
+		// user has to provide current password
+		if len(u.Password) > 0 || (u.Email != "" && u.Email != user.Email) {
+			if err := bcrypt.CompareHashAndPassword(
+				[]byte(user.Password),
+				[]byte(u.CurrentPassword),
+			); err != nil {
+				return ErrCurrentPasswordMismatch
+			}
 		}
 	}
+	return nil
+}
 
-	if ua.verifyTenant && u.Email != "" {
-		ident := identity.FromContext(ctx)
-		err := ua.cTenant.UpdateUser(ctx,
-			ident.Tenant,
-			id,
-			&tenant.UserUpdate{
-				Name: u.Email,
-			},
-			ua.clientGetter())
+func (ua *UserAdm) deleteAndInvalidateUserTokens(
+	ctx context.Context,
+	userID string,
+	token *jwt.Token,
+) error {
+	var err error
+	if token != nil {
+		err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, userID, token.ID)
+	} else {
+		err = ua.db.DeleteTokensByUserId(ctx, userID)
+	}
+	return err
+}
 
-		if err != nil {
+func (ua *UserAdm) UpdateUser(ctx context.Context, id string, userUpdate *model.UserUpdate) error {
+	idty := identity.FromContext(ctx)
+	me := idty.Subject == id
+	user, err := ua.db.GetUserAndPasswordById(ctx, id)
+	if err != nil {
+		return errors.Wrap(err, "useradm: failed to get user")
+	} else if user == nil {
+		return store.ErrUserNotFound
+	}
+
+	if err := ua.validateUserUpdate(ctx, user, userUpdate, me); err != nil {
+		return err
+	}
+
+	if userUpdate.ETag == nil {
+		// Update without the support for etags.
+		next := user.NextETag()
+		userUpdate.ETagUpdate = &next
+		userUpdate.ETag = &user.ETag
+	} else if *userUpdate.ETag != user.ETag {
+		return ErrETagMismatch
+	}
+
+	if len(userUpdate.Email) > 0 && userUpdate.Email != user.Email {
+		if ua.verifyTenant {
+			err := ua.cTenant.UpdateUser(ctx,
+				idty.Tenant,
+				id,
+				&tenant.UserUpdate{
+					Name: string(userUpdate.Email),
+				},
+				ua.clientGetter())
+
 			switch err {
+			case nil:
+				break
 			case tenant.ErrDuplicateUser:
 				return store.ErrDuplicateEmail
 			case tenant.ErrUserNotFound:
@@ -358,25 +412,25 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, u *model.UserUpdat
 		}
 	}
 
-	_, err := ua.db.UpdateUser(ctx, id, u)
+	_, err = ua.db.UpdateUser(ctx, id, userUpdate)
+	switch err {
+	case nil:
+		// invalidate the JWT tokens but the one used to update the user
+		err = ua.deleteAndInvalidateUserTokens(ctx, id, userUpdate.Token)
+		err = errors.Wrap(err, "useradm: failed to invalidate tokens")
 
-	// invalidate the JWT tokens but the one used to update the user
-	if err == nil {
-		if u.Token != nil {
-			err = ua.db.DeleteTokensByUserIdExceptCurrentOne(ctx, id, u.Token.ID)
-		} else {
-			err = ua.db.DeleteTokensByUserId(ctx, id)
-		}
+	case store.ErrUserNotFound:
+		// We matched the user earlier, the ETag must have changed in
+		// the meantime
+		err = ErrETagMismatch
+	case store.ErrDuplicateEmail:
+		break
+
+	default:
+		err = errors.Wrap(err, "useradm: failed to update user information")
 	}
 
-	if err != nil {
-		if err == store.ErrDuplicateEmail || err == store.ErrUserNotFound {
-			return err
-		}
-		return errors.Wrap(err, "useradm: failed to update user information")
-	}
-
-	return nil
+	return err
 }
 
 func (ua *UserAdm) Verify(ctx context.Context, token *jwt.Token) error {
@@ -436,6 +490,9 @@ func (ua *UserAdm) GetUsers(ctx context.Context, fltr model.UserFilter) ([]model
 }
 
 func (ua *UserAdm) GetUser(ctx context.Context, id string) (*model.User, error) {
+	if id == userIdMe {
+		id = identity.FromContext(ctx).Subject
+	}
 	user, err := ua.db.GetUserById(ctx, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to get user")
