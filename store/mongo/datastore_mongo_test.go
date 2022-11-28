@@ -1,16 +1,16 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package mongo
 
 import (
@@ -189,6 +189,12 @@ func TestMongoUpdateUser(t *testing.T) {
 			Email:    "bar@bar.com",
 			Password: "pretenditsahash",
 		},
+		model.User{
+			ID:       "2bbde4d1-2a4c-47dc-9df4-f048285d2704",
+			Email:    "baz+mcetagface@bar.com",
+			Password: "pretenditsahash",
+			ETag:     new(model.ETag),
+		},
 	}
 
 	testCases := map[string]struct {
@@ -228,6 +234,28 @@ func TestMongoUpdateUser(t *testing.T) {
 			tenant:   "foo",
 			outErr:   "",
 		},
+		"ok with tenant and etag": {
+			inUserUpdate: model.UserUpdate{
+				ETag:       new(model.ETag),
+				Email:      "baz@bar.com",
+				Password:   "correcthorsebatterystaple",
+				ETagUpdate: &model.ETag{1},
+			},
+			inUserId: "2bbde4d1-2a4c-47dc-9df4-f048285d2704",
+			tenant:   "foo",
+			outErr:   "",
+		},
+		"error, etag mismatch": {
+			inUserUpdate: model.UserUpdate{
+				ETag:       &model.ETag{3},
+				Email:      "baz@bar.com",
+				Password:   "correcthorsebatterystaple",
+				ETagUpdate: &model.ETag{4},
+			},
+			inUserId: "2bbde4d1-2a4c-47dc-9df4-f048285d2704",
+			tenant:   "foo",
+			outErr:   store.ErrUserNotFound.Error(),
+		},
 		"duplicate email error": {
 			inUserUpdate: model.UserUpdate{
 				Email:    "foo@bar.com",
@@ -241,7 +269,7 @@ func TestMongoUpdateUser(t *testing.T) {
 				Email:    "foo@acme.com",
 				Password: "correcthorsebatterystaple",
 			},
-			inUserId: "3",
+			inUserId: "0",
 			outErr:   store.ErrUserNotFound.Error(),
 		},
 	}

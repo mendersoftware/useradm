@@ -83,7 +83,7 @@ type User struct {
 	// the User document.
 	// NOTE: The v1 API does not support ETags, so this is only used
 	// internally for checking pre-conditions before performing updates.
-	ETag ETag `json:"-" bson:"etag"`
+	ETag *ETag `json:"-" bson:"etag,omitempty"`
 
 	// user email address
 	Email string `json:"email" bson:"email"`
@@ -102,6 +102,9 @@ type User struct {
 }
 
 func (u User) NextETag() (ret ETag) {
+	if u.ETag == nil {
+		u.ETag = new(ETag)
+	}
 	if u.CreatedTs != nil {
 		// Weak part of the ETag
 		lsb := uint64(u.CreatedTs.Unix())
