@@ -202,6 +202,9 @@ func isDuplicateKeyError(err error) bool {
 	return false
 }
 
+// UpdateUser updates the user of a given ID.
+// NOTE: This function supports using ETag matching using UserUpdate,
+// but defaults to wildcard matching
 func (db *DataStoreMongo) UpdateUser(
 	ctx context.Context,
 	id string,
@@ -227,14 +230,16 @@ func (db *DataStoreMongo) UpdateUser(
 
 	f := bson.M{"_id": id}
 	if u.ETag != nil {
-		f["etag"] = *u.ETag
+		if *u.ETag == model.ETagNil {
+			f["etag"] = bson.D{{Key: "$exists", Value: false}}
+		} else {
+			f["etag"] = *u.ETag
+		}
 		if u.ETagUpdate == nil {
 			next := *u.ETag
 			next.Increment()
 			u.ETagUpdate = &next
 		}
-	} else {
-		f["etag"] = bson.D{{Key: "$exists", Value: false}}
 	}
 	up := bson.M{"$set": u}
 	fuOpts := mopts.FindOneAndUpdate().

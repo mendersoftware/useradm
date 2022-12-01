@@ -398,6 +398,10 @@ func (ua *UserAdm) UpdateUser(ctx context.Context, id string, userUpdate *model.
 		next := user.NextETag()
 		userUpdate.ETagUpdate = &next
 		userUpdate.ETag = user.ETag
+		if user.ETag == nil {
+			// If the ETag field is not set, assign the etag to nil
+			user.ETag = &model.ETagNil
+		}
 	} else if user.ETag == nil || *userUpdate.ETag != *user.ETag {
 		return ErrETagMismatch
 	}
