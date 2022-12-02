@@ -62,10 +62,17 @@ func (email Email) Validate() error {
 
 type ETag [12]byte
 
+var (
+	ETagNil ETag
+)
+
 func (t *ETag) Increment() {
 	c := binary.BigEndian.Uint32((*t)[8:])
 	c += 1
 	binary.BigEndian.PutUint32((*t)[8:], c)
+	if *t == ETagNil {
+		t.Increment()
+	}
 }
 
 func (t *ETag) UnmarshalText(b []byte) error {
@@ -133,6 +140,9 @@ func (u User) NextETag() (ret ETag) {
 	c := binary.BigEndian.Uint32(u.ETag[8:])
 	c += 1
 	binary.BigEndian.PutUint32(ret[8:], c)
+	if ret == ETagNil {
+		ret.Increment()
+	}
 	return ret
 }
 
@@ -181,6 +191,7 @@ func (u UserInternal) ShouldPropagate() bool {
 type UserUpdate struct {
 	// ETag selects user ETag for the user to update
 	// NOTE: This is the only parameter that goes into the query condition if set.
+	// NOTE: If set to ETagNil, it will match users without an ETag.
 	ETag *ETag `json:"-" bson:"-"`
 
 	// ETagUpdate sets the updated ETag value. If not set, it is incremented from the

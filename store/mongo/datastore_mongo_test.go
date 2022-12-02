@@ -191,7 +191,7 @@ func TestMongoUpdateUser(t *testing.T) {
 			ID:       "2bbde4d1-2a4c-47dc-9df4-f048285d2704",
 			Email:    "baz+mcetagface@bar.com",
 			Password: "pretenditsahash",
-			ETag:     new(model.ETag),
+			ETag:     &model.ETag{1},
 		},
 	}
 
@@ -234,10 +234,10 @@ func TestMongoUpdateUser(t *testing.T) {
 		},
 		"ok with tenant and etag": {
 			inUserUpdate: model.UserUpdate{
-				ETag:       new(model.ETag),
+				ETag:       &model.ETag{1},
 				Email:      "baz@bar.com",
 				Password:   "correcthorsebatterystaple",
-				ETagUpdate: &model.ETag{1},
+				ETagUpdate: &model.ETag{2},
 			},
 			inUserId: "2bbde4d1-2a4c-47dc-9df4-f048285d2704",
 			tenant:   "foo",
