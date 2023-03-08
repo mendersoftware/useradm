@@ -390,7 +390,7 @@ func TestGetRequestToken(t *testing.T) {
 		Claims: jwt.Claims{
 			Subject:   oid.NewUUIDv5("foo"),
 			Issuer:    "bar",
-			ExpiresAt: jwt.Time{Time: time.Unix(12345, 0)},
+			ExpiresAt: &jwt.Time{Time: time.Unix(12345, 0)},
 		},
 	}
 

@@ -26,7 +26,7 @@ type Claims struct {
 	// Subject holds the UUID associated with the user's account.
 	Subject oid.ObjectID `json:"sub,omitempty" bson:"sub,omitempty"`
 	// ExpiresAt is the absolute time when the token expires.
-	ExpiresAt Time `json:"exp,omitempty" bson:"exp,omitempty"`
+	ExpiresAt *Time `json:"exp,omitempty" bson:"exp,omitempty"`
 	// IssuedAt is the absolute time the token was created.
 	IssuedAt Time `json:"iat,omitempty" bson:"iat,omitempty"`
 	// Tenant holds the tenant ID claim
@@ -74,9 +74,11 @@ func (c *Claims) Valid() error {
 		return ErrTokenInvalid
 	}
 
-	now := time.Now()
-	if now.After(c.ExpiresAt.Time) {
-		return ErrTokenExpired
+	if c.ExpiresAt != nil {
+		now := time.Now()
+		if now.After(c.ExpiresAt.Time) {
+			return ErrTokenExpired
+		}
 	}
 
 	return nil

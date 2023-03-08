@@ -44,7 +44,7 @@ func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 			claims: Claims{
 				Issuer:  "Mender",
 				Subject: oid.NewUUIDv5("foo"),
-				ExpiresAt: Time{
+				ExpiresAt: &Time{
 					Time: time.Now().Add(time.Hour),
 				},
 			},
@@ -97,7 +97,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      oid.NewUUIDv5("someid"),
 					Subject: oid.NewUUIDv5("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
 					IssuedAt: Time{
@@ -132,7 +132,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      oid.NewUUIDv5("someid"),
 					Subject: oid.NewUUIDv5("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
 					IssuedAt: Time{
@@ -167,7 +167,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      oid.NewUUIDv5("someid"),
 					Subject: oid.NewUUIDv5("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
 					IssuedAt: Time{
@@ -202,7 +202,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      oid.NewUUIDv5("someid"),
 					Subject: oid.NewUUIDv5("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
 					IssuedAt: Time{
@@ -237,7 +237,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				Claims: Claims{
 					ID:      oid.NewUUIDv5("someid"),
 					Subject: oid.NewUUIDv5("foo"),
-					ExpiresAt: Time{
+					ExpiresAt: &Time{
 						Time: time.Unix(4481893900, 0),
 					},
 					IssuedAt: Time{

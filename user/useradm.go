@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -214,7 +214,7 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 		Issuer:    u.config.Issuer,
 		IssuedAt:  now,
 		NotBefore: now,
-		ExpiresAt: jwt.Time{
+		ExpiresAt: &jwt.Time{
 			Time: now.Add(time.Second *
 				time.Duration(u.config.ExpirationTime)),
 		},
@@ -639,10 +639,13 @@ func (u *UserAdm) IssuePersonalAccessToken(
 	}
 	// update claims
 	t.TokenName = tr.Name
-	now := jwt.Time{Time: time.Now()}
-	t.ExpiresAt = jwt.Time{
-		Time: now.Add(time.Second *
-			time.Duration(tr.ExpiresIn)),
+	if tr.ExpiresIn > 0 {
+		expires := jwt.Time{
+			Time: time.Now().Add(time.Second * time.Duration(tr.ExpiresIn)),
+		}
+		t.ExpiresAt = &expires
+	} else {
+		t.ExpiresAt = nil
 	}
 
 	err = u.db.SaveToken(ctx, t)

@@ -619,11 +619,12 @@ definitions:
         description: Name of a token.
         type: string
       expires_in:
-        description: Expiration time in seconds (maximum one year - 31536000s).
+        description: |
+          Expiration time in seconds (maximum one year - 31536000s).
+          If you omit it or set it to zero, the Personal Access Token will never expire.
         type: number
     required:
       - name
-      - expires_in
     example:
       name: 'my_personal_token'
       expires_in: 28800

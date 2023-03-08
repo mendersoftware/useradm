@@ -44,7 +44,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 				Claims: jwt.Claims{
 					Subject: oid.NewUUIDv5("testsubject"),
 					Issuer:  "mender",
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
 					Scope: scope.All,
@@ -57,7 +57,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
 					Issuer: "mender",
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
 					Subject: oid.NewUUIDv5("testsubject"),
@@ -71,7 +71,7 @@ func TestSimpleAuthzAuthorize(t *testing.T) {
 			inToken: &jwt.Token{
 				Claims: jwt.Claims{
 					Issuer: "mender",
-					ExpiresAt: jwt.Time{
+					ExpiresAt: &jwt.Time{
 						Time: time.Now().Add(time.Hour),
 					},
 					Subject: oid.NewUUIDv5("testsubject"),
