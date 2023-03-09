@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -138,6 +138,7 @@ func TestUserAdmLogin(t *testing.T) {
 	testCases := map[string]struct {
 		inEmail    model.Email
 		inPassword string
+		noExpiry   bool
 
 		verifyTenant bool
 		tenant       *ct.Tenant
@@ -353,7 +354,9 @@ func TestUserAdmLogin(t *testing.T) {
 				useradm = useradm.WithTenantVerification(cTenant)
 			}
 
-			token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword)
+			token, err := useradm.Login(ctx, tc.inEmail, tc.inPassword, &LoginOptions{
+				NoExpiry: tc.noExpiry,
+			})
 
 			if tc.outErr != nil {
 				assert.EqualError(t, err, tc.outErr.Error())

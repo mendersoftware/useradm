@@ -42,6 +42,13 @@ paths:
       produces:
         - application/jwt
         - application/json
+      parameters:
+        - name: options
+          in: body
+          description: Log in options
+          required: false
+          schema:
+            $ref: "#/definitions/LoginOptions"
       responses:
         200:
           description: |
@@ -545,6 +552,16 @@ paths:
             $ref: "#/definitions/Error"
 
 definitions:
+  LoginOptions:
+    description: Log in options
+    type: object
+    properties:
+      no_expiry:
+        description: Generate a JWT token with no expiration date.
+        type: boolean
+    example:
+      no_expiry: true
+
   UserNew:
     description: New user descriptor.
     type: object

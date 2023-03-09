@@ -60,7 +60,8 @@ const (
 type App interface {
 	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
-	Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error)
+	Login(ctx context.Context, email model.Email, pass string,
+		options *LoginOptions) (*jwt.Token, error)
 	Logout(ctx context.Context, token *jwt.Token) error
 	CreateUser(ctx context.Context, u *model.User) error
 	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
@@ -141,7 +142,8 @@ func (u *UserAdm) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error) {
+func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string,
+	options *LoginOptions) (*jwt.Token, error) {
 	var ident identity.Identity
 	l := log.FromContext(ctx)
 
@@ -187,7 +189,7 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 	}
 
 	//generate and save token
-	t, err := u.generateToken(user.ID, scope.All, ident.Tenant)
+	t, err := u.generateToken(user.ID, scope.All, ident.Tenant, options.NoExpiry)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -204,7 +206,8 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
+func (u *UserAdm) generateToken(subject, scope, tenant string,
+	noExpiry bool) (*jwt.Token, error) {
 	id := oid.NewUUIDv4()
 	subjectID := oid.FromString(subject)
 	now := jwt.Time{Time: time.Now()}
@@ -214,14 +217,15 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 		Issuer:    u.config.Issuer,
 		IssuedAt:  now,
 		NotBefore: now,
-		ExpiresAt: &jwt.Time{
-			Time: now.Add(time.Second *
-				time.Duration(u.config.ExpirationTime)),
-		},
-		Tenant: tenant,
-		Scope:  scope,
-		User:   true,
+		Tenant:    tenant,
+		Scope:     scope,
+		User:      true,
 	}}
+	if !noExpiry {
+		ret.Claims.ExpiresAt = &jwt.Time{
+			Time: now.Add(time.Second * time.Duration(u.config.ExpirationTime)),
+		}
+	}
 	return ret, ret.Claims.Valid()
 }
 
@@ -633,7 +637,7 @@ func (u *UserAdm) IssuePersonalAccessToken(
 		}
 	}
 	//generate and save token
-	t, err := u.generateToken(id.Subject, scope.All, id.Tenant)
+	t, err := u.generateToken(id.Subject, scope.All, id.Tenant, tr.ExpiresIn == 0)
 	if err != nil {
 		return "", errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -644,8 +648,6 @@ func (u *UserAdm) IssuePersonalAccessToken(
 			Time: time.Now().Add(time.Second * time.Duration(tr.ExpiresIn)),
 		}
 		t.ExpiresAt = &expires
-	} else {
-		t.ExpiresAt = nil
 	}
 
 	err = u.db.SaveToken(ctx, t)

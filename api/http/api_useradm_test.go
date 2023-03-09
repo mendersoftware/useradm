@@ -131,6 +131,7 @@ func TestUserAdmApiLogin(t *testing.T) {
 	now := time.Now()
 	testCases := map[string]struct {
 		inAuthHeader string
+		inBody       interface{}
 
 		uaToken *jwt.Token
 		uaError error
@@ -164,6 +165,40 @@ func TestUserAdmApiLogin(t *testing.T) {
 					Expires:  now,
 				}).String()},
 			},
+		},
+		"ok with no_expiry": {
+			//"email:pass"
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			inBody: map[string]interface{}{
+				"no_expiry": true,
+			},
+			uaToken: &jwt.Token{
+				Claims: jwt.Claims{},
+			},
+
+			signed: "dummytoken",
+
+			checker: &mt.BaseResponse{
+				Status:      http.StatusOK,
+				ContentType: "application/jwt",
+				Body:        "dummytoken",
+				Headers: map[string]string{"Set-Cookie": (&http.Cookie{
+					Name:     "JWT",
+					Value:    "dummytoken",
+					Path:     uriUIRoot,
+					Secure:   true,
+					SameSite: http.SameSiteStrictMode,
+				}).String()},
+			},
+		},
+		"error: bad payload": {
+			//"email:pass"
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			inBody:       "dummy",
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error")),
 		},
 		"error: unauthorized": {
 			//"email:pass"
@@ -231,14 +266,15 @@ func TestUserAdmApiLogin(t *testing.T) {
 			uadm := &museradm.App{}
 			uadm.On("Login", ctx,
 				mock.AnythingOfType("model.Email"),
-				mock.AnythingOfType("string")).
+				mock.AnythingOfType("string"),
+				mock.AnythingOfType("*useradm.LoginOptions")).
 				Return(tc.uaToken, tc.uaError)
 
 			uadm.On("SignToken", ctx, tc.uaToken).Return(tc.signed, tc.signErr)
 
 			//make mock request
 			req := makeReq("POST", "http://1.2.3.4/api/management/v1/useradm/auth/login",
-				tc.inAuthHeader, nil)
+				tc.inAuthHeader, tc.inBody)
 
 			api := makeMockApiHandler(t, uadm, nil)
 
