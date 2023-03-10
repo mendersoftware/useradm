@@ -92,6 +92,9 @@ type Config struct {
 	Issuer string
 	// token expiration time
 	ExpirationTime int64
+	// maximum number of log in tokens per user
+	// zero means no limit
+	LimitSessionsPerUser int
 	// maximum number of personal access tokens per user
 	// zero means no limit
 	LimitTokensPerUser int
@@ -197,6 +200,12 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string,
 	err = u.db.SaveToken(ctx, t)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to save token")
+	}
+	if u.config.LimitSessionsPerUser > 0 {
+		err = u.db.EnsureSessionTokensLimit(ctx, t.Subject, u.config.LimitSessionsPerUser)
+		if err != nil {
+			return nil, errors.Wrap(err, "useradm: failed to ensure session tokens limit")
+		}
 	}
 
 	if err = u.db.UpdateLoginTs(ctx, user.ID); err != nil {

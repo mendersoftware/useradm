@@ -77,6 +77,7 @@ func RunServer(c config.Reader) error {
 		useradm.Config{
 			Issuer:                         c.GetString(SettingJWTIssuer),
 			ExpirationTime:                 int64(c.GetInt(SettingJWTExpirationTimeout)),
+			LimitSessionsPerUser:           c.GetInt(SettingLimitSessionsPerUser),
 			LimitTokensPerUser:             c.GetInt(SettingLimitTokensPerUser),
 			TokenLastUsedUpdateFreqMinutes: c.GetInt(SettingTokenLastUsedUpdateFreqMinutes),
 		})

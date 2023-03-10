@@ -1030,6 +1030,222 @@ func TestMongoSaveToken(t *testing.T) {
 	}
 }
 
+func TestMongoEnsureSessionTokensLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode.")
+	}
+
+	userID := oid.NewUUIDv5("sub-3")
+
+	now := time.Now()
+	testCases := map[string]struct {
+		tokens []*jwt.Token
+		limit  int
+		count  int64
+		tenant string
+	}{
+		"ok, single token": {
+			tokens: []*jwt.Token{
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  userID,
+						Audience: "audience",
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now.Add(time.Hour - 1),
+						},
+						Issuer: "iss-3",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-3",
+						Tenant: "tenantID3",
+						User:   true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  oid.NewUUIDv5("sub-4"),
+						Audience: "audience",
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now.Add(time.Hour - 1),
+						},
+						Issuer: "iss-3",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-3",
+						Tenant: "tenantID3",
+						User:   true,
+					},
+				},
+			},
+			count: 1,
+		},
+		"ok, two tokens": {
+			tokens: []*jwt.Token{
+				{
+					Claims: jwt.Claims{
+						ID:      oid.NewUUIDv5("id-1"),
+						Subject: userID,
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now.Add(time.Hour - 1),
+						},
+						Tenant: "tenantID4",
+						User:   true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:      oid.NewUUIDv5("id-2"),
+						Subject: userID,
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{Time: now},
+						Tenant:   "tenantID4",
+						User:     true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  oid.NewUUIDv5("sub-4"),
+						Audience: "audience",
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now.Add(time.Hour - 1),
+						},
+						Issuer: "iss-3",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-3",
+						Tenant: "tenantID3",
+						User:   true,
+					},
+				},
+			},
+			count: 1,
+		},
+		"ok, two tokens with MT": {
+			tokens: []*jwt.Token{
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-1"),
+						Subject:  userID,
+						Audience: "audience",
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now.Add(time.Hour - 1),
+						},
+						Issuer: "iss-3",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-3",
+						Tenant: "tenantID1",
+						User:   true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-2"),
+						Subject:  userID,
+						Audience: "audience",
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now,
+						},
+						Issuer: "iss-3",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-3",
+						Tenant: "tenantID1",
+						User:   true,
+					},
+				},
+				{
+					Claims: jwt.Claims{
+						ID:       oid.NewUUIDv5("id-3"),
+						Subject:  userID,
+						Audience: "audience",
+						ExpiresAt: &jwt.Time{
+							Time: now.Add(time.Hour),
+						},
+						IssuedAt: jwt.Time{
+							Time: now,
+						},
+						Issuer: "iss-3",
+						NotBefore: jwt.Time{
+							Time: time.Unix(7890, 0),
+						},
+						Scope:  "scope-3",
+						Tenant: "tenantID2",
+						User:   true,
+					},
+				},
+			},
+			tenant: "tenantID1",
+			count:  1,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			db.Wipe()
+
+			//setup
+			ctx := context.Background()
+			if tc.tenant != "" {
+				ctx = identity.WithContext(ctx, &identity.Identity{
+					Tenant: tc.tenant,
+				})
+			}
+
+			client := db.Client()
+			store, err := NewDataStoreMongoWithClient(client)
+			assert.NoError(t, err)
+
+			for _, token := range tc.tokens {
+				err = store.SaveToken(ctx, token)
+				assert.NoError(t, err)
+			}
+
+			// test
+			err = store.EnsureSessionTokensLimit(ctx, userID, 1)
+			assert.NoError(t, err)
+
+			filter := mstore.WithTenantID(ctx, bson.M{
+				DbTokenSubject: userID,
+			})
+			c, err := client.
+				Database(mstore.DbFromContext(ctx, DbName)).
+				Collection(DbTokensColl).
+				CountDocuments(ctx, filter)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.count, c)
+		})
+	}
+}
+
 func TestMigrate(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping TestMigrate in short mode.")

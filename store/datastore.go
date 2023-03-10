@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ type DataStore interface {
 	SaveToken(ctx context.Context, token *jwt.Token) error
 	GetTokenById(ctx context.Context, id oid.ObjectID) (*jwt.Token, error)
 	DeleteToken(ctx context.Context, userID, tokenID oid.ObjectID) error
+	EnsureSessionTokensLimit(ctx context.Context, userID oid.ObjectID, sessionsLimit int) error
 
 	// deletes all tenant's tokens (identity in context)
 	DeleteTokens(ctx context.Context) error

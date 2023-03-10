@@ -135,6 +135,8 @@ func TestUserAdmSignToken(t *testing.T) {
 }
 
 func TestUserAdmLogin(t *testing.T) {
+	const sessionTokensLimit = 10
+
 	testCases := map[string]struct {
 		inEmail    model.Email
 		inPassword string
@@ -147,8 +149,9 @@ func TestUserAdmLogin(t *testing.T) {
 		dbUser    *model.User
 		dbUserErr error
 
-		dbTokenErr  error
-		dbUpdateErr error
+		dbTokenErr        error
+		dbEnsureLimitsErr error
+		dbUpdateErr       error
 
 		outErr   error
 		outToken *jwt.Token
@@ -175,8 +178,9 @@ func TestUserAdmLogin(t *testing.T) {
 			},
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 		"ok, multitenant": {
@@ -209,8 +213,9 @@ func TestUserAdmLogin(t *testing.T) {
 			},
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 		"error, multitenant: tenant not found": {
@@ -257,8 +262,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr: ErrTenantAccountSuspended,
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 		"error: no user": {
@@ -272,8 +278,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 		"error: wrong password": {
@@ -291,8 +298,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 		"error: regular login, db.GetUserByEmail() error": {
@@ -306,8 +314,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 		"error: db.SaveToken() error": {
@@ -327,8 +336,31 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
+			},
+		},
+		"error: db.EnsureSessionTokensLimit() error": {
+			inEmail:    "foo@bar.com",
+			inPassword: "correcthorsebatterystaple",
+
+			dbUser: &model.User{
+				ID:       oid.NewUUIDv5("1234").String(),
+				Email:    "foo@bar.com",
+				Password: `$2a$10$wMW4kC6o1fY87DokgO.lDektJO7hBXydf4B.yIWmE8hR9jOiO8way`,
+			},
+			dbUserErr: nil,
+
+			dbEnsureLimitsErr: errors.New("db failed"),
+
+			outErr:   errors.New("useradm: failed to ensure session tokens limit: db failed"),
+			outToken: nil,
+
+			config: Config{
+				Issuer:               "foobar",
+				ExpirationTime:       10,
+				LimitSessionsPerUser: sessionTokensLimit,
 			},
 		},
 	}
@@ -341,6 +373,10 @@ func TestUserAdmLogin(t *testing.T) {
 			db.On("GetUserByEmail", ContextMatcher(), tc.inEmail).Return(tc.dbUser, tc.dbUserErr)
 
 			db.On("SaveToken", ContextMatcher(), mock.AnythingOfType("*jwt.Token")).Return(tc.dbTokenErr)
+			if tc.dbTokenErr == nil {
+				db.On("EnsureSessionTokensLimit", ContextMatcher(), mock.AnythingOfType("oid.ObjectID"),
+					sessionTokensLimit).Return(tc.dbEnsureLimitsErr)
+			}
 			if tc.dbUser != nil {
 				db.On("UpdateLoginTs", ContextMatcher(), tc.dbUser.ID).
 					Return(tc.dbUpdateErr)
