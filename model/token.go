@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -37,8 +37,7 @@ func (tr TokenRequest) Validate(maxExpiration int) error {
 	}
 	return validation.ValidateStruct(&tr,
 		validation.Field(&tr.Name, validation.Required, lessThan4096),
-		validation.Field(
-			&tr.ExpiresIn, validation.Required, validation.Min(1), validation.Max(maxExpiration)))
+		validation.Field(&tr.ExpiresIn, validation.Min(0), validation.Max(maxExpiration)))
 }
 
 type PersonalAccessToken struct {
@@ -49,7 +48,7 @@ type PersonalAccessToken struct {
 	// timestamp of the last usage
 	LastUsed *time.Time `json:"last_used,omitempty" bson:"last_used,omitempty"`
 	// the absolute time when the token expires.
-	ExpirationDate jwt.Time `json:"expiration_date,omitempty" bson:"exp,omitempty"`
+	ExpirationDate *jwt.Time `json:"expiration_date,omitempty" bson:"exp,omitempty"`
 	// CreatedTs is the absolute time the token was created.
 	CreatedTs jwt.Time `json:"created_ts,omitempty" bson:"iat,omitempty"`
 }
@@ -68,11 +67,15 @@ type apiToken struct {
 }
 
 func newApiToken(t PersonalAccessToken) apiToken {
+	var expiration *time.Time
+	if t.ExpirationDate != nil {
+		expiration = &t.ExpirationDate.Time
+	}
 	return apiToken{
 		t.ID,
 		t.Name,
 		t.LastUsed,
-		&t.ExpirationDate.Time,
+		expiration,
 		&t.CreatedTs.Time,
 	}
 }

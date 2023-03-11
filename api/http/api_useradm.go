@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -170,7 +170,14 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 	}
 	email := model.Email(strings.ToLower(user))
 
-	token, err := u.userAdm.Login(ctx, email, pass)
+	options := &useradm.LoginOptions{}
+	err := r.DecodeJsonPayload(options)
+	if err != nil && err != rest.ErrJsonPayloadEmpty {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	token, err := u.userAdm.Login(ctx, email, pass, options)
 	if err != nil {
 		switch {
 		case err == useradm.ErrUnauthorized || err == useradm.ErrTenantAccountSuspended:
@@ -189,14 +196,17 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 
 	writer := w.(http.ResponseWriter)
 	writer.Header().Set("Content-Type", "application/jwt")
-	http.SetCookie(writer, &http.Cookie{
+	cookie := &http.Cookie{
 		Name:     "JWT",
 		Value:    raw,
 		Path:     uriUIRoot,
 		SameSite: http.SameSiteStrictMode,
 		Secure:   true,
-		Expires:  token.ExpiresAt.Time,
-	})
+	}
+	if token.ExpiresAt != nil {
+		cookie.Expires = token.ExpiresAt.Time
+	}
+	http.SetCookie(writer, cookie)
 	_, _ = writer.Write([]byte(raw))
 }
 

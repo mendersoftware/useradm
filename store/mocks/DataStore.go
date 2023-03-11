@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -130,6 +130,20 @@ func (_m *DataStore) DeleteUser(ctx context.Context, id string) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
 		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// EnsureSessionTokensLimit provides a mock function with given fields: ctx, userID, sessionsLimit
+func (_m *DataStore) EnsureSessionTokensLimit(ctx context.Context, userID oid.ObjectID, sessionsLimit int) error {
+	ret := _m.Called(ctx, userID, sessionsLimit)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, oid.ObjectID, int) error); ok {
+		r0 = rf(ctx, userID, sessionsLimit)
 	} else {
 		r0 = ret.Error(0)
 	}

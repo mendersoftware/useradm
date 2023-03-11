@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -128,8 +128,10 @@ func TestHealthCheck(t *testing.T) {
 func TestUserAdmApiLogin(t *testing.T) {
 	t.Parallel()
 
+	now := time.Now()
 	testCases := map[string]struct {
 		inAuthHeader string
+		inBody       interface{}
 
 		uaToken *jwt.Token
 		uaError error
@@ -142,7 +144,37 @@ func TestUserAdmApiLogin(t *testing.T) {
 		"ok": {
 			//"email:pass"
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
-			uaToken:      &jwt.Token{},
+			uaToken: &jwt.Token{
+				Claims: jwt.Claims{
+					ExpiresAt: &jwt.Time{Time: now},
+				},
+			},
+
+			signed: "dummytoken",
+
+			checker: &mt.BaseResponse{
+				Status:      http.StatusOK,
+				ContentType: "application/jwt",
+				Body:        "dummytoken",
+				Headers: map[string]string{"Set-Cookie": (&http.Cookie{
+					Name:     "JWT",
+					Value:    "dummytoken",
+					Path:     uriUIRoot,
+					Secure:   true,
+					SameSite: http.SameSiteStrictMode,
+					Expires:  now,
+				}).String()},
+			},
+		},
+		"ok with no_expiry": {
+			//"email:pass"
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			inBody: map[string]interface{}{
+				"no_expiry": true,
+			},
+			uaToken: &jwt.Token{
+				Claims: jwt.Claims{},
+			},
 
 			signed: "dummytoken",
 
@@ -158,6 +190,15 @@ func TestUserAdmApiLogin(t *testing.T) {
 					SameSite: http.SameSiteStrictMode,
 				}).String()},
 			},
+		},
+		"error: bad payload": {
+			//"email:pass"
+			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
+			inBody:       "dummy",
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error")),
 		},
 		"error: unauthorized": {
 			//"email:pass"
@@ -225,14 +266,15 @@ func TestUserAdmApiLogin(t *testing.T) {
 			uadm := &museradm.App{}
 			uadm.On("Login", ctx,
 				mock.AnythingOfType("model.Email"),
-				mock.AnythingOfType("string")).
+				mock.AnythingOfType("string"),
+				mock.AnythingOfType("*useradm.LoginOptions")).
 				Return(tc.uaToken, tc.uaError)
 
 			uadm.On("SignToken", ctx, tc.uaToken).Return(tc.signed, tc.signErr)
 
 			//make mock request
 			req := makeReq("POST", "http://1.2.3.4/api/management/v1/useradm/auth/login",
-				tc.inAuthHeader, nil)
+				tc.inAuthHeader, tc.inBody)
 
 			api := makeMockApiHandler(t, uadm, nil)
 
@@ -1903,6 +1945,20 @@ func TestIssueToken(t *testing.T) {
 				Body:        "foo",
 			},
 		},
+		"ok, never expiring token": {
+			inReq: test.MakeSimpleRequest("POST",
+				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
+				map[string]interface{}{
+					"name":       "foo",
+					"expires_in": 0,
+				},
+			),
+			checker: &mt.BaseResponse{
+				Status:      http.StatusOK,
+				ContentType: "application/jwt",
+				Body:        "foo",
+			},
+		},
 		"error: token with the same name already exist": {
 			inReq: test.MakeSimpleRequest("POST",
 				"http://1.2.3.4/api/management/v1/useradm/settings/tokens",
@@ -1942,7 +1998,7 @@ func TestIssueToken(t *testing.T) {
 			checker: mt.NewJSONResponse(
 				http.StatusBadRequest,
 				nil,
-				restError("expires_in: must be no less than 1.")),
+				restError("expires_in: must be no less than 0.")),
 		},
 		"error: expires_in too high": {
 			inReq: test.MakeSimpleRequest("POST",

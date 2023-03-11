@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -60,7 +60,8 @@ const (
 type App interface {
 	HealthCheck(ctx context.Context) error
 	// Login accepts email/password, returns JWT
-	Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error)
+	Login(ctx context.Context, email model.Email, pass string,
+		options *LoginOptions) (*jwt.Token, error)
 	Logout(ctx context.Context, token *jwt.Token) error
 	CreateUser(ctx context.Context, u *model.User) error
 	CreateUserInternal(ctx context.Context, u *model.UserInternal) error
@@ -91,6 +92,9 @@ type Config struct {
 	Issuer string
 	// token expiration time
 	ExpirationTime int64
+	// maximum number of log in tokens per user
+	// zero means no limit
+	LimitSessionsPerUser int
 	// maximum number of personal access tokens per user
 	// zero means no limit
 	LimitTokensPerUser int
@@ -141,7 +145,8 @@ func (u *UserAdm) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*jwt.Token, error) {
+func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string,
+	options *LoginOptions) (*jwt.Token, error) {
 	var ident identity.Identity
 	l := log.FromContext(ctx)
 
@@ -187,7 +192,7 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 	}
 
 	//generate and save token
-	t, err := u.generateToken(user.ID, scope.All, ident.Tenant)
+	t, err := u.generateToken(user.ID, scope.All, ident.Tenant, options.NoExpiry)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -195,6 +200,12 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 	err = u.db.SaveToken(ctx, t)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to save token")
+	}
+	if u.config.LimitSessionsPerUser > 0 {
+		err = u.db.EnsureSessionTokensLimit(ctx, t.Subject, u.config.LimitSessionsPerUser)
+		if err != nil {
+			return nil, errors.Wrap(err, "useradm: failed to ensure session tokens limit")
+		}
 	}
 
 	if err = u.db.UpdateLoginTs(ctx, user.ID); err != nil {
@@ -204,7 +215,8 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string) (*j
 	return t, nil
 }
 
-func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, error) {
+func (u *UserAdm) generateToken(subject, scope, tenant string,
+	noExpiry bool) (*jwt.Token, error) {
 	id := oid.NewUUIDv4()
 	subjectID := oid.FromString(subject)
 	now := jwt.Time{Time: time.Now()}
@@ -214,14 +226,15 @@ func (u *UserAdm) generateToken(subject, scope, tenant string) (*jwt.Token, erro
 		Issuer:    u.config.Issuer,
 		IssuedAt:  now,
 		NotBefore: now,
-		ExpiresAt: jwt.Time{
-			Time: now.Add(time.Second *
-				time.Duration(u.config.ExpirationTime)),
-		},
-		Tenant: tenant,
-		Scope:  scope,
-		User:   true,
+		Tenant:    tenant,
+		Scope:     scope,
+		User:      true,
 	}}
+	if !noExpiry {
+		ret.Claims.ExpiresAt = &jwt.Time{
+			Time: now.Add(time.Second * time.Duration(u.config.ExpirationTime)),
+		}
+	}
 	return ret, ret.Claims.Valid()
 }
 
@@ -633,16 +646,17 @@ func (u *UserAdm) IssuePersonalAccessToken(
 		}
 	}
 	//generate and save token
-	t, err := u.generateToken(id.Subject, scope.All, id.Tenant)
+	t, err := u.generateToken(id.Subject, scope.All, id.Tenant, tr.ExpiresIn == 0)
 	if err != nil {
 		return "", errors.Wrap(err, "useradm: failed to generate token")
 	}
 	// update claims
 	t.TokenName = tr.Name
-	now := jwt.Time{Time: time.Now()}
-	t.ExpiresAt = jwt.Time{
-		Time: now.Add(time.Second *
-			time.Duration(tr.ExpiresIn)),
+	if tr.ExpiresIn > 0 {
+		expires := jwt.Time{
+			Time: time.Now().Add(time.Second * time.Duration(tr.ExpiresIn)),
+		}
+		t.ExpiresAt = &expires
 	}
 
 	err = u.db.SaveToken(ctx, t)

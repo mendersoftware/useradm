@@ -1,16 +1,16 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//	    http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
 package jwt
 
 import (
@@ -26,7 +26,7 @@ type Claims struct {
 	// Subject holds the UUID associated with the user's account.
 	Subject oid.ObjectID `json:"sub,omitempty" bson:"sub,omitempty"`
 	// ExpiresAt is the absolute time when the token expires.
-	ExpiresAt Time `json:"exp,omitempty" bson:"exp,omitempty"`
+	ExpiresAt *Time `json:"exp,omitempty" bson:"exp,omitempty"`
 	// IssuedAt is the absolute time the token was created.
 	IssuedAt Time `json:"iat,omitempty" bson:"iat,omitempty"`
 	// Tenant holds the tenant ID claim
@@ -74,9 +74,11 @@ func (c *Claims) Valid() error {
 		return ErrTokenInvalid
 	}
 
-	now := time.Now()
-	if now.After(c.ExpiresAt.Time) {
-		return ErrTokenExpired
+	if c.ExpiresAt != nil {
+		now := time.Now()
+		if now.After(c.ExpiresAt.Time) {
+			return ErrTokenExpired
+		}
 	}
 
 	return nil

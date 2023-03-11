@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
+
 package authz_test
 
 import (
@@ -389,7 +390,7 @@ func TestGetRequestToken(t *testing.T) {
 		Claims: jwt.Claims{
 			Subject:   oid.NewUUIDv5("foo"),
 			Issuer:    "bar",
-			ExpiresAt: jwt.Time{Time: time.Unix(12345, 0)},
+			ExpiresAt: &jwt.Time{Time: time.Unix(12345, 0)},
 		},
 	}
 

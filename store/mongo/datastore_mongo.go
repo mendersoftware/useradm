@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -55,6 +55,8 @@ const (
 	DbTokenLastUsed  = "last_used"
 	DbTokenName      = "name"
 	DbID             = "_id"
+
+	DbTokenIssuedAtTime = DbTokenIssuedAt + ".time"
 
 	DbUniqueEmailIndexName     = "email_1"
 	DbUniqueTokenNameIndexName = "token_name_1"
@@ -431,8 +433,48 @@ func (db *DataStoreMongo) SaveToken(ctx context.Context, token *jwt.Token) error
 	} else if err != nil {
 		return errors.Wrap(err, "failed to store token")
 	}
+	return err
+}
 
-	return nil
+func (db *DataStoreMongo) EnsureSessionTokensLimit(ctx context.Context, userID oid.ObjectID,
+	tokensLimit int) error {
+	opts := &mopts.FindOptions{}
+	opts.SetLimit(int64(tokensLimit))
+	opts.SetSkip(int64(tokensLimit) - 1)
+	opts.SetSort(bson.M{
+		DbTokenIssuedAtTime: -1,
+	})
+
+	cur, err := db.client.Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl).
+		Find(ctx, mstore.WithTenantID(ctx, bson.M{
+			DbTokenSubject: userID,
+			DbTokenName:    bson.M{"$exists": false},
+		}), opts)
+	if err != nil {
+		return err
+	}
+
+	tokens := []jwt.Token{}
+	err = cur.All(ctx, &tokens)
+	if err == mongo.ErrNoDocuments || len(tokens) == 0 {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	_, err = db.client.
+		Database(mstore.DbFromContext(ctx, DbName)).
+		Collection(DbTokensColl).
+		DeleteMany(ctx, mstore.WithTenantID(ctx, bson.M{
+			DbTokenSubject: userID,
+			DbTokenName:    bson.M{"$exists": false},
+			DbTokenIssuedAtTime: bson.M{
+				"$lt": tokens[0].IssuedAt.Time,
+			},
+		}))
+
+	return err
 }
 
 // WithMultitenant enables multitenant support and returns a new datastore based

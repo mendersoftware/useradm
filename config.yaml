@@ -54,3 +54,11 @@ listen: :8080
 # Overwrites password set in connection string.
 # Defaults to: none
 # mongo_password: secret
+
+# Maximum number of active sessions (valid JWT tokens) per user
+# Defaults to: 10
+# limit_sessions_per_user: 10
+
+# Maximum number of peresonal access tokens per user
+# Defaults to: 10
+# limit_tokens_per_user: 10
