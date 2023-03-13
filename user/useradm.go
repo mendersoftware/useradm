@@ -91,7 +91,7 @@ type Config struct {
 	// token issuer
 	Issuer string
 	// token expiration time
-	ExpirationTime int64
+	ExpirationTimeSeconds int64
 	// maximum number of log in tokens per user
 	// zero means no limit
 	LimitSessionsPerUser int
@@ -232,7 +232,7 @@ func (u *UserAdm) generateToken(subject, scope, tenant string,
 	}}
 	if !noExpiry {
 		ret.Claims.ExpiresAt = &jwt.Time{
-			Time: now.Add(time.Second * time.Duration(u.config.ExpirationTime)),
+			Time: now.Add(time.Second * time.Duration(u.config.ExpirationTimeSeconds)),
 		}
 	}
 	return ret, ret.Claims.Valid()

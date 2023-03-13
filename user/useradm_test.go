@@ -178,9 +178,9 @@ func TestUserAdmLogin(t *testing.T) {
 			},
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"ok, multitenant": {
@@ -213,9 +213,9 @@ func TestUserAdmLogin(t *testing.T) {
 			},
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"error, multitenant: tenant not found": {
@@ -262,9 +262,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outErr: ErrTenantAccountSuspended,
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"error: no user": {
@@ -278,9 +278,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"error: wrong password": {
@@ -298,9 +298,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"error: regular login, db.GetUserByEmail() error": {
@@ -314,9 +314,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"error: db.SaveToken() error": {
@@ -336,9 +336,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 		"error: db.EnsureSessionTokensLimit() error": {
@@ -358,9 +358,9 @@ func TestUserAdmLogin(t *testing.T) {
 			outToken: nil,
 
 			config: Config{
-				Issuer:               "foobar",
-				ExpirationTime:       10,
-				LimitSessionsPerUser: sessionTokensLimit,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitSessionsPerUser:  sessionTokensLimit,
 			},
 		},
 	}
@@ -405,7 +405,7 @@ func TestUserAdmLogin(t *testing.T) {
 					assert.Equal(t, tc.config.Issuer, token.Claims.Issuer)
 					assert.Equal(t, tc.outToken.Claims.Scope, token.Claims.Scope)
 					assert.WithinDuration(t,
-						time.Now().Add(time.Duration(tc.config.ExpirationTime)*time.Second),
+						time.Now().Add(time.Duration(tc.config.ExpirationTimeSeconds)*time.Second),
 						token.Claims.ExpiresAt.Time,
 						time.Second)
 
@@ -1675,9 +1675,9 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 			callDbCountTokens: true,
 			dbCountTokens:     9,
 			config: Config{
-				Issuer:             "foobar",
-				ExpirationTime:     10,
-				LimitTokensPerUser: 10,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitTokensPerUser:    10,
 			},
 		},
 		"ok, no limit": {
@@ -1687,8 +1687,8 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 			},
 			callDbSaveToken: true,
 			config: Config{
-				Issuer:         "foobar",
-				ExpirationTime: 10,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
 			},
 		},
 		"error: too many tokens": {
@@ -1699,9 +1699,9 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 			callDbCountTokens: true,
 			dbCountTokens:     10,
 			config: Config{
-				Issuer:             "foobar",
-				ExpirationTime:     10,
-				LimitTokensPerUser: 10,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitTokensPerUser:    10,
 			},
 			outErr: ErrTooManyTokens,
 		},
@@ -1714,9 +1714,9 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 			dbCountTokens:     0,
 			dbCountTokensErr:  errors.New("count tokens error"),
 			config: Config{
-				Issuer:             "foobar",
-				ExpirationTime:     10,
-				LimitTokensPerUser: 10,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitTokensPerUser:    10,
 			},
 			outErr: errors.New(
 				"useradm: failed to count personal access tokens: count tokens error"),
@@ -1731,9 +1731,9 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 			callDbCountTokens: true,
 			dbCountTokens:     9,
 			config: Config{
-				Issuer:             "foobar",
-				ExpirationTime:     10,
-				LimitTokensPerUser: 10,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitTokensPerUser:    10,
 			},
 			outErr: ErrDuplicateTokenName,
 		},
@@ -1747,9 +1747,9 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 			callDbCountTokens: true,
 			dbCountTokens:     9,
 			config: Config{
-				Issuer:             "foobar",
-				ExpirationTime:     10,
-				LimitTokensPerUser: 10,
+				Issuer:                "foobar",
+				ExpirationTimeSeconds: 10,
+				LimitTokensPerUser:    10,
 			},
 			outErr: errors.New("useradm: failed to save token: save token error"),
 		},

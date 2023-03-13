@@ -76,7 +76,7 @@ func RunServer(c config.Reader) error {
 	ua := useradm.NewUserAdm(jwth, db,
 		useradm.Config{
 			Issuer:                         c.GetString(SettingJWTIssuer),
-			ExpirationTime:                 int64(c.GetInt(SettingJWTExpirationTimeout)),
+			ExpirationTimeSeconds:          int64(c.GetInt(SettingJWTExpirationTimeout)),
 			LimitSessionsPerUser:           c.GetInt(SettingLimitSessionsPerUser),
 			LimitTokensPerUser:             c.GetInt(SettingLimitTokensPerUser),
 			TokenLastUsedUpdateFreqMinutes: c.GetInt(SettingTokenLastUsedUpdateFreqMinutes),
