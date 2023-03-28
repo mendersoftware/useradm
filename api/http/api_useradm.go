@@ -173,7 +173,7 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 	options := &useradm.LoginOptions{}
 	err := r.DecodeJsonPayload(options)
 	if err != nil && err != rest.ErrJsonPayloadEmpty {
-		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
 		return
 	}
 
