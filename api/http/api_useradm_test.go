@@ -196,9 +196,9 @@ func TestUserAdmApiLogin(t *testing.T) {
 			inAuthHeader: "Basic ZW1haWw6cGFzcw==",
 			inBody:       "dummy",
 			checker: mt.NewJSONResponse(
-				http.StatusInternalServerError,
+				http.StatusBadRequest,
 				nil,
-				restError("internal error")),
+				restError("json: cannot unmarshal string into Go value of type useradm.LoginOptions")),
 		},
 		"error: unauthorized": {
 			//"email:pass"
