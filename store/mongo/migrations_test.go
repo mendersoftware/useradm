@@ -22,9 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMigration_2_0_2(t *testing.T) {
+func TestMigration_2_0_3(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping TestMigration_2_0_2 in short mode")
+		t.Skip("Skipping TestMigration_2_0_3 in short mode")
 	}
 
 	client := db.Client()
@@ -41,13 +41,13 @@ func TestMigration_2_0_2(t *testing.T) {
 	}
 
 	migration := []migrate.Migration{
-		&migration_2_0_2{
+		&migration_2_0_3{
 			ds:     ds,
 			ctx:    ctx,
 			dbName: DbName,
 		},
 	}
-	err = migrator.Apply(ctx, migrate.MakeVersion(2, 0, 2), migration)
+	err = migrator.Apply(ctx, migrate.MakeVersion(2, 0, 3), migration)
 	if assert.NoError(t, err, "migration is broken :'(") {
 		iw := client.Database(DbName).
 			Collection(DbTokensColl).

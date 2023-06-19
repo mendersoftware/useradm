@@ -28,13 +28,13 @@ import (
 
 const IndexNameTokenExpire = "exp_time"
 
-type migration_2_0_2 struct {
+type migration_2_0_3 struct {
 	ds     *DataStoreMongo
 	dbName string
 	ctx    context.Context
 }
 
-func (m *migration_2_0_2) Up(from migrate.Version) error {
+func (m *migration_2_0_3) Up(from migrate.Version) error {
 
 	const errCodeIndexNotFound = 27
 	var err error
@@ -74,6 +74,6 @@ func (m *migration_2_0_2) Up(from migrate.Version) error {
 	return err
 }
 
-func (m *migration_2_0_2) Version() migrate.Version {
-	return migrate.MakeVersion(2, 0, 2)
+func (m *migration_2_0_3) Version() migrate.Version {
+	return migrate.MakeVersion(2, 0, 3)
 }
