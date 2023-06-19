@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -55,14 +55,6 @@ func (m *migration_2_0_0) Up(from migrate.Version) error {
 		},
 		DbTokensColl: {
 			Indexes: []mongo.IndexModel{
-				{
-					Keys: bson.D{
-						{Key: DbTokenExpiresAt, Value: 1},
-					},
-					Options: mopts.Index().
-						SetExpireAfterSeconds(0).
-						SetName(DbTokenExpirationIndexName),
-				},
 				{
 					Keys: bson.D{
 						{Key: mstore.FieldTenantID, Value: 1},
