@@ -33,7 +33,7 @@ import tenantadm
 class Migration:
     DB_NAME = "useradm"
     MIGRATION_COLLECTION = "migration_info"
-    DB_VERSION = "2.0.2"
+    DB_VERSION = "2.0.3"
 
     @staticmethod
     def verify_db_and_collections(client, dbname):
