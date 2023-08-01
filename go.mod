@@ -15,7 +15,7 @@ require (
 	github.com/urfave/cli v1.22.14
 	go.mongodb.org/mongo-driver v1.11.7
 	golang.org/x/crypto v0.10.0
-	golang.org/x/term v0.9.0
+	golang.org/x/term v0.10.0
 )
 
 require (
@@ -62,7 +62,7 @@ require (
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
