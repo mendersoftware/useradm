@@ -1308,7 +1308,7 @@ func TestMigrate(t *testing.T) {
 				assert.NoError(t, err)
 
 				if tc.automigrate {
-					assert.Len(t, out, 5)
+					assert.Len(t, out, 6)
 					assert.NoError(t, err)
 
 					v, _ := migrate.NewVersion(tc.version)

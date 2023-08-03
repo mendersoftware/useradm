@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	DbVersion = "2.0.1"
+	DbVersion = "2.0.3"
 	DbName    = "useradm"
 )
 
@@ -67,6 +67,11 @@ func (db *DataStoreMongo) MigrateTenant(ctx context.Context, version string, ten
 			ctx:    tenantCtx,
 		},
 		&migration_2_0_1{
+			ds:     db,
+			dbName: mstore_v1.DbFromContext(tenantCtx, DbName),
+			ctx:    tenantCtx,
+		},
+		&migration_2_0_3{
 			ds:     db,
 			dbName: mstore_v1.DbFromContext(tenantCtx, DbName),
 			ctx:    tenantCtx,
