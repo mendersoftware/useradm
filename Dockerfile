@@ -1,4 +1,5 @@
-FROM golang:1.19.7-alpine3.17 as builder
+FROM --platform=$BUILDPLATFORM golang:1.19.7-alpine3.17 as builder
+ARG TARGETARCH
 WORKDIR /go/src/github.com/mendersoftware/useradm
 RUN mkdir -p /etc_extra
 RUN echo "nobody:x:65534:" > /etc_extra/group
@@ -7,7 +8,7 @@ RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_extra/passwd
 RUN chown -R nobody:nobody /etc_extra
 RUN apk add --no-cache ca-certificates
 COPY ./ .
-RUN CGO_ENABLED=0 GOARCH=amd64 go build -o useradm .
+RUN CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o useradm .
 
 
 FROM scratch
