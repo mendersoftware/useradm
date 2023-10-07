@@ -1,0 +1,10 @@
+plans:
+  Mender_Open_Source:
+    display_name: Mender
+    features:
+      rbac: false
+      audit_logs: false
+      dynamic_groups: false
+      terminal: false
+      configuration: true
+      monitoring: false

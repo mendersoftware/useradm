@@ -85,6 +85,8 @@ type App interface {
 	DeleteTokens(ctx context.Context, tenantId, userId string) error
 
 	CreateTenant(ctx context.Context, tenant model.NewTenant) error
+	GetPlans(ctx context.Context, skip, limit int) []model.Plan
+	GetPlanBinding(ctx context.Context) (*model.PlanBindingDetails, error)
 }
 
 type Config struct {
@@ -693,4 +695,22 @@ func (ua *UserAdm) DeleteToken(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (ua *UserAdm) GetPlans(ctx context.Context, skip, limit int) []model.Plan {
+	if (skip + limit) <= len(model.PlanList) {
+		return model.PlanList[skip:(skip + limit)]
+	} else if skip <= len(model.PlanList) {
+		return model.PlanList[skip:]
+	}
+	return []model.Plan{}
+}
+
+func (ua *UserAdm) GetPlanBinding(ctx context.Context) (*model.PlanBindingDetails, error) {
+	if len(model.PlanList) == 1 {
+		return &model.PlanBindingDetails{
+			Plan: model.PlanList[0],
+		}, nil
+	}
+	return &model.PlanBindingDetails{}, nil
 }

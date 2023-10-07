@@ -551,6 +551,70 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
+  /plans:
+    get:
+      operationId: List Plans
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Get list of available plans
+      parameters:
+        - name: page
+          in: query
+          description: Starting page.
+          required: false
+          type: number
+          format: integer
+          default: 1
+        - name: per_page
+          in: query
+          description: Maximum number of results per page.
+          required: false
+          type: number
+          format: integer
+          default: 20
+          maximum: 500
+      responses:
+        200:
+          description: Successful response - list of plans is returned.
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Plan"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
+  /plan_binding:
+    get:
+      operationId: Show Plan And Limits
+      tags:
+        - Management API
+      security:
+        - ManagementJWT: []
+      summary: Get plan and limits information for current tenant
+      responses:
+        200:
+          description: Successful response - a plan information is returned.
+          schema:
+            $ref: "#/definitions/PlanBindingDetails"
+        401:
+          description: |
+                The user cannot be granted authentication.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal server error.
+          schema:
+            $ref: "#/definitions/Error"
+
 definitions:
   LoginOptions:
     description: Log in options
@@ -698,3 +762,96 @@ definitions:
   Settings:
     description: User settings.
     type: object
+
+  Plan:
+    description: Plan descriptor.
+    type: object
+    properties:
+      name:
+        description: |
+            Unique name of the plan.
+        type: string
+      display_name:
+        description: |
+            Short information about the plan.
+        type: string
+      features:
+        $ref: "#/definitions/Features"
+    required:
+      - name
+      - display_name
+      - features
+    example:
+      name: "mender-enterprise"
+      display_name: "Mender Enterprise"
+      features:
+        rbac: true
+        audit_logs: false
+        dynamic_groups: false
+        terminal: true
+        file_transfer: true
+        configuration: true
+        monitoring: true
+
+  Features:
+    description: Features descriptor.
+    type: object
+    properties:
+      rbac:
+        type: boolean
+      audit_logs:
+        type: boolean
+      dynamic_groups:
+        type: boolean
+      terminal:
+        type: boolean
+      file_transfer:
+        type: boolean
+      configuration:
+        type: boolean
+      monitoring:
+        type: boolean
+    example:
+      rbac: true
+      audit_logs: false
+      dynamic_groups: false
+      terminal: true
+      file_transfer: true
+      configuration: true
+      monitoring: true
+
+  PlanLimits:
+    description: Plan limits descriptor.
+    type: object
+    properties:
+      devices:
+        type: integer
+      users:
+        type: integer
+      audit_logs_days:
+        type: integer
+    example:
+      devices: 10
+      users: 2
+      audit_logs_days: 2
+
+  PlanBindingDetails:
+    description: Combination of plan and limits objects.
+    type: object
+    properties:
+      plan:
+        $ref: "#/definitions/Plan"
+      limits:
+        $ref: "#/definitions/PlanLimits"
+    example:
+      plan:
+        product: "Mender"
+        name: "mender-enterprise"
+        display_name: "Mender Enterprise"
+        features:
+          rbac: true
+          audit_logs: true
+      limits:
+        devices: 10
+        users: 2
+        audit_logs_days: 2
