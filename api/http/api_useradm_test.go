@@ -860,7 +860,7 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	if !assert.NoError(t, err) {
 		t.Fatalf("faied to load private key: %v", err)
 	}
-	jwth := jwt.NewJWTHandlerRS256(privkey, nil)
+	jwth := jwt.NewJWTHandlerRS256(privkey)
 
 	// API handler
 	handlers := NewUserAdmApiHandlers(uadm, db, jwth, Config{})

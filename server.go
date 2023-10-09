@@ -14,7 +14,6 @@
 package main
 
 import (
-	"crypto/rsa"
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
@@ -32,9 +31,10 @@ import (
 	useradm "github.com/mendersoftware/useradm/user"
 )
 
-func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler) (*rest.Api, error) {
+func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler,
+	jwthFallback jwt.Handler) (*rest.Api, error) {
 	api := rest.NewApi()
-	if err := SetupMiddleware(api, stacktype, authz, jwth); err != nil {
+	if err := SetupMiddleware(api, stacktype, authz, jwth, jwthFallback); err != nil {
 		return nil, errors.Wrap(err, "failed to setup middleware")
 	}
 
@@ -47,33 +47,50 @@ func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler) (*rest
 	return api, nil
 }
 
+func getJWTHandler(privateKeyType, privateKeyPath string) (jwt.Handler, error) {
+	if privateKeyType == SettingServerPrivKeyTypeRSA {
+		privKey, err := keys.LoadRSAPrivate(privateKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read rsa private key")
+		}
+		return jwt.NewJWTHandlerRS256(privKey), nil
+	} else if privateKeyType == SettingServerPrivKeyTypeEd25519 {
+		privKey, err := keys.LoadEd25519Private(privateKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read ed25519 private key")
+		}
+		return jwt.NewJWTHandlerEd25519(privKey), nil
+	}
+	return nil, errors.Errorf("unsupported server private key type %v", privateKeyType)
+}
+
 func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
-	privKey, err := keys.LoadRSAPrivate(c.GetString(SettingPrivKeyPath))
-	if err != nil {
-		return errors.Wrap(err, "failed to read rsa private key")
-	}
-
-	fallbackPrivKeyPath := c.GetString(SettingServerFallbackPrivKeyPath)
-	var fallbackPrivKey *rsa.PrivateKey
-	if fallbackPrivKeyPath != "" {
-		fallbackPrivKey, err = keys.LoadRSAPrivate(fallbackPrivKeyPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to read fallback rsa private key")
-		}
-	}
-
 	authz := &SimpleAuthz{}
-	jwth := jwt.NewJWTHandlerRS256(privKey, fallbackPrivKey)
+	jwtHandler, err := getJWTHandler(
+		c.GetString(SettingServerPrivKeyType),
+		c.GetString(SettingServerPrivKeyPath),
+	)
+	var jwtFallbackHandler jwt.Handler
+	fallback := c.GetString(SettingServerFallbackPrivKeyPath)
+	if err == nil && fallback != "" {
+		jwtFallbackHandler, err = getJWTHandler(
+			c.GetString(SettingServerFallbackPrivKeyType),
+			fallback,
+		)
+	}
+	if err != nil {
+		return err
+	}
 
 	db, err := mongo.GetDataStoreMongo(dataStoreMongoConfigFromAppConfig(c))
 	if err != nil {
 		return errors.Wrap(err, "database connection failed")
 	}
 
-	ua := useradm.NewUserAdm(jwth, db,
+	ua := useradm.NewUserAdm(jwtHandler, db,
 		useradm.Config{
 			Issuer:                         c.GetString(SettingJWTIssuer),
 			ExpirationTimeSeconds:          int64(c.GetInt(SettingJWTExpirationTimeout)),
@@ -92,12 +109,12 @@ func RunServer(c config.Reader) error {
 		ua = ua.WithTenantVerification(tc)
 	}
 
-	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwth,
+	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwtHandler,
 		api_http.Config{
 			TokenMaxExpSeconds: c.GetInt(SettingTokenMaxExpirationSeconds),
 		})
 
-	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwth)
+	api, err := SetupAPI(c.GetString(SettingMiddleware), authz, jwtHandler, jwtFallbackHandler)
 	if err != nil {
 		return errors.Wrap(err, "API setup failed")
 	}

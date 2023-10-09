@@ -12,10 +12,22 @@ listen: :8080
 # Defaults to: prod
 # middleware: dev
 
+# Private key type - used for JWT signing
+# Defaults to: rsa
+# Supported values: rsa, ed25519
+# Overwrite with environment variable: USERADM_SERVER_PRIV_KEY_TYPE
+# server_priv_key_type: rsa
+
 # Private key path - used for JWT signing
 # Defaults to: /etc/useradm/rsa/private.pem
 # Overwrite with environment variable: USERADM_SERVER_PRIV_KEY_PATH
 # server_priv_key_path: /etc/useradm/rsa/private.pem
+
+# Private key type - used for JWT signing
+# Defaults to: rsa
+# Supported values: rsa, ed25519
+# Overwrite with environment variable: USERADM_SERVER_FALLBACK_PRIV_KEY_TYPE
+# server_fallback_priv_key_type: rsa
 
 # Fallback private key path - used for JWT verification
 # Defaults to: none

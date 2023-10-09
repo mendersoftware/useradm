@@ -25,8 +25,16 @@ const (
 	SettingMiddleware        = "middleware"
 	SettingMiddlewareDefault = "prod"
 
-	SettingPrivKeyPath        = "server_priv_key_path"
-	SettingPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
+	SettingServerPrivKeyType        = "server_priv_key_type"
+	SettingServerPrivKeyTypeRSA     = "rsa"
+	SettingServerPrivKeyTypeEd25519 = "ed25519"
+	SettingServerPrivKeyTypeDefault = SettingServerPrivKeyTypeRSA
+
+	SettingServerPrivKeyPath        = "server_priv_key_path"
+	SettingServerPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
+
+	SettingServerFallbackPrivKeyType        = "server_fallback_priv_key_type"
+	SettingServerFallbackPrivKeyTypeDefault = SettingServerPrivKeyTypeRSA
 
 	SettingServerFallbackPrivKeyPath        = "server_fallback_priv_key_path"
 	SettingServerFallbackPrivKeyPathDefault = ""
@@ -72,7 +80,9 @@ var (
 	ConfigDefaults = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
-		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
+		{Key: SettingServerPrivKeyType, Value: SettingServerPrivKeyTypeDefault},
+		{Key: SettingServerPrivKeyPath, Value: SettingServerPrivKeyPathDefault},
+		{Key: SettingServerFallbackPrivKeyType, Value: SettingServerFallbackPrivKeyTypeDefault},
 		{Key: SettingServerFallbackPrivKeyPath, Value: SettingServerFallbackPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
