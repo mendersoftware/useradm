@@ -2114,3 +2114,187 @@ func TestUserAdmApiGetTokens(t *testing.T) {
 		})
 	}
 }
+
+func TestUserAdmApiGetPlans(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		uaSkip         int
+		uaLimit        int
+		uaPlans        []model.Plan
+		uaError        error
+		uaCallGetPlans bool
+		page           string
+		perPage        string
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			uaSkip:  0,
+			uaLimit: 20,
+			uaPlans: []model.Plan{
+				{
+					Name: "foo",
+				},
+			},
+			uaError:        nil,
+			uaCallGetPlans: true,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				[]model.Plan{
+					{
+						Name: "foo",
+					},
+				},
+			),
+		},
+		"ok, no plans": {
+			uaSkip:         0,
+			uaLimit:        20,
+			uaPlans:        nil,
+			uaCallGetPlans: true,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				[]model.Plan{},
+			),
+		},
+		"ok, with pagination": {
+			page:    "10",
+			perPage: "10",
+			uaSkip:  90,
+			uaLimit: 10,
+			uaPlans: []model.Plan{
+				{
+					Name: "foo",
+				},
+			},
+			uaError:        nil,
+			uaCallGetPlans: true,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				[]model.Plan{
+					{
+						Name: "foo",
+					},
+				},
+			),
+		},
+		"error: wrong page": {
+			page: "foo",
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("Can't parse param page"),
+			),
+		},
+		"error: wrong per_page": {
+			perPage: "foo",
+
+			checker: mt.NewJSONResponse(
+				http.StatusBadRequest,
+				nil,
+				restError("Can't parse param per_page"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			defer uadm.AssertExpectations(t)
+
+			if tc.uaCallGetPlans {
+				uadm.On("GetPlans", mtesting.ContextMatcher(), tc.uaSkip, tc.uaLimit).
+					Return(tc.uaPlans, tc.uaError)
+			}
+
+			//make handler
+			api := makeMockApiHandler(t, uadm, nil)
+
+			//make request
+			req := makeReq("GET",
+				"http://1.2.3.4"+uriManagementPlans+"?page="+tc.page+"&per_page="+tc.perPage,
+				"",
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req.WithContext(ctx))
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
+
+func TestUserAdmApiGetPlanBinding(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		uaPlanBinding *model.PlanBindingDetails
+		uaError       error
+
+		checker mt.ResponseChecker
+	}{
+		"ok": {
+			uaPlanBinding: &model.PlanBindingDetails{
+				Plan: model.Plan{
+					Name: "foo",
+				},
+			},
+			uaError: nil,
+
+			checker: mt.NewJSONResponse(
+				http.StatusOK,
+				nil,
+				&model.PlanBindingDetails{
+					Plan: model.Plan{
+						Name: "foo",
+					},
+				},
+			),
+		},
+		"error": {
+			uaError: errors.New("foo"),
+
+			checker: mt.NewJSONResponse(
+				http.StatusInternalServerError,
+				nil,
+				restError("internal error"),
+			),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := identity.WithContext(context.Background(), &identity.Identity{Subject: "123"})
+
+			//make mock useradm
+			uadm := &museradm.App{}
+			defer uadm.AssertExpectations(t)
+
+			uadm.On("GetPlanBinding", mtesting.ContextMatcher()).
+				Return(tc.uaPlanBinding, tc.uaError)
+
+			//make handler
+			api := makeMockApiHandler(t, uadm, nil)
+
+			//make request
+			req := makeReq("GET",
+				"http://1.2.3.4"+uriManagementPlanBinding,
+				"",
+				nil)
+
+			//test
+			recorded := test.RunRequest(t, api, req.WithContext(ctx))
+			mt.CheckResponse(t, tc.checker, recorded)
+		})
+	}
+}
