@@ -64,10 +64,6 @@ const (
 	hdrIfMatch     = "If-Match"
 )
 
-const (
-	uriUIRoot = "/"
-)
-
 var (
 	ErrAuthHeader   = errors.New("invalid or missing auth header")
 	ErrUserNotFound = errors.New("user not found")
@@ -201,17 +197,6 @@ func (u *UserAdmApiHandlers) AuthLoginHandler(w rest.ResponseWriter, r *rest.Req
 
 	writer := w.(http.ResponseWriter)
 	writer.Header().Set("Content-Type", "application/jwt")
-	cookie := &http.Cookie{
-		Name:     "JWT",
-		Value:    raw,
-		Path:     uriUIRoot,
-		SameSite: http.SameSiteStrictMode,
-		Secure:   true,
-	}
-	if token.ExpiresAt != nil {
-		cookie.Expires = token.ExpiresAt.Time
-	}
-	http.SetCookie(writer, cookie)
 	_, _ = writer.Write([]byte(raw))
 }
 
