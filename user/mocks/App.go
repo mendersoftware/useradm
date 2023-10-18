@@ -139,6 +139,45 @@ func (_m *App) GetPersonalAccessTokens(ctx context.Context, userID string) ([]mo
 	return r0, r1
 }
 
+// GetPlanBinding provides a mock function with given fields: ctx
+func (_m *App) GetPlanBinding(ctx context.Context) (*model.PlanBindingDetails, error) {
+	ret := _m.Called(ctx)
+
+	var r0 *model.PlanBindingDetails
+	if rf, ok := ret.Get(0).(func(context.Context) *model.PlanBindingDetails); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.PlanBindingDetails)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPlans provides a mock function with given fields: ctx, skip, limit
+func (_m *App) GetPlans(ctx context.Context, skip int, limit int) []model.Plan {
+	ret := _m.Called(ctx, skip, limit)
+
+	var r0 []model.Plan
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) []model.Plan); ok {
+		r0 = rf(ctx, skip, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.Plan)
+		}
+	}
+
+	return r0
+}
+
 // GetUser provides a mock function with given fields: ctx, id
 func (_m *App) GetUser(ctx context.Context, id string) (*model.User, error) {
 	ret := _m.Called(ctx, id)

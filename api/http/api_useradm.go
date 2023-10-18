@@ -35,15 +35,17 @@ import (
 )
 
 const (
-	apiUrlManagementV1      = "/api/management/v1/useradm"
-	uriManagementAuthLogin  = apiUrlManagementV1 + "/auth/login"
-	uriManagementAuthLogout = apiUrlManagementV1 + "/auth/logout"
-	uriManagementUser       = apiUrlManagementV1 + "/users/#id"
-	uriManagementUsers      = apiUrlManagementV1 + "/users"
-	uriManagementSettings   = apiUrlManagementV1 + "/settings"
-	uriManagementSettingsMe = apiUrlManagementV1 + "/settings/me"
-	uriManagementTokens     = apiUrlManagementV1 + "/settings/tokens"
-	uriManagementToken      = apiUrlManagementV1 + "/settings/tokens/#id"
+	apiUrlManagementV1       = "/api/management/v1/useradm"
+	uriManagementAuthLogin   = apiUrlManagementV1 + "/auth/login"
+	uriManagementAuthLogout  = apiUrlManagementV1 + "/auth/logout"
+	uriManagementUser        = apiUrlManagementV1 + "/users/#id"
+	uriManagementUsers       = apiUrlManagementV1 + "/users"
+	uriManagementSettings    = apiUrlManagementV1 + "/settings"
+	uriManagementSettingsMe  = apiUrlManagementV1 + "/settings/me"
+	uriManagementTokens      = apiUrlManagementV1 + "/settings/tokens"
+	uriManagementToken       = apiUrlManagementV1 + "/settings/tokens/#id"
+	uriManagementPlans       = apiUrlManagementV1 + "/plans"
+	uriManagementPlanBinding = apiUrlManagementV1 + "/plan_binding"
 
 	apiUrlInternalV1  = "/api/internal/v1/useradm"
 	uriInternalAlive  = apiUrlInternalV1 + "/alive"
@@ -125,6 +127,9 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		rest.Post(uriManagementTokens, i.IssueTokenHandler),
 		rest.Get(uriManagementTokens, i.GetTokensHandler),
 		rest.Delete(uriManagementToken, i.DeleteTokenHandler),
+		// plans
+		rest.Get(uriManagementPlans, i.GetPlansHandler),
+		rest.Get(uriManagementPlanBinding, i.GetPlanBindingHandler),
 	}
 
 	app, err := rest.MakeRouter(
@@ -747,4 +752,36 @@ func (u *UserAdmApiHandlers) DeleteTokenHandler(w rest.ResponseWriter, r *rest.R
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// plans and plan binding
+
+func (u *UserAdmApiHandlers) GetPlansHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	l := log.FromContext(ctx)
+	page, perPage, err := rest_utils.ParsePagination(r)
+	if err != nil {
+		rest_utils.RestErrWithLog(w, r, l, err, http.StatusBadRequest)
+		return
+	}
+
+	plans := u.userAdm.GetPlans(ctx, int((page-1)*perPage), int(perPage))
+	if plans == nil {
+		plans = []model.Plan{}
+	}
+
+	_ = w.WriteJson(plans)
+}
+
+func (u *UserAdmApiHandlers) GetPlanBindingHandler(w rest.ResponseWriter, r *rest.Request) {
+	ctx := r.Context()
+	l := log.FromContext(ctx)
+
+	planBinding, err := u.userAdm.GetPlanBinding(ctx)
+	if err != nil {
+		rest_utils.RestErrWithLogInternal(w, r, l, err)
+		return
+	}
+
+	_ = w.WriteJson(planBinding)
 }

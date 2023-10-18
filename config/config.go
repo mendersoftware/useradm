@@ -63,6 +63,9 @@ const (
 
 	SettingTokenMaxExpirationSeconds        = "token_max_expiration_seconds"
 	SettingTokenMaxExpirationSecondsDefault = 31536000
+
+	SettingPlanDefinitions        = "plan_definitions_path"
+	SettingPlanDefinitionsDefault = "/etc/useradm/plans.yaml"
 )
 
 var (
@@ -83,5 +86,7 @@ var (
 			Value: SettingTokenLastUsedUpdateFreqMinutesDefault},
 		{Key: SettingTokenMaxExpirationSeconds,
 			Value: SettingTokenMaxExpirationSecondsDefault},
+		{Key: SettingPlanDefinitions,
+			Value: SettingPlanDefinitionsDefault},
 	}
 )

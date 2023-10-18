@@ -1798,3 +1798,131 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 	}
 
 }
+
+func TestUserAdmGetPlans(t *testing.T) {
+	t.Parallel()
+
+	planList := []model.Plan{
+		{
+			Name: "plan1",
+		},
+		{
+			Name: "plan2",
+		},
+		{
+			Name: "plan3",
+		},
+		{
+			Name: "plan4",
+		},
+		{
+			Name: "plan5",
+		},
+		{
+			Name: "plan6",
+		},
+		{
+			Name: "plan7",
+		},
+		{
+			Name: "plan8",
+		},
+		{
+			Name: "plan9",
+		},
+		{
+			Name: "plan10",
+		},
+	}
+
+	testCases := map[string]struct {
+		skip  int
+		limit int
+		plans []model.Plan
+	}{
+		"ok, empty": {
+			skip:  0,
+			limit: 0,
+			plans: []model.Plan{},
+		},
+		"ok": {
+			skip:  0,
+			limit: 10,
+			plans: planList,
+		},
+		"ok 1": {
+			skip:  3,
+			limit: 4,
+			plans: planList[3:7],
+		},
+		"ok 2": {
+			skip:  7,
+			limit: 10,
+			plans: planList[7:],
+		},
+		"ok 3": {
+			skip:  20,
+			limit: 10,
+			plans: []model.Plan{},
+		},
+	}
+
+	for name := range testCases {
+		tc := testCases[name]
+		t.Run(name, func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			useradm := NewUserAdm(nil, nil, Config{})
+
+			model.PlanList = planList
+			plans := useradm.GetPlans(ctx, tc.skip, tc.limit)
+
+			assert.Equal(t, plans, tc.plans)
+		})
+	}
+}
+
+func TestUserAdmGetPlanBinding(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		plans       []model.Plan
+		planBinding *model.PlanBindingDetails
+	}{
+		"ok": {
+			plans: []model.Plan{
+				{
+					Name: "plan1",
+				},
+			},
+			planBinding: &model.PlanBindingDetails{
+				Plan: model.Plan{
+					Name: "plan1",
+				},
+			},
+		},
+		"ok, no plans": {
+			planBinding: &model.PlanBindingDetails{},
+		},
+	}
+
+	for name := range testCases {
+		tc := testCases[name]
+		t.Run(name, func(t *testing.T) {
+
+			t.Logf("test case: %s", name)
+
+			ctx := context.Background()
+
+			useradm := NewUserAdm(nil, nil, Config{})
+			model.PlanList = tc.plans
+
+			pB, err := useradm.GetPlanBinding(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, pB, tc.planBinding)
+		})
+	}
+}

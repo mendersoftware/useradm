@@ -18,6 +18,7 @@ USER 65534
 WORKDIR /etc/useradm/rsa
 COPY --from=builder --chown=nobody /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --chown=nobody ./config.yaml /etc/useradm/
+COPY --chown=nobody ./config/plans.yaml /etc/useradm/
 COPY --from=builder --chown=nobody /go/src/github.com/mendersoftware/useradm/useradm /usr/bin/
 
 ENTRYPOINT ["/usr/bin/useradm", "--config", "/etc/useradm/config.yaml"]
