@@ -26,7 +26,6 @@ import (
 	"github.com/mendersoftware/useradm/client/tenant"
 	. "github.com/mendersoftware/useradm/config"
 	"github.com/mendersoftware/useradm/jwt"
-	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/store/mongo"
 	useradm "github.com/mendersoftware/useradm/user"
 )
@@ -47,37 +46,18 @@ func SetupAPI(stacktype string, authz authz.Authorizer, jwth jwt.Handler,
 	return api, nil
 }
 
-func getJWTHandler(privateKeyType, privateKeyPath string) (jwt.Handler, error) {
-	if privateKeyType == SettingServerPrivKeyTypeRSA {
-		privKey, err := keys.LoadRSAPrivate(privateKeyPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read rsa private key")
-		}
-		return jwt.NewJWTHandlerRS256(privKey), nil
-	} else if privateKeyType == SettingServerPrivKeyTypeEd25519 {
-		privKey, err := keys.LoadEd25519Private(privateKeyPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read ed25519 private key")
-		}
-		return jwt.NewJWTHandlerEd25519(privKey), nil
-	}
-	return nil, errors.Errorf("unsupported server private key type %v", privateKeyType)
-}
-
 func RunServer(c config.Reader) error {
 
 	l := log.New(log.Ctx{})
 
 	authz := &SimpleAuthz{}
-	jwtHandler, err := getJWTHandler(
-		c.GetString(SettingServerPrivKeyType),
+	jwtHandler, err := jwt.NewJWTHandler(
 		c.GetString(SettingServerPrivKeyPath),
 	)
 	var jwtFallbackHandler jwt.Handler
 	fallback := c.GetString(SettingServerFallbackPrivKeyPath)
 	if err == nil && fallback != "" {
-		jwtFallbackHandler, err = getJWTHandler(
-			c.GetString(SettingServerFallbackPrivKeyType),
+		jwtFallbackHandler, err = jwt.NewJWTHandler(
 			fallback,
 		)
 	}

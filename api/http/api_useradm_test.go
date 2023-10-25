@@ -16,11 +16,14 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -41,7 +44,6 @@ import (
 	"github.com/mendersoftware/useradm/authz"
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
-	"github.com/mendersoftware/useradm/keys"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/store"
 	mstore "github.com/mendersoftware/useradm/store/mocks"
@@ -856,11 +858,16 @@ func TestUpdateUser(t *testing.T) {
 
 func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http.Handler {
 	// JWT handler
-	privkey, err := keys.LoadRSAPrivate("../../crypto/private.pem")
-	if !assert.NoError(t, err) {
+	data, err := os.ReadFile("../../crypto/private.pem")
+	if err != nil {
 		t.Fatalf("faied to load private key: %v", err)
 	}
-	jwth := jwt.NewJWTHandlerRS256(privkey)
+
+	block, _ := pem.Decode(data)
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	assert.NoError(t, err)
+
+	jwth := jwt.NewJWTHandlerRS256(key)
 
 	// API handler
 	handlers := NewUserAdmApiHandlers(uadm, db, jwth, Config{})
