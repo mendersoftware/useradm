@@ -76,7 +76,7 @@ var (
 type UserAdmApiHandlers struct {
 	userAdm useradm.App
 	db      store.DataStore
-	jwth    *jwt.JWTHandlerRS256
+	jwth    jwt.Handler
 	config  Config
 }
 
@@ -89,7 +89,7 @@ type Config struct {
 func NewUserAdmApiHandlers(
 	userAdm useradm.App,
 	db store.DataStore,
-	jwth *jwt.JWTHandlerRS256,
+	jwth jwt.Handler,
 	config Config,
 ) ApiHandler {
 	return &UserAdmApiHandlers{

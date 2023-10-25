@@ -18,8 +18,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -304,7 +305,7 @@ func TestAuthzMiddleware(t *testing.T) {
 			api := rest.NewApi()
 			api.Use(
 				&requestlog.RequestLogMiddleware{
-					BaseLogger: &logrus.Logger{Out: ioutil.Discard},
+					BaseLogger: &logrus.Logger{Out: io.Discard},
 				},
 				&requestid.RequestIdMiddleware{},
 			)
@@ -330,7 +331,7 @@ func TestAuthzMiddleware(t *testing.T) {
 
 			//finish setting up the middleware
 			privkey := loadPrivKey("../crypto/private.pem", t)
-			jwth := jwt.NewJWTHandlerRS256(privkey, nil)
+			jwth := jwt.NewJWTHandlerRS256(privkey)
 			mw := AuthzMiddleware{
 				Authz:      a,
 				ResFunc:    resfunc,
@@ -365,7 +366,7 @@ func restError(status string) map[string]interface{} {
 }
 
 func loadPrivKey(path string, t *testing.T) *rsa.PrivateKey {
-	pem_data, err := ioutil.ReadFile(path)
+	pem_data, err := os.ReadFile(path)
 	if err != nil {
 		t.FailNow()
 	}

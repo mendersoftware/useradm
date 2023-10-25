@@ -25,8 +25,8 @@ const (
 	SettingMiddleware        = "middleware"
 	SettingMiddlewareDefault = "prod"
 
-	SettingPrivKeyPath        = "server_priv_key_path"
-	SettingPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
+	SettingServerPrivKeyPath        = "server_priv_key_path"
+	SettingServerPrivKeyPathDefault = "/etc/useradm/rsa/private.pem"
 
 	SettingServerFallbackPrivKeyPath        = "server_fallback_priv_key_path"
 	SettingServerFallbackPrivKeyPathDefault = ""
@@ -72,7 +72,7 @@ var (
 	ConfigDefaults = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
 		{Key: SettingMiddleware, Value: SettingMiddlewareDefault},
-		{Key: SettingPrivKeyPath, Value: SettingPrivKeyPathDefault},
+		{Key: SettingServerPrivKeyPath, Value: SettingServerPrivKeyPathDefault},
 		{Key: SettingServerFallbackPrivKeyPath, Value: SettingServerFallbackPrivKeyPathDefault},
 		{Key: SettingJWTIssuer, Value: SettingJWTIssuerDefault},
 		{Key: SettingJWTExpirationTimeout, Value: SettingJWTExpirationTimeoutDefault},
