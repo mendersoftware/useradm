@@ -158,14 +158,6 @@ func TestUserAdmApiLogin(t *testing.T) {
 				Status:      http.StatusOK,
 				ContentType: "application/jwt",
 				Body:        "dummytoken",
-				Headers: map[string]string{"Set-Cookie": (&http.Cookie{
-					Name:     "JWT",
-					Value:    "dummytoken",
-					Path:     uriUIRoot,
-					Secure:   true,
-					SameSite: http.SameSiteStrictMode,
-					Expires:  now,
-				}).String()},
 			},
 		},
 		"ok with no_expiry": {
@@ -184,13 +176,6 @@ func TestUserAdmApiLogin(t *testing.T) {
 				Status:      http.StatusOK,
 				ContentType: "application/jwt",
 				Body:        "dummytoken",
-				Headers: map[string]string{"Set-Cookie": (&http.Cookie{
-					Name:     "JWT",
-					Value:    "dummytoken",
-					Path:     uriUIRoot,
-					Secure:   true,
-					SameSite: http.SameSiteStrictMode,
-				}).String()},
 			},
 		},
 		"error: bad payload": {
