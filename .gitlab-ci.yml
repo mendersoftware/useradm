@@ -60,3 +60,5 @@ publish:image:mender:
   rules:
     - when: never
 
+test:validate-open-api:
+  allow_failure: false
