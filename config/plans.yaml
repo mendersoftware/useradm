@@ -6,5 +6,6 @@ plans:
       audit_logs: false
       dynamic_groups: false
       terminal: false
+      file_tranfer: false
       configuration: true
       monitoring: false
