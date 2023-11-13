@@ -62,3 +62,7 @@ listen: :8080
 # Maximum number of peresonal access tokens per user
 # Defaults to: 10
 # limit_tokens_per_user: 10
+
+# Path to the file containing plan definitions
+# Defaults to: "/etc/useradm-enterprise/plans.yaml"
+# plan_definitions_path: "/etc/useradm-enterprise/plans.yaml"
