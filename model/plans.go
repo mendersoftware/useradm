@@ -53,6 +53,9 @@ type Features struct {
 
 	// monitoring
 	Monitoring bool `json:"monitoring" bson:"monitoring"`
+
+	// reporting
+	Reporting bool `json:"reporting" bson:"reporting"`
 }
 
 type PlanLimits struct {

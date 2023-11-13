@@ -9,3 +9,4 @@ plans:
       file_tranfer: false
       configuration: true
       monitoring: false
+      reporting: false
