@@ -811,6 +811,8 @@ definitions:
         type: boolean
       monitoring:
         type: boolean
+      reporting:
+        type: boolean
     example:
       rbac: true
       audit_logs: false
@@ -819,6 +821,7 @@ definitions:
       file_transfer: true
       configuration: true
       monitoring: true
+      reporting: true
 
   PlanLimits:
     description: Plan limits descriptor.
