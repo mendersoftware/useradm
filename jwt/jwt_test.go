@@ -46,12 +46,18 @@ func TestNewJWTHandler(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			_, err := NewJWTHandler(tc.privateKeyPath)
+			_, err := NewJWTHandler(tc.privateKeyPath, "pem")
 			if tc.err != nil {
 				assert.EqualError(t, err, tc.err.Error())
 			} else {
 				assert.NoError(t, err)
 			}
 		})
+	}
+}
+
+func TestGetKeyId(t *testing.T) {
+	for id, token := range tokensByKid {
+		assert.Equal(t, id, GetKeyId(token))
 	}
 }

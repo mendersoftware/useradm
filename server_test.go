@@ -14,6 +14,7 @@
 package main
 
 import (
+	"github.com/mendersoftware/go-lib-micro/log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,4 +29,21 @@ func TestSetupApi(t *testing.T) {
 	api, err = SetupAPI(EnvDev, nil, nil, nil)
 	assert.NotNil(t, api)
 	assert.Nil(t, err)
+}
+
+func TestAddPrivateKeys(t *testing.T) {
+	l := log.New(log.Ctx{})
+	handlers, err := addPrivateKeys(l, "user/testdata", "private\\.id\\.([0-9]*)\\.pem")
+	assert.NoError(t, err)
+	assert.Equal(t, 10, len(handlers)) // there are 10 keys matching the pattern
+	assert.Contains(t, handlers, 1024)
+	assert.Contains(t, handlers, 13102)
+	assert.Contains(t, handlers, 14211)
+	assert.Contains(t, handlers, 20433)
+	assert.Contains(t, handlers, 2048)
+	assert.Contains(t, handlers, 21172)
+	assert.Contains(t, handlers, 22899)
+	assert.Contains(t, handlers, 5539)
+	assert.Contains(t, handlers, 826)
+	assert.Contains(t, handlers, 9478)
 }

@@ -79,7 +79,7 @@ func SetupMiddleware(
 	api *rest.Api,
 	mwtype string,
 	authorizer authz.Authorizer,
-	jwth jwt.Handler,
+	jwth map[int]jwt.Handler,
 	jwthFallback jwt.Handler,
 ) error {
 
@@ -101,7 +101,7 @@ func SetupMiddleware(
 	authzmw := &authz.AuthzMiddleware{
 		Authz:              authorizer,
 		ResFunc:            api_http.ExtractResourceAction,
-		JWTHandler:         jwth,
+		JWTHandlers:        jwth,
 		JWTFallbackHandler: jwthFallback,
 	}
 

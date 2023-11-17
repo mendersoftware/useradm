@@ -35,7 +35,7 @@ const (
 type AuthzMiddleware struct {
 	Authz              Authorizer
 	ResFunc            ResourceActionExtractor
-	JWTHandler         jwt.Handler
+	JWTHandlers        map[int]jwt.Handler
 	JWTFallbackHandler jwt.Handler
 }
 
@@ -60,8 +60,18 @@ func (mw *AuthzMiddleware) MiddlewareFunc(h rest.HandlerFunc) rest.HandlerFunc {
 			return
 		}
 
+		keyId := jwt.GetKeyId(tokstr)
+
+		if _, ok := mw.JWTHandlers[keyId]; !ok {
+			// we have not found the corresponding handler for the key by id
+			// on purpose we do not return common.ErrKeyIdNotFound -- to not allow
+			// the enumeration attack
+			rest_utils.RestErrWithLog(w, r, l, ErrAuthzTokenInvalid, http.StatusUnauthorized)
+			return
+		}
+
 		// parse token, insert into env
-		token, err := mw.JWTHandler.FromJWT(tokstr)
+		token, err := mw.JWTHandlers[keyId].FromJWT(tokstr)
 		if err != nil && mw.JWTFallbackHandler != nil {
 			token, err = mw.JWTFallbackHandler.FromJWT(tokstr)
 		}
