@@ -120,7 +120,7 @@ func TestUserAdmSignToken(t *testing.T) {
 				mock.AnythingOfType("*jwt.Token"),
 			).Return(tc.signed, tc.signErr)
 
-			useradm := NewUserAdm(&mockJWTHandler, nil, tc.config)
+			useradm := NewUserAdm(map[int]jwt.Handler{0: &mockJWTHandler}, nil, tc.config)
 			signed, err := useradm.SignToken(ctx, &jwt.Token{})
 
 			if tc.signErr != nil {
@@ -1779,7 +1779,7 @@ func TestUserAdmIssuePersonalAccessToken(t *testing.T) {
 				mock.AnythingOfType("*jwt.Token"),
 			).Return("signed", nil)
 
-			useradm := NewUserAdm(&mockJWTHandler, db, tc.config)
+			useradm := NewUserAdm(map[int]jwt.Handler{0: &mockJWTHandler}, db, tc.config)
 
 			id := &identity.Identity{
 				Subject: "foo",

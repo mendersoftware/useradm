@@ -72,7 +72,7 @@ var (
 type UserAdmApiHandlers struct {
 	userAdm useradm.App
 	db      store.DataStore
-	jwth    jwt.Handler
+	jwth    map[int]jwt.Handler
 	config  Config
 }
 
@@ -85,7 +85,7 @@ type Config struct {
 func NewUserAdmApiHandlers(
 	userAdm useradm.App,
 	db store.DataStore,
-	jwth jwt.Handler,
+	jwth map[int]jwt.Handler,
 	config Config,
 ) ApiHandler {
 	return &UserAdmApiHandlers{
@@ -205,7 +205,13 @@ func (u *UserAdmApiHandlers) AuthLogoutHandler(w rest.ResponseWriter, r *rest.Re
 	l := log.FromContext(ctx)
 
 	if tokenStr, err := authz.ExtractToken(r.Request); err == nil {
-		token, err := u.jwth.FromJWT(tokenStr)
+		keyId := jwt.GetKeyId(tokenStr)
+		if _, ok := u.jwth[keyId]; !ok {
+			rest_utils.RestErrWithLogInternal(w, r, l, errors.New("internal error"))
+			return
+		}
+
+		token, err := u.jwth[keyId].FromJWT(tokenStr)
 		if err != nil {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 			return
@@ -374,7 +380,13 @@ func (u *UserAdmApiHandlers) UpdateUserHandler(w rest.ResponseWriter, r *rest.Re
 
 	// extract the token used to update the user
 	if tokenStr, err := authz.ExtractToken(r.Request); err == nil {
-		token, err := u.jwth.FromJWT(tokenStr)
+		keyId := jwt.GetKeyId(tokenStr)
+		if _, ok := u.jwth[keyId]; !ok {
+			rest_utils.RestErrWithLogInternal(w, r, l, errors.New("internal error"))
+			return
+		}
+
+		token, err := u.jwth[keyId].FromJWT(tokenStr)
 		if err != nil {
 			rest_utils.RestErrWithLogInternal(w, r, l, err)
 			return

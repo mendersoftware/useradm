@@ -29,7 +29,7 @@ import (
 
 func TestNewJWTHandlerEd25519(t *testing.T) {
 	privKey := loadEd25519PrivKey("./testdata/ed25519.pem", t)
-	jwtHandler := NewJWTHandlerEd25519(privKey)
+	jwtHandler := NewJWTHandlerEd25519(privKey, 0)
 
 	assert.NotNil(t, jwtHandler)
 }
@@ -67,7 +67,7 @@ func TestJWTHandlerEd25519GenerateToken(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerEd25519(tc.privKey)
+		jwtHandler := NewJWTHandlerEd25519(tc.privKey, 0)
 
 		raw, err := jwtHandler.ToJWT(&Token{
 			Claims: tc.claims,
@@ -165,6 +165,34 @@ func TestJWTHandlerEd25519FromJWT(t *testing.T) {
 				},
 			},
 		},
+		"ok (with key id 0)": {
+			privKey: key,
+
+			inToken: "eyJhbGciOiJFZERTQSIsImtpZCI6MCwidHlwIjoiSldUIn0." +
+				"eyJqdGkiOiI2MDg5MGRkOC0yODg3LTQ0NTYtOGVmYy1iM2YzNzAzZGJjYzQiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjE3MDExMDM4ODUsImlhdCI6MTcwMDQ5OTA4NSwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAwNDk5MDg1fQ." +
+				"0n7zsiwy-mz44oOvS0mpLsRZMTeTNvZwNnwH8pdQNwj0FR8a1umoTGRGzMegJZyB2VSPaSOD8uu8AAoD5IyoAQ",
+
+			outToken: Token{
+				KeyId: 0,
+				Claims: Claims{
+					ID:      oid.FromString("60890dd8-2887-4456-8efc-b3f3703dbcc4"),
+					Subject: oid.FromString("78d27eb1-6cab-44dc-879b-ce7ee61385fe"),
+					ExpiresAt: &Time{
+						Time: time.Unix(1701103885,0),
+					},
+					IssuedAt: Time{
+						Time: time.Unix(1700499085,0),
+					},
+					NotBefore: Time{
+						Time: time.Unix(1700499085,0),
+					},
+					Issuer: "mender.useradm",
+					Scope:  "mender.*",
+					Tenant: "5abcb6de7a673a0001287c71",
+					User: true,
+				},
+			},
+		},
 		"error - bad claims": {
 			privKey: key,
 
@@ -208,7 +236,7 @@ func TestJWTHandlerEd25519FromJWT(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerEd25519(tc.privKey)
+		jwtHandler := NewJWTHandlerEd25519(tc.privKey, 0)
 
 		token, err := jwtHandler.FromJWT(tc.inToken)
 		if tc.outErr == nil {

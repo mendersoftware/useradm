@@ -29,7 +29,7 @@ import (
 
 func TestNewJWTHandlerRS256(t *testing.T) {
 	privKey := loadRSAPrivKey("./testdata/rsa.pem", t)
-	jwtHandler := NewJWTHandlerRS256(privKey)
+	jwtHandler := NewJWTHandlerRS256(privKey, 0)
 
 	assert.NotNil(t, jwtHandler)
 }
@@ -67,7 +67,7 @@ func TestJWTHandlerRS256GenerateToken(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerRS256(tc.privKey)
+		jwtHandler := NewJWTHandlerRS256(tc.privKey, 0)
 
 		raw, err := jwtHandler.ToJWT(&Token{
 			Claims: tc.claims,
@@ -223,7 +223,7 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Logf("test case: %s", name)
-		jwtHandler := NewJWTHandlerRS256(tc.privKey)
+		jwtHandler := NewJWTHandlerRS256(tc.privKey, 0)
 
 		token, err := jwtHandler.FromJWT(tc.inToken)
 		if tc.outErr == nil {

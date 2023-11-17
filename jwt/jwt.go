@@ -21,6 +21,10 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+
+	jwtv4 "github.com/golang-jwt/jwt/v4"
+
+	"github.com/mendersoftware/useradm/common"
 )
 
 var (
@@ -45,7 +49,7 @@ type Handler interface {
 	FromJWT(string) (*Token, error)
 }
 
-func NewJWTHandler(privateKeyPath string) (Handler, error) {
+func NewJWTHandler(privateKeyPath string, privateKeyFilenamePattern string) (Handler, error) {
 	priv, err := os.ReadFile(privateKeyPath)
 	block, _ := pem.Decode(priv)
 	if block == nil {
@@ -57,7 +61,11 @@ func NewJWTHandler(privateKeyPath string) (Handler, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read rsa private key")
 		}
-		return NewJWTHandlerRS256(privKey), nil
+		return NewJWTHandlerRS256(
+				privKey,
+				common.KeyIdFromPath(privateKeyPath, privateKeyFilenamePattern),
+			),
+			nil
 	case pemHeaderPKCS8:
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
@@ -65,10 +73,42 @@ func NewJWTHandler(privateKeyPath string) (Handler, error) {
 		}
 		switch v := key.(type) {
 		case *rsa.PrivateKey:
-			return NewJWTHandlerRS256(v), nil
+			return NewJWTHandlerRS256(
+					v,
+					common.KeyIdFromPath(privateKeyPath, privateKeyFilenamePattern),
+				),
+				nil
 		case ed25519.PrivateKey:
-			return NewJWTHandlerEd25519(&v), nil
+			return NewJWTHandlerEd25519(
+					&v,
+					common.KeyIdFromPath(privateKeyPath, privateKeyFilenamePattern),
+				),
+				nil
 		}
 	}
 	return nil, errors.Errorf("unsupported server private key type")
+}
+
+func GetKeyId(tokenString string) int {
+	token, _, err := jwtv4.NewParser().ParseUnverified(tokenString, &Claims{})
+
+	if err != nil {
+		return common.KeyIdZero
+	}
+
+	if _, ok := token.Header["kid"]; ok {
+		if _, ok := token.Header["kid"]; ok {
+			if _, isFloat := token.Header["kid"].(float64); isFloat {
+				return int(token.Header["kid"].(float64))
+			}
+			if _, isInt := token.Header["kid"].(int64); isInt {
+				return int(token.Header["kid"].(int64))
+			}
+			if _, isInt := token.Header["kid"].(int); isInt {
+				return token.Header["kid"].(int)
+			}
+		}
+	}
+
+	return common.KeyIdZero
 }
