@@ -55,3 +55,9 @@ func TestNewJWTHandler(t *testing.T) {
 		})
 	}
 }
+
+func TestGetKeyId(t *testing.T) {
+	for id, token := range tokensByKid {
+		assert.Equal(t, id, GetKeyId(token))
+	}
+}

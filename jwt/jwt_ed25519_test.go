@@ -168,28 +168,26 @@ func TestJWTHandlerEd25519FromJWT(t *testing.T) {
 		"ok (with key id 0)": {
 			privKey: key,
 
-			inToken: "eyJhbGciOiJFZERTQSIsImtpZCI6MCwidHlwIjoiSldUIn0." +
-				"eyJqdGkiOiI2MDg5MGRkOC0yODg3LTQ0NTYtOGVmYy1iM2YzNzAzZGJjYzQiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjE3MDExMDM4ODUsImlhdCI6MTcwMDQ5OTA4NSwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAwNDk5MDg1fQ." +
-				"0n7zsiwy-mz44oOvS0mpLsRZMTeTNvZwNnwH8pdQNwj0FR8a1umoTGRGzMegJZyB2VSPaSOD8uu8AAoD5IyoAQ",
+			inToken: "eyJhbGciOiJFZERTQSIsImtpZCI6MCwidHlwIjoiSldUIn0.eyJqdGkiOiIyNjRjMDljYS01N2ViLTQ2ZDctOTc3Yy03NjRiYzc1ZDYwOTIiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjE3MDE4MTI4MjgsImlhdCI6MTcwMTIwODAyOCwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAxMjA4MDI4fQ.oz4f56jA1I4eGv_p2Mcmoof-EJ-I1A0qvTNU1E93HaIUsp6F5OUiZAwRM-SbauZV284A1fUjlmLPjTxSvhgyBg",
 
 			outToken: Token{
 				KeyId: 0,
 				Claims: Claims{
-					ID:      oid.FromString("60890dd8-2887-4456-8efc-b3f3703dbcc4"),
+					ID:      oid.FromString("264c09ca-57eb-46d7-977c-764bc75d6092"),
 					Subject: oid.FromString("78d27eb1-6cab-44dc-879b-ce7ee61385fe"),
 					ExpiresAt: &Time{
-						Time: time.Unix(1701103885,0),
+						Time: time.Unix(1701812828, 0),
 					},
 					IssuedAt: Time{
-						Time: time.Unix(1700499085,0),
+						Time: time.Unix(1701208028, 0),
 					},
 					NotBefore: Time{
-						Time: time.Unix(1700499085,0),
+						Time: time.Unix(1701208028, 0),
 					},
 					Issuer: "mender.useradm",
 					Scope:  "mender.*",
 					Tenant: "5abcb6de7a673a0001287c71",
-					User: true,
+					User:   true,
 				},
 			},
 		},

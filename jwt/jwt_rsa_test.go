@@ -172,6 +172,31 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 				},
 			},
 		},
+		"ok (with kid 0)": {
+			privKey: key,
+
+			inToken: "eyJhbGciOiJSUzI1NiIsImtpZCI6MCwidHlwIjoiSldUIn0.eyJqdGkiOiJiMTAwZDVkYi0zYzFjLTQyOGUtOGI1Ni1lYzExOGVkZGE3YzYiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjE3MDE3NTcwMTUsImlhdCI6MTcwMTE1MjIxNSwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAxMTUyMjE1fQ.hxamI4u9txdFwLN4ohzw_hOMqoJRqj3LdbRTUIowRp4vHBmsNzaT1MOB792NuIThJAo1LHEtUpRKteVmQpuhtyGSpVDYzV_dMSlClQOIP7n_lKBsqc6XvZyB-WtetJLYVEVy6bg5WU3agLOvhqyex9o7bdBABWNjpX9XdKmRyb6nVSbdUZSiwsA9N0A1Y6Ns8GXDj3i2Io2o24lHD9DTul696PlaRqWW7MoA1EjSoJXZ48RMWLkBRC6l6Ks4AJTlHTC_RhrKLLpy4hDq4IKcxtwq027WwJF6BrTM3DUwu4OKL9oqE9c2tPoPTRO0cwK0AApx6Bt_6t8IJWvosTxn1w",
+
+			outToken: Token{
+				Claims: Claims{
+					ID:      oid.FromString("b100d5db-3c1c-428e-8b56-ec118edda7c6"),
+					Subject: oid.FromString("78d27eb1-6cab-44dc-879b-ce7ee61385fe"),
+					ExpiresAt: &Time{
+						Time: time.Unix(1701757015, 0),
+					},
+					IssuedAt: Time{
+						Time: time.Unix(1701152215, 0),
+					},
+					NotBefore: Time{
+						Time: time.Unix(1701152215, 0),
+					},
+					Issuer: "mender.useradm",
+					Scope:  "mender.*",
+					Tenant: "5abcb6de7a673a0001287c71",
+					User:   true,
+				},
+			},
+		},
 		"error - bad claims": {
 			privKey: key,
 

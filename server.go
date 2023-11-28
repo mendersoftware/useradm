@@ -59,12 +59,17 @@ func RunServer(c config.Reader) error {
 
 	// let's now go through all the existing keys and load them
 	jwtHandlers, err := addPrivateKeys(
+		l,
 		filepath.Dir(c.GetString(SettingServerPrivKeyPath)),
 		c.GetString(SettingServerPrivKeyFileNamePattern),
 	)
 	if err != nil {
 		return err
 	}
+
+	// the handler for keyId equal 0 is the one associated with the
+	// SettingServerPrivKeyPathDefault key. it is the one serving all the previously
+	// issued tokens (before the kid introduction in the JWTs)
 	defaultHandler, err := jwt.NewJWTHandler(
 		SettingServerPrivKeyPathDefault,
 		c.GetString(SettingServerPrivKeyFileNamePattern),
@@ -83,6 +88,40 @@ func RunServer(c config.Reader) error {
 		// checked against it.
 		jwtHandlers[common.KeyIdZero] = defaultHandler
 	}
+
+	// if the default path is different from the currently set key path
+	// we still have not loaded this key. this happens when the key rotation took place,
+	// someone exported USERADM_SERVER_PRIV_KEY_PATH=path-to-a-new-key and this key
+	// now will serve all. if we do not have this, the Login will fall back to the keyId
+	// from the filename and either use the KeyIdZero key or fail to find the key to issue a
+	// token if the one set in USERADM_SERVER_PRIV_KEY_PATH does have id in the filename
+	// (but does not exist because we have not loaded it)
+	// this also means that careless setting of USERADM_SERVER_PRIV_KEY_PATH to a key that does
+	// not match the SettingServerPrivKeyFileNamePattern will result in
+	// KeyIdZero handler overwrite and lack of back support for tokens signed by it.
+	if c.GetString(SettingServerPrivKeyPath) != SettingServerPrivKeyPathDefault {
+		defaultHandler, err = jwt.NewJWTHandler(
+			c.GetString(SettingServerPrivKeyPath),
+			c.GetString(SettingServerPrivKeyFileNamePattern),
+		)
+		if err == nil && defaultHandler != nil {
+			keyId := common.KeyIdFromPath(
+				c.GetString(SettingServerPrivKeyPath),
+				c.GetString(SettingServerPrivKeyFileNamePattern),
+			)
+			if keyId == common.KeyIdZero {
+				l.Warnf(
+					"currently set private key %s either does not match %s pattern"+
+						" or has explicitly set id=0. we are overridding the default"+
+						" private key handler with id=0",
+					c.GetString(SettingServerPrivKeyPath),
+					c.GetString(SettingServerPrivKeyFileNamePattern),
+				)
+			}
+			jwtHandlers[keyId] = defaultHandler
+		}
+	}
+
 	var jwtFallbackHandler jwt.Handler
 	fallback := c.GetString(SettingServerFallbackPrivKeyPath)
 	if err == nil && fallback != "" {
@@ -149,6 +188,7 @@ func RunServer(c config.Reader) error {
 }
 
 func addPrivateKeys(
+	l *log.Logger,
 	privateKeysDirectory string,
 	privateKeyPattern string,
 ) (handlers map[int]jwt.Handler, err error) {
@@ -171,6 +211,7 @@ func addPrivateKeys(
 				continue
 			}
 			keyId := common.KeyIdFromPath(keyPath, privateKeyPattern)
+			l.Infof("loaded private key id=%d from %s", keyId, keyPath)
 			handlers[keyId] = handler
 		}
 	}
