@@ -26,6 +26,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mendersoftware/useradm/client/tenant"
+	"github.com/mendersoftware/useradm/common"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
 	"github.com/mendersoftware/useradm/scope"
@@ -103,6 +104,11 @@ type Config struct {
 	// how often we should update personal access token
 	// with last used timestamp
 	TokenLastUsedUpdateFreqMinutes int
+	// path to the private key, used to generate kid header in JWT and to get all the keys
+	PrivateKeyPath string
+	// PrivateKeyFileNamePattern holds the regular expression used
+	// to get the key id from a filename
+	PrivateKeyFileNamePattern string
 }
 
 type ApiClientGetter func() apiclient.HttpRunner
@@ -113,7 +119,7 @@ func simpleApiClientGetter() apiclient.HttpRunner {
 
 type UserAdm struct {
 	// JWT serialized/deserializer
-	jwtHandler   jwt.Handler
+	jwtHandlers  map[int]jwt.Handler
 	db           store.DataStore
 	config       Config
 	verifyTenant bool
@@ -121,10 +127,10 @@ type UserAdm struct {
 	clientGetter ApiClientGetter
 }
 
-func NewUserAdm(jwtHandler jwt.Handler, db store.DataStore, config Config) *UserAdm {
+func NewUserAdm(jwtHandlers map[int]jwt.Handler, db store.DataStore, config Config) *UserAdm {
 
 	return &UserAdm{
-		jwtHandler:   jwtHandler,
+		jwtHandlers:  jwtHandlers,
 		db:           db,
 		config:       config,
 		clientGetter: simpleApiClientGetter,
@@ -194,7 +200,13 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string,
 	}
 
 	//generate and save token
-	t, err := u.generateToken(user.ID, scope.All, ident.Tenant, options.NoExpiry)
+	t, err := u.generateToken(
+		user.ID,
+		scope.All,
+		ident.Tenant,
+		options.NoExpiry,
+		common.KeyIdFromPath(u.config.PrivateKeyPath, u.config.PrivateKeyFileNamePattern),
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -218,20 +230,22 @@ func (u *UserAdm) Login(ctx context.Context, email model.Email, pass string,
 }
 
 func (u *UserAdm) generateToken(subject, scope, tenant string,
-	noExpiry bool) (*jwt.Token, error) {
+	noExpiry bool, keyId int) (*jwt.Token, error) {
 	id := oid.NewUUIDv4()
 	subjectID := oid.FromString(subject)
 	now := jwt.Time{Time: time.Now()}
-	ret := &jwt.Token{Claims: jwt.Claims{
-		ID:        id,
-		Subject:   subjectID,
-		Issuer:    u.config.Issuer,
-		IssuedAt:  now,
-		NotBefore: now,
-		Tenant:    tenant,
-		Scope:     scope,
-		User:      true,
-	}}
+	ret := &jwt.Token{
+		KeyId: keyId,
+		Claims: jwt.Claims{
+			ID:        id,
+			Subject:   subjectID,
+			Issuer:    u.config.Issuer,
+			IssuedAt:  now,
+			NotBefore: now,
+			Tenant:    tenant,
+			Scope:     scope,
+			User:      true,
+		}}
 	if !noExpiry {
 		ret.Claims.ExpiresAt = &jwt.Time{
 			Time: now.Add(time.Second * time.Duration(u.config.ExpirationTimeSeconds)),
@@ -241,7 +255,10 @@ func (u *UserAdm) generateToken(subject, scope, tenant string,
 }
 
 func (u *UserAdm) SignToken(ctx context.Context, t *jwt.Token) (string, error) {
-	return u.jwtHandler.ToJWT(t)
+	if _, ok := u.jwtHandlers[t.KeyId]; !ok {
+		return "", common.ErrKeyIdNotFound
+	}
+	return u.jwtHandlers[t.KeyId].ToJWT(t)
 }
 
 func (u *UserAdm) Logout(ctx context.Context, token *jwt.Token) error {
@@ -648,7 +665,14 @@ func (u *UserAdm) IssuePersonalAccessToken(
 		}
 	}
 	//generate and save token
-	t, err := u.generateToken(id.Subject, scope.All, id.Tenant, tr.ExpiresIn == 0)
+	keyId := common.KeyIdFromPath(u.config.PrivateKeyPath, u.config.PrivateKeyFileNamePattern)
+	t, err := u.generateToken(
+		id.Subject,
+		scope.All,
+		id.Tenant,
+		tr.ExpiresIn == 0,
+		keyId,
+	)
 	if err != nil {
 		return "", errors.Wrap(err, "useradm: failed to generate token")
 	}
@@ -668,8 +692,11 @@ func (u *UserAdm) IssuePersonalAccessToken(
 		return "", errors.Wrap(err, "useradm: failed to save token")
 	}
 
+	if _, ok := u.jwtHandlers[keyId]; !ok {
+		return "", common.ErrKeyIdNotFound
+	}
 	// sign token
-	return u.jwtHandler.ToJWT(t)
+	return u.jwtHandlers[keyId].ToJWT(t)
 }
 
 func (ua *UserAdm) GetPersonalAccessTokens(

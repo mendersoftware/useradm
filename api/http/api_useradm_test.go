@@ -852,10 +852,10 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	assert.NoError(t, err)
 
-	jwth := jwt.NewJWTHandlerRS256(key)
+	jwth := jwt.NewJWTHandlerRS256(key, 0)
 
 	// API handler
-	handlers := NewUserAdmApiHandlers(uadm, db, jwth, Config{})
+	handlers := NewUserAdmApiHandlers(uadm, db, map[int]jwt.Handler{0: jwth}, Config{})
 	assert.NotNil(t, handlers)
 
 	app, err := handlers.GetApp()
@@ -879,9 +879,9 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 		mock.AnythingOfType("*log.Logger")).Return(authorizer)
 
 	authzmw := &authz.AuthzMiddleware{
-		Authz:      authorizer,
-		ResFunc:    ExtractResourceAction,
-		JWTHandler: jwth,
+		Authz:       authorizer,
+		ResFunc:     ExtractResourceAction,
+		JWTHandlers: map[int]jwt.Handler{0: jwth},
 	}
 
 	ifmw := &rest.IfMiddleware{

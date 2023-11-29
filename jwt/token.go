@@ -32,6 +32,11 @@ type Token struct {
 	LastUsed *time.Time `json:"last_used,omitempty" bson:"last_used,omitempty"`
 	// TokenName holds the name of the token
 	TokenName *string `json:"name,omitempty" bson:"name,omitempty"`
+	// KeyId is the field that corresponds to "kid" in the JWT Header, we use it
+	// to identify the key which was used to sign the token. It allows the private key rotation
+	// as long as you keep the private keys we can use the new ones (the highest id)
+	// to issue new tokens, while verify the old tokens with the keys used to issue them
+	KeyId int `json:"key_id,omitempty" bson:"key_id,omitempty"`
 }
 
 // MarshalJWT marshals Token into JWT comaptible format. `sign` provides means
