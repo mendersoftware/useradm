@@ -175,20 +175,20 @@ func TestJWTHandlerRS256FromJWT(t *testing.T) {
 		"ok (with kid 0)": {
 			privKey: key,
 
-			inToken: "eyJhbGciOiJSUzI1NiIsImtpZCI6MCwidHlwIjoiSldUIn0.eyJqdGkiOiJiMTAwZDVkYi0zYzFjLTQyOGUtOGI1Ni1lYzExOGVkZGE3YzYiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjE3MDE3NTcwMTUsImlhdCI6MTcwMTE1MjIxNSwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAxMTUyMjE1fQ.hxamI4u9txdFwLN4ohzw_hOMqoJRqj3LdbRTUIowRp4vHBmsNzaT1MOB792NuIThJAo1LHEtUpRKteVmQpuhtyGSpVDYzV_dMSlClQOIP7n_lKBsqc6XvZyB-WtetJLYVEVy6bg5WU3agLOvhqyex9o7bdBABWNjpX9XdKmRyb6nVSbdUZSiwsA9N0A1Y6Ns8GXDj3i2Io2o24lHD9DTul696PlaRqWW7MoA1EjSoJXZ48RMWLkBRC6l6Ks4AJTlHTC_RhrKLLpy4hDq4IKcxtwq027WwJF6BrTM3DUwu4OKL9oqE9c2tPoPTRO0cwK0AApx6Bt_6t8IJWvosTxn1w",
+			inToken: "eyJhbGciOiJSUzI1NiIsImtpZCI6MCwidHlwIjoiSldUIn0.eyJqdGkiOiJhNTczODY1ZS0yOTczLTQ5ZDctOTNhMC01YjQ5NDUzYmVhNTkiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjU3Mzg0MTIzMzYsImlhdCI6MTcwMTgwNDMzNiwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAxODA0MzM2fQ.NcudT8gQENu81tZ_R8n-wg825r47cskolE1HXqAX8_91nSriOXusS3UqLbY_HwrhTPThk9jC_BmkE9LVdKwUfg96-BhtDJnAxph3WcJu9SNxXkB7Yfhf-5YD6fO95Y2N9dSHZH13yqR14yU4AzFID7SDdzMYZ5DVxryrPaIygcCxaG2WH-a7IaKM4mO2HFIX7vCIBZpp1MJT0_FLFT_jlrs2Qd64PgDnBi3wlgbRunv40oavPP7dTf0Ol82LNuksu1V2X5lj9SgP-v9nTkUfp6Co7aZgBietGNoUbPl3dFwb_ZRHM660uMch-12gxF-o2oNAOS2Rg1MwTl6b9Y2Sqg",
 
 			outToken: Token{
 				Claims: Claims{
-					ID:      oid.FromString("b100d5db-3c1c-428e-8b56-ec118edda7c6"),
+					ID:      oid.FromString("a573865e-2973-49d7-93a0-5b49453bea59"),
 					Subject: oid.FromString("78d27eb1-6cab-44dc-879b-ce7ee61385fe"),
 					ExpiresAt: &Time{
-						Time: time.Unix(1701757015, 0),
+						Time: time.Unix(5738412336, 0),
 					},
 					IssuedAt: Time{
-						Time: time.Unix(1701152215, 0),
+						Time: time.Unix(1701804336, 0),
 					},
 					NotBefore: Time{
-						Time: time.Unix(1701152215, 0),
+						Time: time.Unix(1701804336, 0),
 					},
 					Issuer: "mender.useradm",
 					Scope:  "mender.*",

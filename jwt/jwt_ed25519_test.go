@@ -168,21 +168,21 @@ func TestJWTHandlerEd25519FromJWT(t *testing.T) {
 		"ok (with key id 0)": {
 			privKey: key,
 
-			inToken: "eyJhbGciOiJFZERTQSIsImtpZCI6MCwidHlwIjoiSldUIn0.eyJqdGkiOiIyNjRjMDljYS01N2ViLTQ2ZDctOTc3Yy03NjRiYzc1ZDYwOTIiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjE3MDE4MTI4MjgsImlhdCI6MTcwMTIwODAyOCwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAxMjA4MDI4fQ.oz4f56jA1I4eGv_p2Mcmoof-EJ-I1A0qvTNU1E93HaIUsp6F5OUiZAwRM-SbauZV284A1fUjlmLPjTxSvhgyBg",
+			inToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2ZTA4ODNlZi00NGRkLTRlNmMtYjQzNi0wZDc5YjZjNzRlMzAiLCJzdWIiOiI3OGQyN2ViMS02Y2FiLTQ0ZGMtODc5Yi1jZTdlZTYxMzg1ZmUiLCJleHAiOjU3Mzg0NTg3NDAsImlhdCI6MTcwMTg1MDc0MCwibWVuZGVyLnRlbmFudCI6IjVhYmNiNmRlN2E2NzNhMDAwMTI4N2M3MSIsIm1lbmRlci51c2VyIjp0cnVlLCJpc3MiOiJtZW5kZXIudXNlcmFkbSIsInNjcCI6Im1lbmRlci4qIiwibmJmIjoxNzAxODUwNzQwfQ.CZJhNss0TJ5Qhcxpn_GsquMaxYAwXChBR06DwN1hOwcqvs9OjZDIu4Ct0BCInwSCIwVmAu6i7OwubXHztgZYDQ",
 
 			outToken: Token{
 				KeyId: 0,
 				Claims: Claims{
-					ID:      oid.FromString("264c09ca-57eb-46d7-977c-764bc75d6092"),
+					ID:      oid.FromString("6e0883ef-44dd-4e6c-b436-0d79b6c74e30"),
 					Subject: oid.FromString("78d27eb1-6cab-44dc-879b-ce7ee61385fe"),
 					ExpiresAt: &Time{
-						Time: time.Unix(1701812828, 0),
+						Time: time.Unix(5738458740, 0),
 					},
 					IssuedAt: Time{
-						Time: time.Unix(1701208028, 0),
+						Time: time.Unix(1701850740, 0),
 					},
 					NotBefore: Time{
-						Time: time.Unix(1701208028, 0),
+						Time: time.Unix(1701850740, 0),
 					},
 					Issuer: "mender.useradm",
 					Scope:  "mender.*",
