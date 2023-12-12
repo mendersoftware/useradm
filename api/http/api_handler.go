@@ -14,11 +14,13 @@
 package http
 
 import (
-	"github.com/ant0ine/go-json-rest/rest"
+	"net/http"
+
+	"github.com/mendersoftware/useradm/authz"
 )
 
 // thin API handler interface
 type ApiHandler interface {
 	// produce a rest.App with routing setup or an error
-	GetApp() (rest.App, error)
+	Build(authz.Authorizer) (http.Handler, error)
 }

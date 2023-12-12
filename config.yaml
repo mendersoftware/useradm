@@ -2,16 +2,6 @@
 # Defauls to: ":8080" which will listen on all avalable interfaces.
 listen: :8080
 
-# HTTP Server middleware environment
-# Available values:
-#   dev
-#       development environment
-#   prod
-#       production environment
-#
-# Defaults to: prod
-# middleware: dev
-
 # Private key path - used for JWT signing
 # Defaults to: /etc/useradm/rsa/private.pem
 # Overwrite with environment variable: USERADM_SERVER_PRIV_KEY_PATH

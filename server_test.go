@@ -20,17 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSetupApi(t *testing.T) {
-	// expecting an error
-	api, err := SetupAPI("foo", nil, nil, nil)
-	assert.Nil(t, api)
-	assert.Error(t, err)
-
-	api, err = SetupAPI(EnvDev, nil, nil, nil)
-	assert.NotNil(t, api)
-	assert.Nil(t, err)
-}
-
 func TestAddPrivateKeys(t *testing.T) {
 	l := log.New(log.Ctx{})
 	handlers, err := addPrivateKeys(l, "user/testdata", "private\\.id\\.([0-9]*)\\.pem")

@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -32,16 +31,13 @@ import (
 	"github.com/ant0ine/go-json-rest/rest/test"
 	"github.com/mendersoftware/go-lib-micro/mongo/oid"
 	"github.com/mendersoftware/go-lib-micro/requestid"
-	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	mt "github.com/mendersoftware/go-lib-micro/testing"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/mendersoftware/go-lib-micro/identity"
-	"github.com/mendersoftware/useradm/authz"
 	mauthz "github.com/mendersoftware/useradm/authz/mocks"
 	"github.com/mendersoftware/useradm/jwt"
 	"github.com/mendersoftware/useradm/model"
@@ -51,18 +47,6 @@ import (
 	museradm "github.com/mendersoftware/useradm/user/mocks"
 	mtesting "github.com/mendersoftware/useradm/utils/testing"
 )
-
-func makeApi(router rest.App) *rest.Api {
-	api := rest.NewApi()
-	api.Use(
-		&requestlog.RequestLogMiddleware{
-			BaseLogger: &logrus.Logger{Out: ioutil.Discard},
-		},
-		&requestid.RequestIdMiddleware{},
-	)
-	api.SetApp(router)
-	return api
-}
 
 func TestAlive(t *testing.T) {
 	api := makeMockApiHandler(t, nil, nil)
@@ -701,6 +685,7 @@ func TestUpdateUser(t *testing.T) {
 					http.MethodPut,
 					"http://1.2.3.4/api/management/v1/useradm/users/me",
 					bytes.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
 				return req
 			}(),
 
@@ -801,6 +786,7 @@ func TestUpdateUser(t *testing.T) {
 					http.MethodPut,
 					"http://1.2.3.4/api/management/v1/useradm/users/me",
 					bytes.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
 				return req
 			}(),
 
@@ -841,7 +827,16 @@ func TestUpdateUser(t *testing.T) {
 	}
 }
 
+func init() {
+	//this will override the framework's error resp to the desired one:
+	// {"error": "msg"}
+	// instead of:
+	// {"Error": "msg"}
+	rest.ErrorFieldName = "error"
+}
+
 func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http.Handler {
+	t.Helper()
 	// JWT handler
 	data, err := os.ReadFile("../../crypto/private.pem")
 	if err != nil {
@@ -858,16 +853,6 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	handlers := NewUserAdmApiHandlers(uadm, db, map[int]jwt.Handler{0: jwth}, Config{})
 	assert.NotNil(t, handlers)
 
-	app, err := handlers.GetApp()
-	assert.NotNil(t, app)
-	assert.NoError(t, err)
-
-	api := rest.NewApi()
-	api.Use(
-		&requestlog.RequestLogMiddleware{},
-		&requestid.RequestIdMiddleware{},
-	)
-
 	// setup the authz middleware
 	authorizer := &mauthz.Authorizer{}
 	authorizer.On("Authorize",
@@ -878,28 +863,13 @@ func makeMockApiHandler(t *testing.T, uadm useradm.App, db store.DataStore) http
 	authorizer.On("WithLog",
 		mock.AnythingOfType("*log.Logger")).Return(authorizer)
 
-	authzmw := &authz.AuthzMiddleware{
-		Authz:       authorizer,
-		ResFunc:     ExtractResourceAction,
-		JWTHandlers: map[int]jwt.Handler{0: jwth},
+	handler, err := handlers.Build(authorizer)
+	if err != nil {
+		t.Errorf("failed to build handlers: %s", err.Error())
+		t.FailNow()
 	}
 
-	ifmw := &rest.IfMiddleware{
-		Condition: IsVerificationEndpoint,
-		IfTrue:    authzmw,
-	}
-
-	api.Use(ifmw)
-
-	api.SetApp(app)
-
-	//this will override the framework's error resp to the desired one:
-	// {"error": "msg"}
-	// instead of:
-	// {"Error": "msg"}
-	rest.ErrorFieldName = "error"
-
-	return api.MakeHandler()
+	return handler
 }
 
 func TestUserAdmApiPostVerify(t *testing.T) {
@@ -1279,6 +1249,7 @@ func TestUserAdmApiTenantsGetUsers(t *testing.T) {
 				nil,
 			)
 			req.Header.Set("X-MEN-RequestID", "test")
+			req.Header.Set("Content-Type", "application/json")
 			req.URL.RawQuery = tc.queryString
 
 			//test
