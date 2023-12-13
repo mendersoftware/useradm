@@ -6,7 +6,7 @@ require (
 	github.com/ant0ine/go-json-rest v3.3.3-0.20170913041208-ebb33769ae01+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/mendersoftware/go-lib-micro v0.0.0-20231016090356-4769be2f2c88
 	github.com/mendersoftware/go-lib-micro/mongo/codec v0.0.0-20231016090356-4769be2f2c88
 	github.com/pkg/errors v0.9.1
