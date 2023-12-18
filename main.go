@@ -48,10 +48,6 @@ func doMain(args []string) error {
 			Destination: &configPath,
 		},
 		cli.BoolFlag{
-			Name:  "dev",
-			Usage: "Use development setup",
-		},
-		cli.BoolFlag{
 			Name:        "debug",
 			Usage:       "Enable debug logging",
 			Destination: &debug,
@@ -166,14 +162,7 @@ func doMain(args []string) error {
 }
 
 func runServer(args *cli.Context) error {
-	devSetup := args.GlobalBool("dev")
-
 	l := log.New(log.Ctx{})
-
-	if devSetup {
-		l.Infof("setting up development configuration")
-		config.Config.Set(SettingMiddleware, EnvDev)
-	}
 
 	l.Print("User Administration Service starting up")
 

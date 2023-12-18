@@ -21,8 +21,11 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/google/uuid"
+	"github.com/mendersoftware/go-lib-micro/accesslog"
 	"github.com/mendersoftware/go-lib-micro/identity"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/go-lib-micro/requestid"
+	"github.com/mendersoftware/go-lib-micro/requestlog"
 	"github.com/mendersoftware/go-lib-micro/rest_utils"
 	"github.com/mendersoftware/go-lib-micro/routing"
 	"github.com/pkg/errors"
@@ -79,6 +82,8 @@ type UserAdmApiHandlers struct {
 type Config struct {
 	// maximum expiration time for Personal Access Token
 	TokenMaxExpSeconds int
+
+	JWTFallback jwt.Handler
 }
 
 // return an ApiHandler for user administration and authentiacation app
@@ -96,19 +101,62 @@ func NewUserAdmApiHandlers(
 	}
 }
 
-func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
-	routes := []*rest.Route{
+func wrapMiddleware(middleware rest.Middleware, routes ...*rest.Route) []*rest.Route {
+	for _, route := range routes {
+		route.Func = middleware.MiddlewareFunc(route.Func)
+	}
+	return routes
+}
+
+func (i *UserAdmApiHandlers) Build(authorizer authz.Authorizer) (http.Handler, error) {
+	api := rest.NewApi()
+	api.Use(
+		// Apply common middlewares
+		&requestlog.RequestLogMiddleware{},
+		&accesslog.AccessLogMiddleware{
+			Format: accesslog.SimpleLogFormat,
+			DisableLog: func(statusCode int, r *rest.Request) bool {
+				if (r.URL.Path == uriInternalAlive ||
+					r.URL.Path == uriInternalHealth) &&
+					statusCode < 300 {
+					return true
+				}
+				return false
+			},
+		},
+		&requestid.RequestIdMiddleware{},
+		&rest.ContentTypeCheckerMiddleware{},
+	)
+	identityMiddleware := &identity.IdentityMiddleware{
+		UpdateLogger: true,
+	}
+	authzMiddleware := &authz.AuthzMiddleware{
+		Authz:              authorizer,
+		ResFunc:            ExtractResourceAction,
+		JWTHandlers:        i.jwth,
+		JWTFallbackHandler: i.config.JWTFallback,
+	}
+	internalRoutes := []*rest.Route{
 		rest.Get(uriInternalAlive, i.AliveHandler),
 		rest.Get(uriInternalHealth, i.HealthHandler),
 
-		rest.Get(uriInternalAuthVerify, i.AuthVerifyHandler),
-		rest.Post(uriInternalAuthVerify, i.AuthVerifyHandler),
+		rest.Get(uriInternalAuthVerify,
+			authzMiddleware.MiddlewareFunc(
+				identityMiddleware.MiddlewareFunc(i.AuthVerifyHandler),
+			),
+		),
+		rest.Post(uriInternalAuthVerify,
+			authzMiddleware.MiddlewareFunc(
+				identityMiddleware.MiddlewareFunc(i.AuthVerifyHandler),
+			),
+		),
 		rest.Post(uriInternalTenants, i.CreateTenantHandler),
 		rest.Post(uriInternalTenantUsers, i.CreateTenantUserHandler),
 		rest.Delete(uriInternalTenantUser, i.DeleteTenantUserHandler),
 		rest.Get(uriInternalTenantUsers, i.GetTenantUsersHandler),
 		rest.Delete(uriInternalTokens, i.DeleteTokensHandler),
-
+	}
+	mgmtRoutes := routing.AutogenOptionsRoutes([]*rest.Route{
 		rest.Post(uriManagementAuthLogin, i.AuthLoginHandler),
 		rest.Post(uriManagementAuthLogout, i.AuthLogoutHandler),
 		rest.Post(uriManagementUsers, i.AddUserHandler),
@@ -126,17 +174,19 @@ func (i *UserAdmApiHandlers) GetApp() (rest.App, error) {
 		// plans
 		rest.Get(uriManagementPlans, i.GetPlansHandler),
 		rest.Get(uriManagementPlanBinding, i.GetPlanBindingHandler),
-	}
+	}, routing.AllowHeaderOptionsGenerator)
 
-	app, err := rest.MakeRouter(
-		// augment routes with OPTIONS handler
-		routing.AutogenOptionsRoutes(routes, routing.AllowHeaderOptionsGenerator)...,
-	)
+	// IdentityMiddleware is only applied to public APIs
+	mgmtRoutes = wrapMiddleware(identityMiddleware, mgmtRoutes...)
+
+	routes := append(mgmtRoutes, internalRoutes...)
+	app, err := rest.MakeRouter(routes...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create router")
 	}
+	api.SetApp(app)
 
-	return app, nil
+	return api.MakeHandler(), nil
 }
 
 func (u *UserAdmApiHandlers) AliveHandler(w rest.ResponseWriter, r *rest.Request) {

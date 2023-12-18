@@ -20,13 +20,11 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
 
 	api_http "github.com/mendersoftware/useradm/api/http"
-	"github.com/mendersoftware/useradm/authz"
 	"github.com/mendersoftware/useradm/client/tenant"
 	"github.com/mendersoftware/useradm/common"
 	. "github.com/mendersoftware/useradm/config"
@@ -34,22 +32,6 @@ import (
 	"github.com/mendersoftware/useradm/store/mongo"
 	useradm "github.com/mendersoftware/useradm/user"
 )
-
-func SetupAPI(stacktype string, authz authz.Authorizer, jwth map[int]jwt.Handler,
-	jwthFallback jwt.Handler) (*rest.Api, error) {
-	api := rest.NewApi()
-	if err := SetupMiddleware(api, stacktype, authz, jwth, jwthFallback); err != nil {
-		return nil, errors.Wrap(err, "failed to setup middleware")
-	}
-
-	//this will override the framework's error resp to the desired one:
-	// {"error": "msg"}
-	// instead of:
-	// {"Error": "msg"}
-	rest.ErrorFieldName = "error"
-
-	return api, nil
-}
 
 func RunServer(c config.Reader) error {
 
@@ -163,28 +145,18 @@ func RunServer(c config.Reader) error {
 	useradmapi := api_http.NewUserAdmApiHandlers(ua, db, jwtHandlers,
 		api_http.Config{
 			TokenMaxExpSeconds: c.GetInt(SettingTokenMaxExpirationSeconds),
+			JWTFallback:        jwtFallbackHandler,
 		})
 
-	api, err := SetupAPI(
-		c.GetString(SettingMiddleware),
-		authorizer,
-		jwtHandlers,
-		jwtFallbackHandler,
-	)
-	if err != nil {
-		return errors.Wrap(err, "API setup failed")
-	}
-
-	apph, err := useradmapi.GetApp()
+	handler, err := useradmapi.Build(authorizer)
 	if err != nil {
 		return errors.Wrap(err, "useradm API handlers setup failed")
 	}
-	api.SetApp(apph)
 
 	addr := c.GetString(SettingListen)
 	l.Printf("listening on %s", addr)
 
-	return http.ListenAndServe(addr, api.MakeHandler())
+	return http.ListenAndServe(addr, handler)
 }
 
 func addPrivateKeys(
