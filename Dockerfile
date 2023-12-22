@@ -8,7 +8,7 @@ RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_extra/passwd
 RUN chown -R nobody:nobody /etc_extra
 RUN apk add --no-cache ca-certificates
 COPY ./ .
-RUN CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o useradm .
+RUN CGO_ENABLED=0 GOARCH=$TARGETARCH go build -trimpath -o useradm .
 
 
 FROM scratch
