@@ -8,7 +8,9 @@ RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_extra/passwd
 RUN chown -R nobody:nobody /etc_extra
 RUN apk add --no-cache ca-certificates
 COPY ./ .
-RUN CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o useradm .
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOARCH=$TARGETARCH go build -trimpath -o useradm .
 
 
 FROM scratch

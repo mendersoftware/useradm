@@ -7,7 +7,9 @@ RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_extra/passwd
 RUN chown -R nobody:nobody /etc_extra
 RUN mkdir /tmp/gocovedir
 COPY ./ .
-RUN env CGO_ENABLED=0 go test -c -o useradm \
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=cache,target=/root/.cache/go-build \
+    env CGO_ENABLED=0 go test -c -o useradm \
     -tags main -cover -covermode=atomic \
     -coverpkg $(go list ./... | grep -v vendor | grep -v mock | grep -v test | tr  '\n' ,)
 
