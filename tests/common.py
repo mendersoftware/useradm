@@ -85,8 +85,9 @@ def mongo_cleanup(mongo):
 
 
 @pytest.fixture(scope="session")
-def cli():
-    return CliClient()
+def cli(request):
+    service = request.config.getoption("host").split(":")[0]
+    return CliClient(service)
 
 
 @pytest.fixture(scope="class", autouse=True)

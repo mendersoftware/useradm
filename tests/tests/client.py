@@ -206,7 +206,7 @@ class CliClient:
         "/usr/bin/useradm-enterprise", "/etc/useradm-enterprise"
     )
 
-    def __init__(self):
+    def __init__(self, service="useradm"):
         self.client = docker.from_env()
         # Inspect the container we're running in
         hostname = socket.gethostname()
@@ -214,12 +214,12 @@ class CliClient:
         assert len(res) > 0, "Failed to resolve my own container!"
         _self = res[0]
 
+        project = _self.labels.get("com.docker.compose.project")
         self.useradm = self.client.containers.list(
             filters={
                 "label": [
-                    "com.docker.compose.project=%s"
-                    % _self.labels.get("com.docker.compose.project"),
-                    "com.docker.compose.service=mender-useradm",
+                    f"com.docker.compose.project={project}",
+                    f"com.docker.compose.service={service}",
                 ]
             },
             limit=1,
