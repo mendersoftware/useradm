@@ -16,8 +16,6 @@ import json
 from common import (
     init_users,
     init_users_f,
-    init_users_mt,
-    init_users_mt_f,
     cli,
     api_client_mgmt,
     api_client_int,

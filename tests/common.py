@@ -134,45 +134,6 @@ def init_users_f(cli, clean_migrated_db_f, api_client_mgmt, mongo):
 
 
 @pytest.fixture(scope="class")
-def init_users_mt(cli, clean_migrated_db, api_client_mgmt, mongo):
-    tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
-    for t in tenant_users:
-        for i in range(5):
-            user = {
-                "email": f"user={i}-{t}@foo.com",
-                "password": "correcthorsebatterystaple",
-            }
-            with tenantadm.run_fake_create_user(user):
-                cli.create_user(
-                    user["email"], user["password"], None, t,
-                )
-        tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
-    yield tenant_users
-    mongo_cleanup(mongo)
-
-
-@pytest.fixture(scope="function")
-def init_users_mt_f(cli, clean_migrated_db_f, api_client_mgmt, mongo):
-    """
-    Function-scoped version of 'init_users_mt'.
-    """
-    tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
-    for t in tenant_users:
-        for i in range(5):
-            user = {
-                "email": f"user={i}-{t}@foo.com",
-                "password": "correcthorsebatterystaple",
-            }
-            with tenantadm.run_fake_create_user(user):
-                cli.create_user(
-                    user["email"], user["password"], tenant_id=t,
-                )
-            tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
-    yield tenant_users
-    mongo_cleanup(mongo)
-
-
-@pytest.fixture(scope="class")
 def user_tokens(init_users, api_client_mgmt):
     tokens = []
     for user in init_users:

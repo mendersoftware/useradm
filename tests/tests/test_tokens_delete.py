@@ -16,8 +16,6 @@ import json
 from common import (
     init_users,
     init_users_f,
-    init_users_mt,
-    init_users_mt_f,
     cli,
     api_client_mgmt,
     api_client_int,
@@ -63,24 +61,3 @@ def verify_tokens(api_client_int, tokens, removed_tenant=None, removed_user=None
                 verify_token(api_client_int, t, 401)
             else:
                 verify_token(api_client_int, t, 200)
-
-
-@pytest.fixture(scope="function")
-def user_tokens_mt_f(init_users_mt_f, api_client_mgmt):
-    tokens = []
-    password = "correcthorsebatterystaple"
-
-    users_db = {
-        tenant: [user.email for user in users]
-        for tenant, users in init_users_mt_f.items()
-    }
-
-    with tenantadm.run_fake_user_tenants(users_db):
-        for tenant, users in users_db.items():
-            for email in users:
-                _, r = api_client_mgmt.login(email, password)
-                assert r.status_code == 200
-                assert r.headers["Content-Type"] == "application/jwt"
-                tokens.append(r.text)
-
-    yield tokens
