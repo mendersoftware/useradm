@@ -18,8 +18,6 @@ import string
 from common import (
     init_users,
     init_users_f,
-    init_users_mt,
-    init_users_mt_f,
     cli,
     api_client_int,
     api_client_mgmt,
@@ -167,55 +165,3 @@ class TestManagementApiPostToken(TestManagementApiPostTokenBase):
 
     def test_tokens_naming_collisions_multiple_users(self, api_client_mgmt, init_users):
         self._test_pat_name_collision_for_multiple_users(api_client_mgmt, init_users)
-
-
-class TestManagementApiPostTokenEnterprise(TestManagementApiPostTokenBase):
-    @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_ok(self, tenant_id, api_client_int, api_client_mgmt, init_users_mt):
-        token_request = {"name": "my_personal_access_token", "expires_in": 3600}
-        users_db = {
-            tenant: [user.email for user in users]
-            for tenant, users in init_users_mt.items()
-        }
-
-        with tenantadm.run_fake_user_tenants(users_db):
-            self._do_test_ok(
-                api_client_int, api_client_mgmt, init_users_mt[tenant_id], token_request
-            )
-
-    @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_tokens_limit_for_single_user(
-        self, tenant_id, api_client_mgmt, init_users_mt
-    ):
-        users_db = {
-            tenant: [user.email for user in users]
-            for tenant, users in init_users_mt.items()
-        }
-        with tenantadm.run_fake_user_tenants(users_db):
-            self._test_pat_limit(api_client_mgmt, init_users_mt[tenant_id])
-
-    @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_tokens_naming_collisions_one_user(
-        self, tenant_id, api_client_mgmt, init_users_mt
-    ):
-        users_db = {
-            tenant: [user.email for user in users]
-            for tenant, users in init_users_mt.items()
-        }
-        with tenantadm.run_fake_user_tenants(users_db):
-            self._test_pat_name_collision_for_one_user(
-                api_client_mgmt, init_users_mt[tenant_id]
-            )
-
-    @pytest.mark.parametrize("tenant_id", TENANTS)
-    def test_tokens_naming_collisions_multiple_users(
-        self, tenant_id, api_client_mgmt, init_users_mt
-    ):
-        users_db = {
-            tenant: [user.email for user in users]
-            for tenant, users in init_users_mt.items()
-        }
-        with tenantadm.run_fake_user_tenants(users_db):
-            self._test_pat_name_collision_for_multiple_users(
-                api_client_mgmt, init_users_mt[tenant_id]
-            )

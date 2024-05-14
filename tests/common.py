@@ -73,8 +73,8 @@ def make_basic_auth(username, password):
 
 
 @pytest.fixture(scope="session")
-def mongo():
-    return MongoClient("mender-mongo:27017")
+def mongo(request):
+    return MongoClient(request.config.getoption("mongo_url"))
 
 
 def mongo_cleanup(mongo):
@@ -85,8 +85,9 @@ def mongo_cleanup(mongo):
 
 
 @pytest.fixture(scope="session")
-def cli():
-    return CliClient()
+def cli(request):
+    service = request.config.getoption("host").split(":")[0]
+    return CliClient(service)
 
 
 @pytest.fixture(scope="class", autouse=True)
@@ -129,45 +130,6 @@ def init_users_f(cli, clean_migrated_db_f, api_client_mgmt, mongo):
         cli.create_user("user-{}@foo.com".format(i), "correcthorsebatterystaple")
 
     yield api_client_mgmt.get_users()
-    mongo_cleanup(mongo)
-
-
-@pytest.fixture(scope="class")
-def init_users_mt(cli, clean_migrated_db, api_client_mgmt, mongo):
-    tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
-    for t in tenant_users:
-        for i in range(5):
-            user = {
-                "email": f"user={i}-{t}@foo.com",
-                "password": "correcthorsebatterystaple",
-            }
-            with tenantadm.run_fake_create_user(user):
-                cli.create_user(
-                    user["email"], user["password"], None, t,
-                )
-        tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
-    yield tenant_users
-    mongo_cleanup(mongo)
-
-
-@pytest.fixture(scope="function")
-def init_users_mt_f(cli, clean_migrated_db_f, api_client_mgmt, mongo):
-    """
-    Function-scoped version of 'init_users_mt'.
-    """
-    tenant_users = {TENANT_ONE: [], TENANT_TWO: []}
-    for t in tenant_users:
-        for i in range(5):
-            user = {
-                "email": f"user={i}-{t}@foo.com",
-                "password": "correcthorsebatterystaple",
-            }
-            with tenantadm.run_fake_create_user(user):
-                cli.create_user(
-                    user["email"], user["password"], tenant_id=t,
-                )
-            tenant_users[t] = api_client_mgmt.get_users(make_auth("foo", t))
-    yield tenant_users
     mongo_cleanup(mongo)
 
 
