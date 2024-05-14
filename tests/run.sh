@@ -27,5 +27,6 @@ HOST=${HOST="mender-useradm:8080"}
 py.test -s --tb=short --host $HOST \
           --internal-spec $DIR/internal_api.yml \
           --management-spec $DIR/management_api.yml \
+          --mongo-url "mongodb://mender-mongo" \
           --verbose --junitxml=$DIR/results.xml \
           $DIR/tests/test_*.py "$@"

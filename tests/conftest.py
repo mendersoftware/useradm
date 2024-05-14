@@ -21,6 +21,9 @@ def pytest_addoption(parser):
     )
     parser.addoption("--internal-spec", default="../docs/internal_api.yml")
     parser.addoption("--management-spec", default="../docs/management_api.yml")
+    parser.addoption(
+        "--mongo-url", default="tenantadm", help="Mongo URL (connection string)"
+    )
 
 
 def pytest_configure(config):
