@@ -1,3 +1,6 @@
+# MOVED
+
+This repository has been moved to the mender-server monorepo: https://github.com/mendersoftware/mender-server
 [![Build Status](https://gitlab.com/Northern.tech/Mender/useradm/badges/master/pipeline.svg)](https://gitlab.com/Northern.tech/Mender/useradm/pipelines)
 [![Coverage Status](https://coveralls.io/repos/github/mendersoftware/useradm/badge.svg?branch=master)](https://coveralls.io/github/mendersoftware/useradm?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mendersoftware/useradm)](https://goreportcard.com/report/github.com/mendersoftware/useradm)
