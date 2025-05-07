@@ -2,9 +2,7 @@ FROM golang:1.23.9-alpine3.20 as builder
 WORKDIR /go/src/github.com/mendersoftware/useradm
 RUN mkdir /tmp/gocovedir
 COPY ./ .
-RUN env CGO_ENABLED=0 go test -c -o useradm \
-    -tags main -cover -covermode=atomic \
-    -coverpkg $(go list ./... | grep -v vendor | grep -v mock | grep -v test | tr  '\n' ,)
+RUN env CGO_ENABLED=0 go build -cover -covermode=atomic -o useradm
 
 FROM scratch
 EXPOSE 8080
